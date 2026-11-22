@@ -1,0 +1,91 @@
+import { toggleTitle, addToPlaylist, signIn } from "@/features/auth/actions";
+import { titleName, type Title } from "@/integrations/tmdb";
+import { messages } from "@/i18n/messages";
+export function TitleFields({ item }: { item: Title }) {
+  return (
+    <>
+      <input type="hidden" name="media_type" value={item.media_type} />
+      <input type="hidden" name="tmdb_id" value={item.id} />
+      <input type="hidden" name="media_title" value={titleName(item)} />
+      <input type="hidden" name="poster_path" value={item.poster_path || ""} />
+      <input
+        type="hidden"
+        name="genre_ids"
+        value={(item.genre_ids || item.genres?.map((x) => x.id) || []).join(
+          ",",
+        )}
+      />
+    </>
+  );
+}
+export function TitleActions({
+  item,
+  locale,
+  user,
+  states,
+  playlists,
+}: {
+  item: Title;
+  locale: string;
+  user: boolean;
+  states: Record<string, boolean>;
+  playlists: { id: string; name: string }[];
+}) {
+  const t = messages(locale);
+  if (!user)
+    return (
+      <form action={signIn}>
+        <input
+          type="hidden"
+          name="next"
+          value={`/${locale}/title/${item.media_type}/${item.id}`}
+        />
+        <button className="button primary">{t.signIn}</button>
+      </form>
+    );
+  return (
+    <div className="actionGroup">
+      {(
+        [
+          ["favorites", states.favorites ? t.saved : t.save],
+          ["watched", states.watched ? t.watch : t.watched],
+          ["title_likes", states.title_likes ? t.liked : t.like],
+        ] as [string, string][]
+      ).map(([table, label]) => (
+        <form action={toggleTitle} key={table}>
+          <TitleFields item={item} />
+          <input type="hidden" name="table" value={table} />
+          <button
+            className={`button ${table === "favorites" ? "primary" : ""}`}
+            aria-label={label}
+            aria-pressed={!!states[table]}
+          >
+            {table === "favorites" ? "☆" : table === "watched" ? "✓" : "♡"}{" "}
+            {label}
+          </button>
+        </form>
+      ))}
+      {playlists.length > 0 && (
+        <form action={addToPlaylist} className="inlineForm">
+          <TitleFields item={item} />
+          <select
+            name="playlist_id"
+            aria-label={t.selectPlaylist}
+            required
+            defaultValue=""
+          >
+            <option value="" disabled>
+              {t.selectPlaylist}
+            </option>
+            {playlists.map((p) => (
+              <option value={p.id} key={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button className="button">{t.add}</button>
+        </form>
+      )}
+    </div>
+  );
+}

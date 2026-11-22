@@ -1,0 +1,273 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap");
+:root {
+  --coral: #ff6248;
+  --ink: #100e0d;
+  --cream: #f8ead9;
+  --display: "Oswald", "Arial Narrow", sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: "DM Sans", Arial, sans-serif;
+  font-size: 15px;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+.container {
+  width: min(1400px, 90%);
+  margin: 0 auto;
+}
+.eyebrow {
+  text-transform: uppercase;
+  color: var(--coral);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+.button {
+  border: 1px solid #947e6d;
+  background: transparent;
+  color: #fff0df;
+  border-radius: 5px;
+  padding: 12px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.button:hover {
+  border-color: var(--coral);
+}
+.button.primary {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #180f0b;
+}
+.button.primary:hover {
+  background: #ff806b;
+}
+.muted {
+  color: #a99b90;
+}
+.state {
+  padding: 80px 0;
+}
+.footer {
+  border-top: 1px solid #362d29;
+  padding: 30px 0 45px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.footer span {
+  color: var(--coral);
+}
+.footer small {
+  display: block;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #86776c;
+  margin-top: 10px;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+input,
+textarea,
+select {
+  background: #171311;
+  color: #f8ead9;
+  border: 1px solid #705c4e;
+  border-radius: 5px;
+  padding: 11px;
+}
+textarea {
+  resize: vertical;
+}
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #ff806b;
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  body {
+    padding-bottom: 70px;
+  }
+  .container {
+    width: auto;
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .footer {
+    font-size: 12px;
+  }
+}
+.actionGroup {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.inlineForm {
+  display: flex;
+  gap: 8px;
+}
+.inlineForm select {
+  max-width: 180px;
+}
+.narrow {
+  max-width: 900px;
+  padding-top: 55px;
+  padding-bottom: 100px;
+}
+.pageTitle {
+  font: 700 46px/1.1 var(--display);
+  margin: 10px 0 24px;
+}
+.panel {
+  border: 1px solid #48392f;
+  background: #171310;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.panel h2 {
+  font: 600 24px var(--display);
+  margin: 0 0 14px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.stack input:not([type="checkbox"]) {
+  width: 100%;
+}
+.playlistItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #48392f;
+  padding: 12px 0;
+}
+.iconButton {
+  border: 0;
+  background: transparent;
+  color: #f8ead9;
+  font-size: 20px;
+}
+.feedItem small {
+  float: right;
+  color: #a99b90;
+}
+.stars {
+  color: var(--coral);
+  font-size: 22px;
+}
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.profileHeader .pageTitle {
+  margin: 0;
+}
+.profileHeader form {
+  margin-left: auto;
+}
+.avatar {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  background: #593c31;
+  display: grid;
+  place-items: center;
+  font: 700 36px var(--display);
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stats {
+  display: flex;
+  gap: 15px;
+}
+.stats div {
+  border: 1px solid #5b483b;
+  padding: 15px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.stats strong {
+  font-size: 25px;
+}
+@media (max-width: 700px) {
+  .narrow {
+    padding-top: 25px;
+  }
+  .pageTitle {
+    font-size: 36px;
+  }
+  .profileHeader {
+    flex-wrap: wrap;
+  }
+  .avatar {
+    width: 70px;
+    height: 70px;
+  }
+  .profileHeader form {
+    margin-left: 0;
+  }
+}
+.genreRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 25px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+.genreRow div {
+  height: 8px;
+  background: #493a31;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.genreRow i {
+  display: block;
+  height: 100%;
+  background: var(--coral);
+  border-radius: 5px;
+}

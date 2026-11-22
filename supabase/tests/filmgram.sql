@@ -1,0 +1,50 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(25);
+insert into auth.users (id, email, raw_user_meta_data) values
+ ('00000000-0000-0000-0000-000000000001','one@example.test','{"handle":"same"}'),
+ ('00000000-0000-0000-0000-000000000002','two@example.test','{"handle":"same"}');
+select is((select count(distinct handle) from public.profiles where id in ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002')), 2::bigint, 'colliding handles produce distinct profiles');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
+insert into public.favorites(user_id,media_type,tmdb_id,media_title) values ('00000000-0000-0000-0000-000000000001','movie',1,'one');
+insert into public.watched(user_id,media_type,tmdb_id,media_title,genre_ids) values ('00000000-0000-0000-0000-000000000001','tv',2,'two','{18}');
+insert into public.title_likes(user_id,media_type,tmdb_id) values ('00000000-0000-0000-0000-000000000001','movie',1);
+insert into public.reviews(user_id,media_type,tmdb_id,rating) values ('00000000-0000-0000-0000-000000000001','movie',1,5);
+insert into public.playlists(id,user_id,name) values ('10000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','private');
+insert into public.playlists(id,user_id,name,is_public) values ('10000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','public',true);
+insert into public.playlist_items(id,playlist_id,media_type,tmdb_id,position,media_title) values
+ ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','movie',1,0,'one'),
+ ('20000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000001','tv',2,1,'two'),
+ ('20000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000002','movie',3,0,'three');
+select lives_ok($$select public.reorder_playlist_items('10000000-0000-0000-0000-000000000001',array['20000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001']::uuid[])$$,'owner can reorder');
+select is((select position from public.playlist_items where id='20000000-0000-0000-0000-000000000002'),0,'reorder persists order');
+select throws_ok($$select public.reorder_playlist_items('10000000-0000-0000-0000-000000000001',array['20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001']::uuid[])$$,'22023',null,'duplicates rejected');
+select throws_ok($$select public.reorder_playlist_items('10000000-0000-0000-0000-000000000001',array['20000000-0000-0000-0000-000000000001']::uuid[])$$,'22023',null,'incomplete order rejected');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',true);
+select is((select count(*) from public.favorites),0::bigint,'other account cannot read favorites');
+select is((select count(*) from public.watched),0::bigint,'other account cannot read watched');
+select is((select count(*) from public.title_likes),0::bigint,'other account cannot read individual likes');
+select is(public.title_like_count('movie',1),1::bigint,'aggregate likes are public');
+select is((select like_count from public.most_liked_titles(12) where media_type='movie' and tmdb_id=1),1::bigint,'popular titles expose aggregate counts');
+select is((select like_count from public.profile_stats('00000000-0000-0000-0000-000000000001')),1::bigint,'profile likes aggregate works');
+select is((select movie_count from public.profile_stats('00000000-0000-0000-0000-000000000001')),0::bigint,'public watched movie count');
+select is((select series_count from public.profile_stats('00000000-0000-0000-0000-000000000001')),1::bigint,'public watched series count');
+select is((select genre_counts from public.profile_stats('00000000-0000-0000-0000-000000000001')),'{"18":1}'::jsonb,'public aggregate genres');
+select is((select count(*) from public.reviews where user_id='00000000-0000-0000-0000-000000000001'),1::bigint,'reviews are public');
+select is((select count(*) from public.playlists where user_id='00000000-0000-0000-0000-000000000001'),1::bigint,'only public playlist visible');
+select is((select count(*) from public.playlist_items where playlist_id in ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002')),1::bigint,'only public playlist items visible');
+select throws_ok($$select public.reorder_playlist_items('10000000-0000-0000-0000-000000000001',array[]::uuid[])$$,'42501',null,'other account cannot reorder private playlist');
+select throws_ok($$select public.reorder_playlist_items('10000000-0000-0000-0000-000000000002',array['20000000-0000-0000-0000-000000000003']::uuid[])$$,'42501',null,'other account cannot reorder public playlist');
+select throws_ok($$insert into public.favorites(user_id,media_type,tmdb_id,media_title) values ('00000000-0000-0000-0000-000000000001','movie',9,'forged')$$,'42501',null,'cannot forge another owner');
+update public.reviews set rating=1 where user_id='00000000-0000-0000-0000-000000000001';
+select is((select rating from public.reviews where user_id='00000000-0000-0000-0000-000000000001' and media_type='movie' and tmdb_id=1),5,'cannot update another review');
+delete from public.playlist_items where id='20000000-0000-0000-0000-000000000003';
+select is((select count(*) from public.playlist_items where id='20000000-0000-0000-0000-000000000003'),1::bigint,'cannot delete another playlist item');
+set local role anon;
+select set_config('request.jwt.claim.sub','',true);
+select is((select count(*) from public.watched),0::bigint,'anonymous cannot read watched rows');
+select is((select series_count from public.profile_stats('00000000-0000-0000-0000-000000000001')),1::bigint,'anonymous can read profile aggregate');
+select is((select like_count from public.most_liked_titles() where media_type='movie' and tmdb_id=1),1::bigint,'anonymous can read popular titles');
+select * from finish();
+rollback;

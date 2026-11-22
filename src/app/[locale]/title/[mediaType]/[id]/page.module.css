@@ -1,0 +1,140 @@
+.backdrop {
+  background-size: cover;
+  background-position: center;
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+}
+.detail {
+  display: flex;
+  align-items: end;
+  gap: 36px;
+  padding: 55px 0;
+  width: min(1400px, 90%);
+}
+.poster {
+  width: 220px;
+  flex: none;
+  aspect-ratio: 2/3;
+  background: #2b231f;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  overflow: hidden;
+  color: #baa99a;
+}
+.poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.info {
+  max-width: 700px;
+}
+.info h1 {
+  font: 700 clamp(48px, 6vw, 84px)/1 var(--display);
+  letter-spacing: -2px;
+  margin: 15px 0;
+}
+.meta {
+  color: #dbc9b8;
+}
+.score {
+  font-size: 20px;
+  font-weight: 700;
+}
+.score span,
+.stars {
+  color: var(--coral);
+}
+.score small {
+  font-size: 12px;
+  color: #d8c8ba;
+  font-weight: 500;
+}
+.synopsis {
+  max-width: 550px;
+  line-height: 1.6;
+  color: #d4c5b7;
+}
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  padding-top: 35px;
+  padding-bottom: 80px;
+}
+.content h2 {
+  font: 600 26px var(--display);
+  margin: 0 0 20px;
+}
+.content h2:not(:first-child) {
+  margin-top: 40px;
+}
+.cast {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.cast div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cast span {
+  color: #9f8e80;
+  font-size: 12px;
+}
+.reviewForm,
+.reviewForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.reviewForm {
+  gap: 16px;
+}
+.reviewForm label {
+  font-weight: 700;
+}
+.reviewForm button {
+  align-self: flex-start;
+}
+.review {
+  padding: 0 0 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #493a31;
+}
+.review p {
+  line-height: 1.5;
+}
+.stars {
+  font-size: 22px;
+  margin-top: 6px;
+}
+@media (max-width: 700px) {
+  .backdrop {
+    min-height: 480px;
+    align-items: end;
+    background-position: 60% center;
+  }
+  .detail {
+    margin: 0 20px;
+    width: auto;
+    padding: 110px 0 25px;
+  }
+  .poster {
+    display: none;
+  }
+  .info h1 {
+    font-size: 51px;
+  }
+  .content {
+    grid-template-columns: 1fr;
+    gap: 35px;
+    padding-top: 30px;
+  }
+  .synopsis {
+    font-size: 14px;
+  }
+}
