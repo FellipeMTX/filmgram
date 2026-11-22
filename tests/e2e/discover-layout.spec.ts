@@ -175,3 +175,25 @@ test("public title shows the cast without a Google sign-in button", async ({
   expect(frame.width).toBeCloseTo(frame.height, 0);
   expect(frame.radius).toBe("50%");
 });
+
+test("the title poster fills the banner column on desktop", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "Mobile uses the title backdrop");
+  await page.goto("/en/title/movie/1368337");
+  const poster = page.getByAltText(/The Odyssey poster/);
+  await expect(poster).toBeVisible();
+  const edges = await poster.evaluate((image) => {
+    const frame = image.parentElement?.getBoundingClientRect();
+    const info =
+      image.parentElement?.nextElementSibling?.getBoundingClientRect();
+    if (!frame || !info)
+      throw new Error("Expected poster and title information columns");
+    return {
+      top: Math.abs(frame.top - info.top),
+      bottom: Math.abs(frame.bottom - info.bottom),
+    };
+  });
+  expect(edges.top).toBeLessThan(2);
+  expect(edges.bottom).toBeLessThan(2);
+});
