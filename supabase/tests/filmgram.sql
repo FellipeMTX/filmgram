@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(26);
 insert into auth.users (id, email, raw_user_meta_data) values
  ('00000000-0000-0000-0000-000000000001','one@example.test','{"handle":"same"}'),
  ('00000000-0000-0000-0000-000000000002','two@example.test','{"handle":"same"}');
@@ -46,5 +46,6 @@ select set_config('request.jwt.claim.sub','',true);
 select is((select count(*) from public.watched),0::bigint,'anonymous cannot read watched rows');
 select is((select series_count from public.profile_stats('00000000-0000-0000-0000-000000000001')),1::bigint,'anonymous can read profile aggregate');
 select is((select like_count from public.most_liked_titles() where media_type='movie' and tmdb_id=1),1::bigint,'anonymous can read popular titles');
+select is((select media_type from public.most_liked_titles(1, 'movie')), 'movie', 'anonymous popularity respects the media type before applying the limit');
 select * from finish();
 rollback;

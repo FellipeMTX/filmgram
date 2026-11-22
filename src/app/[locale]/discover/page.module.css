@@ -24,9 +24,6 @@
   display: flex;
   align-items: center;
 }
-.heroInner {
-  width: 100%;
-}
 .hero h1 {
   font-family: var(--display);
   font-size: clamp(52px, 6vw, 92px);
@@ -100,5 +97,71 @@
   }
   .hero .button {
     margin-top: 15px;
+  }
+}
+.hero {
+  position: relative;
+  display: block;
+}
+.heroLink {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  background-size: cover;
+  background-position: center 40%;
+}
+.heroInner {
+  min-width: 0;
+}
+.hero h1 {
+  overflow-wrap: anywhere;
+}
+.heroControls {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.heroControls button {
+  cursor: pointer;
+  border: 0;
+  color: white;
+  background: #241b17b8;
+}
+.heroControls button:first-child,
+.heroControls button:last-child {
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 21px;
+}
+.heroControls .dot,
+.heroControls .activeDot {
+  height: 8px;
+  width: 8px;
+  border-radius: 8px;
+  padding: 0;
+  background: #b8a89b;
+}
+.heroControls .activeDot {
+  width: 25px;
+  background: var(--coral);
+}
+@media (max-width: 700px) {
+  .heroLink {
+    align-items: end;
+    background-position: 60% center;
+  }
+  .heroInner {
+    padding: 25px 18px 55px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 10vw, 52px);
+  }
+  .heroControls {
+    width: calc(100% - 36px);
   }
 }

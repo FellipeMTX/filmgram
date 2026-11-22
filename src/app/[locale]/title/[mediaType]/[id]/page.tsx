@@ -10,6 +10,8 @@ import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
 import { submitReview } from "@/features/auth/actions";
 import { TitleActions } from "@/features/catalog/TitleActions";
+import { Rail } from "@/features/catalog/Rail";
+import { MediaImage } from "@/features/catalog/MediaImage";
 import styles from "./page.module.css";
 export default async function Detail({
   params,
@@ -94,11 +96,11 @@ export default async function Detail({
       >
         <div className={`${styles.detail} container`}>
           <div className={styles.poster}>
-            {poster ? (
-              <img src={poster} alt={`${titleName(item)} poster`} />
-            ) : (
-              <span>{t.noPoster}</span>
-            )}
+            <MediaImage
+              src={poster}
+              alt={`${titleName(item)} poster`}
+              fallback={t.noPoster}
+            />
           </div>
           <div className={styles.info}>
             <p className="eyebrow">
@@ -135,14 +137,21 @@ export default async function Detail({
         <section>
           <h2>{t.cast}</h2>
           {item.credits?.cast?.length ? (
-            <div className={styles.cast}>
+            <Rail label={t.cast} previous={t.previous} next={t.next}>
               {item.credits.cast.slice(0, 6).map((c) => (
-                <div key={c.id}>
+                <div className={styles.castMember} key={c.id}>
+                  <div className={styles.castPhoto}>
+                    <MediaImage
+                      src={imageUrl(c.profile_path, "w185")}
+                      alt=""
+                      fallback={c.name.slice(0, 1)}
+                    />
+                  </div>
                   <strong>{c.name}</strong>
                   <span>{c.character}</span>
                 </div>
               ))}
-            </div>
+            </Rail>
           ) : (
             <p className="muted">{t.noCast}</p>
           )}

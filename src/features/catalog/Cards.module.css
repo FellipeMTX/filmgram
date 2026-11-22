@@ -17,11 +17,6 @@
   color: var(--coral);
   font-size: 13px;
 }
-.row {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 18px;
-}
 .card {
   min-width: 0;
   display: block;
@@ -92,18 +87,56 @@
   .sectionHeading h2 {
     font-size: 22px;
   }
-  .row {
-    display: flex;
-    overflow-x: auto;
-    gap: 12px;
-    margin-right: -20px;
-    padding-right: 20px;
-    scrollbar-width: none;
-  }
-  .card {
-    flex: 0 0 145px;
-  }
   .cardTitle {
     font-size: 13px;
+  }
+}
+.rail {
+  position: relative;
+  min-width: 0;
+}
+.row {
+  display: flex;
+  overflow-x: auto;
+  gap: 18px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.row::-webkit-scrollbar {
+  display: none;
+}
+.row > * {
+  flex: 0 0 calc((100% - 90px) / 6);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.arrow {
+  position: absolute;
+  z-index: 2;
+  top: 35%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #b9a99c;
+  background: #1b1512e8;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+.left {
+  left: 4px;
+}
+.right {
+  right: 4px;
+}
+@media (max-width: 700px) {
+  .row {
+    margin: 0;
+    padding: 0;
+    gap: 12px;
+  }
+  .row > * {
+    flex-basis: 145px;
   }
 }

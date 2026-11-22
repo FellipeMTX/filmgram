@@ -1,0 +1,1461 @@
+[
+  {
+    "id": 1726,
+    "media_type": "movie",
+    "title": "Iron Man",
+    "overview": "After being held captive in an Afghan cave, billionaire engineer Tony Stark creates a unique weaponized suit of armor to fight evil.",
+    "poster_path": null,
+    "backdrop_path": "/cKvDv2LpwVEqbdXWoQl4XgGN6le.jpg",
+    "release_date": "2008-04-30",
+    "vote_average": 7.668,
+    "genres": [
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 12,
+        "name": "Adventure"
+      }
+    ],
+    "runtime": 126,
+    "genre_ids": [28, 878, 12],
+    "credits": {
+      "cast": [
+        {
+          "id": 3223,
+          "name": "Robert Downey Jr.",
+          "character": "Tony Stark",
+          "profile_path": "/5qHNjhtjMD4YWH3UP0rm4tKwxCL.jpg"
+        },
+        {
+          "id": 18288,
+          "name": "Terrence Howard",
+          "character": "Rhodey",
+          "profile_path": "/eZ6uRZOYWZAyjNmWpDKGdLL6WUC.jpg"
+        },
+        {
+          "id": 1229,
+          "name": "Jeff Bridges",
+          "character": "Obadiah Stane",
+          "profile_path": "/xms1RAY6q7Lzp7wNeRCB0kzhucn.jpg"
+        },
+        {
+          "id": 12052,
+          "name": "Gwyneth Paltrow",
+          "character": "Pepper Potts",
+          "profile_path": "/ylN4A7fnnNXvHURENl5sQI8Jbib.jpg"
+        },
+        {
+          "id": 57451,
+          "name": "Leslie Bibb",
+          "character": "Christine Everhart",
+          "profile_path": "/g3a1O9lOTZvrwQupUtg4Fc3CdTd.jpg"
+        },
+        {
+          "id": 17857,
+          "name": "Shaun Toub",
+          "character": "Yinsen",
+          "profile_path": "/6fuJ9D50bYuMAhrlEgVqzgqF0LU.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1368337,
+    "media_type": "movie",
+    "title": "The Odyssey",
+    "overview": "Odysseus, the legendary King of Ithaca, embarks on a long and perilous journey home following the Trojan War. Throughout his voyage, he is forced to confront the whims of gods, mythological monsters, and trials that stretch both his cunning and his humanity to the breaking point.",
+    "poster_path": "/5rhTDKUhPYvpdQIijFIs5VoWsON.jpg",
+    "backdrop_path": "/dZI4Ek4qc2Fib2G1zFkGhKKuc6j.jpg",
+    "release_date": "2026-07-15",
+    "vote_average": 8.021,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Adventure"
+      },
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 14,
+        "name": "Fantasy"
+      }
+    ],
+    "runtime": 173,
+    "genre_ids": [12, 28, 14],
+    "credits": {
+      "cast": [
+        {
+          "id": 1892,
+          "name": "Matt Damon",
+          "character": "Odysseus",
+          "profile_path": "/aCvBXTAR9B1qRjIRzMBYhhbm1fR.jpg"
+        },
+        {
+          "id": 1136406,
+          "name": "Tom Holland",
+          "character": "Telemachus",
+          "profile_path": "/xKBAaPIa1c7tzZD3Y0MhBLv4hPE.jpg"
+        },
+        {
+          "id": 1813,
+          "name": "Anne Hathaway",
+          "character": "Penelope",
+          "profile_path": "/s6tflSD20MGz04ZR2R1lZvhmC4Y.jpg"
+        },
+        {
+          "id": 11288,
+          "name": "Robert Pattinson",
+          "character": "Antinous",
+          "profile_path": "/3qZ09UE7lN6AtorfXFRYpEtSY93.jpg"
+        },
+        {
+          "id": 1227717,
+          "name": "Himesh Patel",
+          "character": "Eurylochus",
+          "profile_path": "/icqsXLmU0FxBGTv63kkA0GcrecO.jpg"
+        },
+        {
+          "id": 6885,
+          "name": "Charlize Theron",
+          "character": "Calypso",
+          "profile_path": "/gd7ShD0yt4bsR2STeQ19KQ6hvXL.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1263337,
+    "media_type": "movie",
+    "title": "Heart of the Beast",
+    "overview": "After a harrowing plane crash, Special Forces officer James Belmont and his combat dog, Odin, find themselves stranded deep in the Alaskan wilderness. Together, they are forced into a brutal fight for survival against the elements.",
+    "poster_path": "/6sYemVUn79UPKz1ZsSG6kPU4RVy.jpg",
+    "backdrop_path": "/yE766yhgg98tKwTKd8CyNvAtmn6.jpg",
+    "release_date": "2026-09-19",
+    "vote_average": 7.83,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Adventure"
+      },
+      {
+        "id": 53,
+        "name": "Thriller"
+      }
+    ],
+    "runtime": 102,
+    "genre_ids": [12, 53],
+    "credits": {
+      "cast": [
+        {
+          "id": 287,
+          "name": "Brad Pitt",
+          "character": "James Belmont",
+          "profile_path": "/ajNaPmXVVMJFg9GWmu6MJzTaXdV.jpg"
+        },
+        {
+          "id": 18999,
+          "name": "J.K. Simmons",
+          "character": "Watkins",
+          "profile_path": "/ScmKoJ9eiSUOthAt1PDNLi8Fkw.jpg"
+        },
+        {
+          "id": 2307481,
+          "name": "Anna Lambe",
+          "character": "Amber",
+          "profile_path": "/cKm5ZnAOVc6nD8KAgSDMJdZclYH.jpg"
+        },
+        {
+          "id": 2846013,
+          "name": "Justin Melnick",
+          "character": "Military Soldier",
+          "profile_path": "/sE5W8tononGWHKH2Z6GLeUHXeyP.jpg"
+        },
+        {
+          "id": 6504999,
+          "name": "Shaun DeZern",
+          "character": "Military Soldier",
+          "profile_path": "/iORM61n9AM6ldFm7C4t8dm9pRLq.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1300968,
+    "media_type": "movie",
+    "title": "The Hunger Games: Sunrise on the Reaping",
+    "overview": "Return to the world of Panem 24 years before Katniss Everdeen volunteers in her sister's place, commencing on the morning of the reaping of the 50th Hunger Games, also known as the Second Quarter Quell.",
+    "poster_path": "/jNcZH8yplxttRlf0wwqfGGMKHxX.jpg",
+    "backdrop_path": "/aqFZcr2dxSZ2UwWSo1WC6C0rwDf.jpg",
+    "release_date": "2026-11-18",
+    "vote_average": 7.709,
+    "genres": [
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 12,
+        "name": "Adventure"
+      }
+    ],
+    "runtime": 158,
+    "genre_ids": [878, 28, 12],
+    "credits": {
+      "cast": [
+        {
+          "id": 4744857,
+          "name": "Joseph Zada",
+          "character": "Haymitch Abernathy",
+          "profile_path": "/7CUBF2zZpk9iFetHPfGFj9kOIx2.jpg"
+        },
+        {
+          "id": 88124,
+          "name": "Jesse Plemons",
+          "character": "Plutarch Heavensbee",
+          "profile_path": "/v6WBJbm02mfzLhs8zeUzFRDtoly.jpg"
+        },
+        {
+          "id": 5469,
+          "name": "Ralph Fiennes",
+          "character": "President Snow",
+          "profile_path": "/tJr9GcmGNHhLVVEH3i7QYbj6hBi.jpg"
+        },
+        {
+          "id": 515,
+          "name": "Glenn Close",
+          "character": "Drusilla Sickle",
+          "profile_path": "/4VHZ1GfLwN7MUgApy0LCBzdDF9L.jpg"
+        },
+        {
+          "id": 1172108,
+          "name": "Mckenna Grace",
+          "character": "Maysilee / Merrilee Donner",
+          "profile_path": "/sK0CVa56IIpFhCDrcXSTqPWxNbx.jpg"
+        },
+        {
+          "id": 1842860,
+          "name": "Whitney Peak",
+          "character": "Lenore Dove",
+          "profile_path": "/2TuyybZPFBJzIV4ctUzxo4w3O0X.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1400837,
+    "media_type": "movie",
+    "title": "Other Mommy",
+    "overview": "Young Bela forms a relationship with a sinister entity in her home that looks uncannily like her own mother, drawing her into a terrifying and increasingly dark world.",
+    "poster_path": "/fGRNCssTRrhYZxNzykGGCoMsAVq.jpg",
+    "backdrop_path": "/smZ8BT4Vzw4iCEppTLCnN8jNYtn.jpg",
+    "release_date": "2026-10-07",
+    "vote_average": 6.483,
+    "genres": [
+      {
+        "id": 27,
+        "name": "Horror"
+      }
+    ],
+    "runtime": 93,
+    "genre_ids": [27],
+    "credits": {
+      "cast": [
+        {
+          "id": 83002,
+          "name": "Jessica Chastain",
+          "character": "Ursula Martin",
+          "profile_path": "/lodMzLKSdrPcBry6TdoDsMN3Vge.jpg"
+        },
+        {
+          "id": 45405,
+          "name": "Jay Duplass",
+          "character": "Russell Martin",
+          "profile_path": "/eUY0JDlqzf5pE9pmdvv4IPU3NYn.jpg"
+        },
+        {
+          "id": 3484286,
+          "name": "Arabella Olivia Clark",
+          "character": "Isabela Martin",
+          "profile_path": "/bwTovaznMIXo9Je01soHBCzmFxn.jpg"
+        },
+        {
+          "id": 650,
+          "name": "Karen Allen",
+          "character": "Ruth Martin",
+          "profile_path": "/eJszpndpRzrXbSlz7RUlApoTykn.jpg"
+        },
+        {
+          "id": 457386,
+          "name": "Arian Moayed",
+          "character": "Frank",
+          "profile_path": "/hYBqwt0HelUqgKSd1VDUAyvfDME.jpg"
+        },
+        {
+          "id": 94797,
+          "name": "Dichen Lachman",
+          "character": "Lois Anthony",
+          "profile_path": "/yLrpMHBNtuUAu3M9EjaYHnn5EEY.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 969681,
+    "media_type": "movie",
+    "title": "Spider-Man: Brand New Day",
+    "overview": "Fighting crime full-time as Spider-Man in a world that doesn't remember him—and the pressure of seeing his old friends move on without him—sparks a change in Peter Parker he may not have the power to control. But that transformation might also be the only thing that can stop a shocking new threat to the city and those he loves - a powerful villain no one can even see.",
+    "poster_path": "/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg",
+    "backdrop_path": "/subj7knTn4DeS6KS7qI66EQKe9i.jpg",
+    "release_date": "2026-07-29",
+    "vote_average": 8.458,
+    "genres": [
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 12,
+        "name": "Adventure"
+      }
+    ],
+    "runtime": 145,
+    "genre_ids": [878, 28, 12],
+    "credits": {
+      "cast": [
+        {
+          "id": 1136406,
+          "name": "Tom Holland",
+          "character": "Peter Parker / Spider-Man",
+          "profile_path": "/xKBAaPIa1c7tzZD3Y0MhBLv4hPE.jpg"
+        },
+        {
+          "id": 1590797,
+          "name": "Sadie Sink",
+          "character": "Jean Grey",
+          "profile_path": "/m9OyHAyOx56Pm3JruEBqh4p9XeX.jpg"
+        },
+        {
+          "id": 2028037,
+          "name": "Tramell Tillman",
+          "character": "William 'Bill' Metzger",
+          "profile_path": "/bEA15zMnkcXlRroYjKrFUWiiK7y.jpg"
+        },
+        {
+          "id": 505710,
+          "name": "Zendaya",
+          "character": "MJ",
+          "profile_path": "/1qup8tSt95HLbcy2c2xrx4iJNxv.jpg"
+        },
+        {
+          "id": 1649152,
+          "name": "Jacob Batalon",
+          "character": "Ned Leeds",
+          "profile_path": "/53YhaL4xw4Sb1ssoHkeSSBaO29c.jpg"
+        },
+        {
+          "id": 19498,
+          "name": "Jon Bernthal",
+          "character": "Frank Castle / Punisher",
+          "profile_path": "/bjcglF1IpDcZNs1HwFxakGpzBo6.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1423191,
+    "media_type": "movie",
+    "title": "Resident Evil",
+    "overview": "Medical courier Bryan unwittingly finds himself fighting for survival as one fateful, horrifying night collapses around him in chaos.",
+    "poster_path": "/gAgWJhUSQWCgtKR8170nMkYlBda.jpg",
+    "backdrop_path": "/3icyRAqgakNcQn6aDVz9libFmBA.jpg",
+    "release_date": "2026-09-16",
+    "vote_average": 7.524,
+    "genres": [
+      {
+        "id": 27,
+        "name": "Horror"
+      },
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 12,
+        "name": "Adventure"
+      }
+    ],
+    "runtime": 94,
+    "genre_ids": [27, 878, 12],
+    "credits": {
+      "cast": [
+        {
+          "id": 148992,
+          "name": "Austin Abrams",
+          "character": "Bryan",
+          "profile_path": "/nvbJNwyhIICUFcS4lhxj9mGvL5z.jpg"
+        },
+        {
+          "id": 1294982,
+          "name": "Paul Walter Hauser",
+          "character": "Paul",
+          "profile_path": "/hXjjbYg1Ah8mFf5ZcaakyXzDKMx.jpg"
+        },
+        {
+          "id": 3119545,
+          "name": "Kali Reis",
+          "character": "Maxine",
+          "profile_path": "/ruLDXHnKA4aHEQCcFGDAJ7bLTdt.jpg"
+        },
+        {
+          "id": 1838225,
+          "name": "Zach Cherry",
+          "character": "Carl",
+          "profile_path": "/fT3Wv8ef0Vn0daHWAObCp2Bd4Y.jpg"
+        },
+        {
+          "id": 1169291,
+          "name": "Johnno Wilson",
+          "character": "Officer Wilson",
+          "profile_path": "/eZtBoBE0F7Qb9ZyNpacMOQtmWnM.jpg"
+        },
+        {
+          "id": 2445714,
+          "name": "Shaun W. Loeser",
+          "character": "Puker",
+          "profile_path": "/pMV7kzy7OHk4X93uRGbrdvuFgQB.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1058424,
+    "media_type": "movie",
+    "title": "Hope",
+    "overview": "In the remote South Korean village of Hope Harbor, police chief Bum-seok and officer Sung-ae are called to investigate a mysterious creature wreaking havoc on the community. But all is not as it seems, and perceptions can be misleading. What begins as ignorance plants the seed of disaster, escalating through human conflict into a tragedy of cosmic proportions.",
+    "poster_path": "/6VY1ZKgpsc8CfGsQcCGiYEgHdH0.jpg",
+    "backdrop_path": "/qqHFLg90IUSoTmSMpKOOW5RyqN3.jpg",
+    "release_date": "2026-07-15",
+    "vote_average": 6.858,
+    "genres": [
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      },
+      {
+        "id": 28,
+        "name": "Action"
+      }
+    ],
+    "runtime": 157,
+    "genre_ids": [878, 9648, 28],
+    "credits": {
+      "cast": [
+        {
+          "id": 68903,
+          "name": "Hwang Jung-min",
+          "character": "Go Bum-seok",
+          "profile_path": "/hKF1uh0iEfuZlBE79CXPw415qyn.jpg"
+        },
+        {
+          "id": 127564,
+          "name": "Zo In-sung",
+          "character": "Go Sung-ki",
+          "profile_path": "/69gbyFI0ET0l0dyjKChlx1Zx269.jpg"
+        },
+        {
+          "id": 3194501,
+          "name": "Hoyeon",
+          "character": "Lim Sung-ae",
+          "profile_path": "/AfQFFyGeG9xOQnEJb1Ash1RomkP.jpg"
+        },
+        {
+          "id": 227454,
+          "name": "Alicia Vikander",
+          "character": "J'aur",
+          "profile_path": "/9pmHTbXeRxUF51jJKthmHI49u9z.jpg"
+        },
+        {
+          "id": 17288,
+          "name": "Michael Fassbender",
+          "character": "Ma'veyyo",
+          "profile_path": "/xvbnUiB2ZBR3QIt595OzNy657Vw.jpg"
+        },
+        {
+          "id": 1353827,
+          "name": "Taylor Russell",
+          "character": "Ai'dovor",
+          "profile_path": "/3kW1SvpzyOPPZHxbz7cgR7ilmtQ.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1616687,
+    "media_type": "movie",
+    "title": "Never Surrender",
+    "overview": "When a deadly gang descends on his remote home, a guilt-ridden veteran and the estranged grandchildren he barely knows must unite to survive.",
+    "poster_path": "/hKROmLddpzpjkxKKVFYFRAOXX1b.jpg",
+    "backdrop_path": "/bjt53Hjqwl9VrtJkDv39GwmE1QN.jpg",
+    "release_date": "2026-11-11",
+    "vote_average": 6.818,
+    "genres": [
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 80,
+        "name": "Crime"
+      },
+      {
+        "id": 53,
+        "name": "Thriller"
+      }
+    ],
+    "runtime": 140,
+    "genre_ids": [28, 80, 53],
+    "credits": {
+      "cast": [
+        {
+          "id": 1206436,
+          "name": "Lukman Sardi",
+          "character": "Eyang Hari",
+          "profile_path": "/pMZiVVu8k5MzGteRgpNVzMybxLm.jpg"
+        },
+        {
+          "id": 4684137,
+          "name": "Callista Arum",
+          "character": "Putri",
+          "profile_path": "/1GaAlD5Qeg1KkBND9kCKWtMEmZu.jpg"
+        },
+        {
+          "id": 4137347,
+          "name": "Sulthan Hamonangan",
+          "character": "Dimas",
+          "profile_path": "/zY4t9gyvxGvZxvQ3IKLeIVmEUuZ.jpg"
+        },
+        {
+          "id": 1179545,
+          "name": "Derby Romero",
+          "character": "Bastian",
+          "profile_path": "/45F1pXWKSye5YzII0VqzgEGrQJG.jpg"
+        },
+        {
+          "id": 1202416,
+          "name": "Donny Alamsyah",
+          "character": "Ulo",
+          "profile_path": "/zfv0xvwhealzqRwI0BUQpbzrUuD.jpg"
+        },
+        {
+          "id": 121970,
+          "name": "Dennis Adishwara",
+          "character": "Agus",
+          "profile_path": "/tfpxGYEcLZdiHleucYzQsiyllzr.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1507696,
+    "media_type": "movie",
+    "title": "Apocalypse Z: New World",
+    "overview": "The Canary Islands have become Europe’s last refuge following the outbreak of the TSJ virus. When a special mission sets out for the mainland in search of vital supplies, Roberto joins the team with questionable intentions. The dangerous operation turns into a desperate race for survival, and Roberto and his companions find themselves caught between hordes of infected and divided loyalties.",
+    "poster_path": "/wXln4DUrwcyjcFPwgQxFPYTlG1Z.jpg",
+    "backdrop_path": "/o3XwuDUj0n8qnK91p6q8LKfr6rj.jpg",
+    "release_date": "2026-10-09",
+    "vote_average": 6.211,
+    "genres": [
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 53,
+        "name": "Thriller"
+      },
+      {
+        "id": 27,
+        "name": "Horror"
+      }
+    ],
+    "runtime": 96,
+    "genre_ids": [28, 53, 27],
+    "credits": {
+      "cast": [
+        {
+          "id": 2556046,
+          "name": "Carlos Alcaide",
+          "character": "Roberto",
+          "profile_path": "/rl8fxgvKu56zxf5kIMGVTX3ju7Q.jpg"
+        },
+        {
+          "id": 4847621,
+          "name": "Julia Martínez",
+          "character": "Marina",
+          "profile_path": "/kkw8za1vSW4uLXBdakwbFLO7TCU.jpg"
+        },
+        {
+          "id": 72128,
+          "name": "José María Yázpik",
+          "character": "Pritchenko",
+          "profile_path": "/GEV4PnIhxAAPxIHvsyhdLUjnSv.jpg"
+        },
+        {
+          "id": 67262,
+          "name": "Mónica López",
+          "character": "Castro",
+          "profile_path": "/7Gm2h0ApsorCUJhUA8gUtxrWzMd.jpg"
+        },
+        {
+          "id": 2072194,
+          "name": "Tamara Casellas",
+          "character": "Comillas",
+          "profile_path": "/nCXGGmFP7pyNrdUtrsDUIOVjyc.jpg"
+        },
+        {
+          "id": 1457340,
+          "name": "Berta Vázquez",
+          "character": "Lucía",
+          "profile_path": "/2QNOI5L03XomONmCR42GPyVYryy.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1813355,
+    "media_type": "movie",
+    "title": "A Story of Derry",
+    "overview": "Hundreds of years before Pennywise, three youngsters venture into the Western Wood...where they encounter a terrifying ancient spirit.",
+    "poster_path": "/4PtzGcegF5Po1NmDAW9IklyvAUh.jpg",
+    "backdrop_path": "/z26LxXDMmAIzKr06FPDudCJyvsM.jpg",
+    "release_date": "2026-10-31",
+    "vote_average": 6.548,
+    "genres": [
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 27,
+        "name": "Horror"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      }
+    ],
+    "runtime": 30,
+    "genre_ids": [18, 27, 9648],
+    "credits": {
+      "cast": [
+        {
+          "id": 2718335,
+          "name": "Kiawentiio",
+          "character": "Neekani",
+          "profile_path": "/wc2giacMf80eXDjZn9JpzhOfOKG.jpg"
+        },
+        {
+          "id": 3820201,
+          "name": "Isabel DeRoy-Olson",
+          "character": "Kino",
+          "profile_path": "/5Q00DYyruBqaJQuHqnu6qxVnpXT.jpg"
+        },
+        {
+          "id": 2530541,
+          "name": "Michael Podemski",
+          "character": "Maneese",
+          "profile_path": "/rKhfWIIQhiGKLyhB238wFCDv1nE.jpg"
+        },
+        {
+          "id": 42376,
+          "name": "Zahn McClarnon",
+          "character": "Mitig",
+          "profile_path": "/54M2t1gziirkDdvj4SxAl6dXaVO.jpg"
+        },
+        {
+          "id": 1591305,
+          "name": "MorningStar Angeline",
+          "character": "Sesqui",
+          "profile_path": "/nB1PCopniuETacJofZ254Cr4CFo.jpg"
+        },
+        {
+          "id": 1529984,
+          "name": "Brandon Oakes",
+          "character": "Apto",
+          "profile_path": "/iiEiwcEaOObQXHoOitU1wstZmMF.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1003596,
+    "media_type": "movie",
+    "title": "Avengers: Doomsday",
+    "overview": "Beloved heroes from three distinct universes are set on a deadly collision course and face an existential threat unlike anything they've ever encountered.",
+    "poster_path": "/cWXtJhrlruF8CeYuaBGE8vdj3Q9.jpg",
+    "backdrop_path": "/rObL4of4eFA8yWaN9pRFo9aOVNi.jpg",
+    "release_date": "2026-12-16",
+    "vote_average": 0.0,
+    "genres": [
+      {
+        "id": 878,
+        "name": "Science Fiction"
+      },
+      {
+        "id": 28,
+        "name": "Action"
+      },
+      {
+        "id": 12,
+        "name": "Adventure"
+      }
+    ],
+    "runtime": 165,
+    "genre_ids": [878, 28, 12],
+    "credits": {
+      "cast": [
+        {
+          "id": 3223,
+          "name": "Robert Downey Jr.",
+          "character": "Victor von Doom  / Doctor Doom",
+          "profile_path": "/5qHNjhtjMD4YWH3UP0rm4tKwxCL.jpg"
+        },
+        {
+          "id": 16828,
+          "name": "Chris Evans",
+          "character": "Steve Rogers",
+          "profile_path": "/3bOGNsHlrswhyW79uvIHH1V43JI.jpg"
+        },
+        {
+          "id": 74568,
+          "name": "Chris Hemsworth",
+          "character": "Thor",
+          "profile_path": "/piQGdoIQOF3C1EI5cbYZLAW1gfj.jpg"
+        },
+        {
+          "id": 1253360,
+          "name": "Pedro Pascal",
+          "character": "Reed Richards / Mister Fantastic",
+          "profile_path": "/oKcMbVn0NJTNzQt0ClKKvVXkm60.jpg"
+        },
+        {
+          "id": 22226,
+          "name": "Paul Rudd",
+          "character": "Scott Lang / Ant-Man",
+          "profile_path": "/6jtwNOLKy0LdsRAKwZqgYMAfd5n.jpg"
+        },
+        {
+          "id": 53650,
+          "name": "Anthony Mackie",
+          "character": "Sam Wilson / Captain America",
+          "profile_path": "/vecvTm7SimizluJkyIwBxeLbvRm.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1434,
+    "media_type": "tv",
+    "name": "Family Guy",
+    "overview": "Sick, twisted, politically incorrect and Freakin' Sweet animated series featuring the adventures of the dysfunctional Griffin family. Bumbling Peter and long-suffering Lois have three kids. Stewie (a brilliant but sadistic baby bent on killing his mother and taking over the world), Meg (the oldest, and is the most unpopular girl in town) and Chris (the middle kid, he's not very bright but has a passion for movies). The final member of the family is Brian - a talking dog and much more than a pet, he keeps Stewie in check whilst sipping Martinis and sorting through his own life issues.",
+    "poster_path": "/3PFsEuAiyLkWsP4GG6dIV37Q6gu.jpg",
+    "backdrop_path": "/jbTqU6BJMufoMnPSlO4ThrcXs3Y.jpg",
+    "first_air_date": "1999-01-31",
+    "vote_average": 7.419,
+    "genres": [
+      {
+        "id": 16,
+        "name": "Animation"
+      },
+      {
+        "id": 35,
+        "name": "Comedy"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [16, 35],
+    "credits": {
+      "cast": [
+        {
+          "id": 52139,
+          "name": "Seth MacFarlane",
+          "character": "Peter Griffin / Brian Griffin / Stewie Griffin / Glenn Quagmire (voice)",
+          "profile_path": "/8oQJqM51Z0Qtdb7sE6ZfX1peNCB.jpg"
+        },
+        {
+          "id": 24357,
+          "name": "Alex Borstein",
+          "character": "Lois Griffin / Tricia Takanawa / Loretta Brown / Barbara Pewterschmidt (voice)",
+          "profile_path": "/evbCnRe5Yfuy0B41PONLTIcvbem.jpg"
+        },
+        {
+          "id": 18973,
+          "name": "Mila Kunis",
+          "character": "Meg Griffin (voice)",
+          "profile_path": "/cJAHQWX9hVadDFx5WTSBIW0VjvP.jpg"
+        },
+        {
+          "id": 13922,
+          "name": "Seth Green",
+          "character": "Chris Griffin (voice)",
+          "profile_path": "/l4No5Eu6j0U80hCIkaSn17AOWrj.jpg"
+        },
+        {
+          "id": 9657,
+          "name": "Patrick Warburton",
+          "character": "Joe Swanson (voice)",
+          "profile_path": "/nDoOii5HaGwPxYa28xFC2sDkF8y.jpg"
+        },
+        {
+          "id": 3249539,
+          "name": "Arif Zahir",
+          "character": "Cleveland Brown (voice)",
+          "profile_path": "/b8tKuHh132LcOFKC4Nd2fCJDGMt.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1622,
+    "media_type": "tv",
+    "name": "Supernatural",
+    "overview": "When they were boys, Sam and Dean Winchester lost their mother to a mysterious and demonic supernatural force. Subsequently, their father raised them to be soldiers. He taught them about the paranormal evil that lives in the dark corners and on the back roads of America ... and he taught them how to kill it. Now, the Winchester brothers crisscross the country in their '67 Chevy Impala, battling every kind of supernatural threat they encounter along the way. ",
+    "poster_path": "/8iixmfGx5EIFPdpNvB2JvI3VIqX.jpg",
+    "backdrop_path": "/lirPqYLTtd6XZqGn4cS1wiesTq0.jpg",
+    "first_air_date": "2005-09-13",
+    "vote_average": 8.315,
+    "genres": [
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      },
+      {
+        "id": 10765,
+        "name": "Sci-Fi & Fantasy"
+      }
+    ],
+    "episode_run_time": [45],
+    "genre_ids": [18, 9648, 10765],
+    "credits": {
+      "cast": [
+        {
+          "id": 49623,
+          "name": "Jared Padalecki",
+          "character": "Sam Winchester",
+          "profile_path": "/dTV5ImKP5uIdFShiG3VFbbjLFWo.jpg"
+        },
+        {
+          "id": 49624,
+          "name": "Jensen Ackles",
+          "character": "Dean Winchester",
+          "profile_path": "/xgOAHqDiqdZCF1BhfHaeLrd47ki.jpg"
+        },
+        {
+          "id": 42747,
+          "name": "Misha Collins",
+          "character": "Castiel",
+          "profile_path": "/szigprnenokR4yOpELIB2rj1Er2.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 32573,
+    "media_type": "tv",
+    "name": "Strike Back",
+    "overview": "The series follows John Porter, a former British Special Forces soldier, who is drafted back into service by Section 20, a fictional branch of the Secret Intelligence Service.",
+    "poster_path": "/c0ItaC2Grf4WVJ06G87BjNn9pRs.jpg",
+    "backdrop_path": "/2tL3pNaPQb2ioEYswMkDGVTo1pt.jpg",
+    "first_air_date": "2010-05-05",
+    "vote_average": 7.409,
+    "genres": [
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 10759,
+        "name": "Action & Adventure"
+      }
+    ],
+    "episode_run_time": [45],
+    "genre_ids": [18, 10759],
+    "credits": {
+      "cast": [
+        {
+          "id": 211521,
+          "name": "Warren Brown",
+          "character": "Sergeant Daniel “Mac” Macallister",
+          "profile_path": "/dZrT8aByjdripQ0nnaRVd32bfjQ.jpg"
+        },
+        {
+          "id": 1229432,
+          "name": "Daniel MacPherson",
+          "character": "Sergeant Samuel Wyatt",
+          "profile_path": "/aBvJnrSlzXeU8K3glUa6XQ6nbuK.jpg"
+        },
+        {
+          "id": 1538684,
+          "name": "Alin Sumarwata",
+          "character": "Lance Corporal Gracie Novin",
+          "profile_path": "/85a0Og9K5ExAsucOhEEcFnh5jRj.jpg"
+        },
+        {
+          "id": 50668,
+          "name": "Jamie Bamber",
+          "character": "Col. Alexander Coltrane",
+          "profile_path": "/qQCn0z3o0udPM6OseBhvyNpCkkK.jpg"
+        },
+        {
+          "id": 3700602,
+          "name": "Thulasizwe Kubheka",
+          "character": "Guard 1",
+          "profile_path": "/p6TjBf1SqQ7njHVy9vuM8T2KMTB.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 1413,
+    "media_type": "tv",
+    "name": "American Horror Story",
+    "overview": "An anthology horror drama series centering on different characters and locations, including a house with a murderous past, an asylum, a witch coven, a freak show, a hotel, a farmhouse in Roanoke, a cult, the apocalypse and a summer camp.",
+    "poster_path": "/yCkPLQ10qKIUgRBXmQVVMF1h96d.jpg",
+    "backdrop_path": "/5G4Bnc4Q0YUK1bwLEUYmIsmm2Ib.jpg",
+    "first_air_date": "2011-10-05",
+    "vote_average": 8.078,
+    "genres": [
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      },
+      {
+        "id": 10765,
+        "name": "Sci-Fi & Fantasy"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [18, 9648, 10765],
+    "credits": {
+      "cast": [
+        {
+          "id": 34490,
+          "name": "Sarah Paulson",
+          "character": "Cordelia Goode / Sally McKenna / Ms. Wilhemina Venable / Tuberculosis Karen / Mamie Eisenhower",
+          "profile_path": "/tJnhBV516yrekR3hTDUw15UMbxS.jpg"
+        },
+        {
+          "id": 55089,
+          "name": "Evan Peters",
+          "character": "Tate Langdon / James Patrick March / Kai Anderson",
+          "profile_path": "/m9okq20ca2Md38i2ekJeKs3vTwa.jpg"
+        },
+        {
+          "id": 9780,
+          "name": "Angela Bassett",
+          "character": "Marie Laveau",
+          "profile_path": "/tKnuviliyeKNGlo26IU5gIrJAtd.jpg"
+        },
+        {
+          "id": 8534,
+          "name": "Kathy Bates",
+          "character": "Delphine LaLaurie",
+          "profile_path": "/3MsayDvY73uXGVbCFHyy1ABTacV.jpg"
+        },
+        {
+          "id": 34847,
+          "name": "Emma Roberts",
+          "character": "Madison Montgomery",
+          "profile_path": "/utggW2yIufP3A5CGdT8H5mXyGLs.jpg"
+        },
+        {
+          "id": 1399531,
+          "name": "Billie Lourd",
+          "character": "Mallory / Winter Anderson",
+          "profile_path": "/1u8bZL6ZXu5iDbPO3Z0Spetyt34.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 42009,
+    "media_type": "tv",
+    "name": "Black Mirror",
+    "overview": "Twisted tales run wild in this mind-bending anthology series that reveals humanity's worst traits, greatest innovations and more.",
+    "poster_path": "/seN6rRfN0I6n8iDXjlSMk1QjNcq.jpg",
+    "backdrop_path": "/dg3OindVAGZBjlT3xYKqIAdukPL.jpg",
+    "first_air_date": "2011-12-04",
+    "vote_average": 8.296,
+    "genres": [
+      {
+        "id": 10765,
+        "name": "Sci-Fi & Fantasy"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [10765, 18, 9648],
+    "credits": {
+      "cast": []
+    }
+  },
+  {
+    "id": 5920,
+    "media_type": "tv",
+    "name": "The Mentalist",
+    "overview": "Patrick Jane, a former celebrity psychic medium, uses his razor sharp skills of observation and expertise at \"reading\" people to solve serious crimes with the California Bureau of Investigation.",
+    "poster_path": "/k0kMdO52LpC5JWgd0uWEH7gqcCe.jpg",
+    "backdrop_path": "/rJFqKcmMSttdNP58l0dVzY2NcTA.jpg",
+    "first_air_date": "2008-09-23",
+    "vote_average": 8.4,
+    "genres": [
+      {
+        "id": 80,
+        "name": "Crime"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [80, 18, 9648],
+    "credits": {
+      "cast": [
+        {
+          "id": 1284159,
+          "name": "Simon Baker",
+          "character": "Patrick Jane",
+          "profile_path": "/oay0Lo2zl0lJdguptxgx1BK9Xq7.jpg"
+        },
+        {
+          "id": 17346,
+          "name": "Robin Tunney",
+          "character": "Teresa Lisbon",
+          "profile_path": "/vOmWyYNoVEaPPvoto4IW8dSXn7I.jpg"
+        },
+        {
+          "id": 52947,
+          "name": "Tim Kang",
+          "character": "Kimball Cho",
+          "profile_path": "/Ae7qMN6fJTut145qpeSn1NOu8yx.jpg"
+        },
+        {
+          "id": 17345,
+          "name": "Rockmond Dunbar",
+          "character": "Dennis Abbott",
+          "profile_path": "/gim7zIrYkbKWsp2Kod7fp74fWyI.jpg"
+        },
+        {
+          "id": 970561,
+          "name": "Joe Adler",
+          "character": "Jason Wylie",
+          "profile_path": "/bsle7zqj6HBs6NYstkwDwQY7EEf.jpg"
+        },
+        {
+          "id": 146516,
+          "name": "Josie Loren",
+          "character": "Michelle Vega",
+          "profile_path": "/vZJc51rwheOC0TCdUkA4KM1UfXu.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 4620,
+    "media_type": "tv",
+    "name": "Eureka",
+    "overview": "The sleepy Pacific Northwest town of Eureka is hiding a mysterious secret. The government has been relocating the world's geniuses and their families to this rustic town for years where innovation and chaos have lived hand in hand. U.S. Marshal Jack Carter stumbles upon this odd town after wrecking his car and becoming stranded there. When the denizens of the town unleash an unknown scientific creation, Carter jumps in to try to restore order and consequently learns of one of the country's best kept secrets.",
+    "poster_path": "/f2l5hUk63hPqYTucnFy2HmElFV0.jpg",
+    "backdrop_path": "/8MQeyFsWrp2ILjbumtxrinmk7t4.jpg",
+    "first_air_date": "2006-07-18",
+    "vote_average": 7.7,
+    "genres": [
+      {
+        "id": 10765,
+        "name": "Sci-Fi & Fantasy"
+      },
+      {
+        "id": 35,
+        "name": "Comedy"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      }
+    ],
+    "episode_run_time": [44],
+    "genre_ids": [10765, 35, 18],
+    "credits": {
+      "cast": [
+        {
+          "id": 25146,
+          "name": "Colin Ferguson",
+          "character": "Jack Carter",
+          "profile_path": "/7SGIkq4AsacsqkrsRo95PJ9TiYI.jpg"
+        },
+        {
+          "id": 53918,
+          "name": "Salli Richardson-Whitfield",
+          "character": "Allison Blake",
+          "profile_path": "/wMQaIzY5kyRQd8UwF1lphKK6oQm.jpg"
+        },
+        {
+          "id": 3977,
+          "name": "Joe Morton",
+          "character": "Henry Deacon",
+          "profile_path": "/w7rGWWSGKWWukojLbZOQJ5yh9jv.jpg"
+        },
+        {
+          "id": 1218928,
+          "name": "Erica Cerra",
+          "character": "Jo Lupo",
+          "profile_path": "/crbst9frQuWVRxILtvbsLL9ZAEv.jpg"
+        },
+        {
+          "id": 168501,
+          "name": "Neil Grayston",
+          "character": "Douglas Fargo",
+          "profile_path": "/9YqhNcaU2VaijPAimGYXIkeIXDn.jpg"
+        },
+        {
+          "id": 1230713,
+          "name": "Niall Matter",
+          "character": "Zane Donovan",
+          "profile_path": "/9hlmypLILRkaEVOazFdg11nfsJm.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 76331,
+    "media_type": "tv",
+    "name": "Succession",
+    "overview": "Follow the lives of the Roy family as they contemplate their future once their aging father begins to step back from the media and entertainment conglomerate they control.",
+    "poster_path": "/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg",
+    "backdrop_path": "/d87JXX3DLkRJMfm5StCmmnmhHuX.jpg",
+    "first_air_date": "2018-06-03",
+    "vote_average": 8.308,
+    "genres": [
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 35,
+        "name": "Comedy"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [18, 35],
+    "credits": {
+      "cast": [
+        {
+          "id": 239271,
+          "name": "Jeremy Strong",
+          "character": "Kendall Roy",
+          "profile_path": "/jcMhXWICSi4QjQttJVhFSiKVvpF.jpg"
+        },
+        {
+          "id": 18793,
+          "name": "Kieran Culkin",
+          "character": "Roman Roy",
+          "profile_path": "/4TiNEWVb5R0E62H9ljkY9RU4PoK.jpg"
+        },
+        {
+          "id": 235416,
+          "name": "Sarah Snook",
+          "character": "Siobhan 'Shiv' Roy",
+          "profile_path": "/w9xv72oaTISLgeT381fU4Jor9GV.jpg"
+        },
+        {
+          "id": 1248,
+          "name": "Brian Cox",
+          "character": "Logan Roy",
+          "profile_path": "/scSjbFCTRngXlkJRoKptM5kQGw7.jpg"
+        },
+        {
+          "id": 15576,
+          "name": "Matthew Macfadyen",
+          "character": "Tom Wambsgans",
+          "profile_path": "/sFaIfkykJdftwrc3BdEfpdg2mYW.jpg"
+        },
+        {
+          "id": 2394,
+          "name": "Alan Ruck",
+          "character": "Connor Roy",
+          "profile_path": "/hj7CuWinT12hMKjRhSO4XEMVq7w.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 84773,
+    "media_type": "tv",
+    "name": "The Lord of the Rings: The Rings of Power",
+    "overview": "Beginning in a time of relative peace, we follow an ensemble cast of characters as they confront the re-emergence of evil to Middle-earth. From the darkest depths of the Misty Mountains, to the majestic forests of Lindon, to the breathtaking island kingdom of Númenor, to the furthest reaches of the map, these kingdoms and characters will carve out legacies that live on long after they are gone.",
+    "poster_path": "/bMXWXKM9ydUmMTNvDnYo9QtCBRt.jpg",
+    "backdrop_path": "/i1phX1JpaqSnHBBGta6LBFYVCZq.jpg",
+    "first_air_date": "2022-09-01",
+    "vote_average": 7.2,
+    "genres": [
+      {
+        "id": 10759,
+        "name": "Action & Adventure"
+      },
+      {
+        "id": 10765,
+        "name": "Sci-Fi & Fantasy"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [10759, 10765],
+    "credits": {
+      "cast": [
+        {
+          "id": 2309879,
+          "name": "Charlie Vickers",
+          "character": "Sauron",
+          "profile_path": "/52AAfocWk3d8J3a15iznfD3cabW.jpg"
+        },
+        {
+          "id": 1321628,
+          "name": "Morfydd Clark",
+          "character": "Galadriel",
+          "profile_path": "/kG1Xg85F9yAggCMquo4XouAOjdo.jpg"
+        },
+        {
+          "id": 1648346,
+          "name": "Robert Aramayo",
+          "character": "Elrond",
+          "profile_path": "/1wqSZVvB018H2mZbemMSn6gH4zq.jpg"
+        },
+        {
+          "id": 1274938,
+          "name": "Owain Arthur",
+          "character": "Durin IV",
+          "profile_path": "/ljqVjVzp9pgcfTTU3oJbKtnd6im.jpg"
+        },
+        {
+          "id": 2056333,
+          "name": "Sophia Nomvete",
+          "character": "Disa",
+          "profile_path": "/fRglwdtHHjLGAMIoCkqXwQ9bIfd.jpg"
+        },
+        {
+          "id": 1100144,
+          "name": "Ismael Cruz Cordova",
+          "character": "Arondir",
+          "profile_path": "/oXcrsQGndk60iFkNB8qFnMHlNzL.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 18347,
+    "media_type": "tv",
+    "name": "Community",
+    "overview": "Follow the lives of a group of students at what is possibly the world’s worst community college in the fictional locale of Greendale, Colorado.",
+    "poster_path": "/3KUjDt8XY7w2Ku70UE0SECmv1zP.jpg",
+    "backdrop_path": "/1xRfgONYmK3T6FSmbtcuo8eyxVt.jpg",
+    "first_air_date": "2009-09-17",
+    "vote_average": 7.989,
+    "genres": [
+      {
+        "id": 35,
+        "name": "Comedy"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [35],
+    "credits": {
+      "cast": [
+        {
+          "id": 74949,
+          "name": "Joel McHale",
+          "character": "Jeff Winger",
+          "profile_path": "/7iwIiaYhIPaiAyiaZOc2Gl1ZAY4.jpg"
+        },
+        {
+          "id": 94098,
+          "name": "Gillian Jacobs",
+          "character": "Britta Perry",
+          "profile_path": "/tKpXn260glPElCKlFekKAACNWYn.jpg"
+        },
+        {
+          "id": 88029,
+          "name": "Alison Brie",
+          "character": "Annie Edison",
+          "profile_path": "/uu16GiwYblS6IJV3o4qFSLWKXOC.jpg"
+        },
+        {
+          "id": 161932,
+          "name": "Jim Rash",
+          "character": "Dean Craig Pelton",
+          "profile_path": "/cXat9HZ5ajQZsrAZ8xE4zIEVEcb.jpg"
+        },
+        {
+          "id": 205179,
+          "name": "Danny Pudi",
+          "character": "Abed Nadir",
+          "profile_path": "/w0zT8Y2dQHU8FgV03NJoHJE6tmD.jpg"
+        },
+        {
+          "id": 83586,
+          "name": "Ken Jeong",
+          "character": "Ben Chang",
+          "profile_path": "/dfuDZ2m2A8nBb0TdyeqmlPOobJA.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 46923,
+    "media_type": "tv",
+    "name": "Shetland",
+    "overview": "Created from the novels by award winning crime writer Ann Cleeves, Shetland follows DI Jimmy Perez and his team as they investigate crime within the close knit island community. In this isolated and sometimes inhospitable environment, the team have to rely on a uniquely resourceful style of policing.",
+    "poster_path": "/rKnxmir8m5I3RdSTdZr3jaQaCZi.jpg",
+    "backdrop_path": "/AdlDrgoNCDu3naYjZMwmiklBHnV.jpg",
+    "first_air_date": "2013-03-10",
+    "vote_average": 7.5,
+    "genres": [
+      {
+        "id": 80,
+        "name": "Crime"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 9648,
+        "name": "Mystery"
+      }
+    ],
+    "episode_run_time": [],
+    "genre_ids": [80, 18, 9648],
+    "credits": {
+      "cast": [
+        {
+          "id": 55398,
+          "name": "Ashley Jensen",
+          "character": "DI Ruth Calder",
+          "profile_path": "/iDewhUriZzdJ2vbehTQD5cxi1yv.jpg"
+        },
+        {
+          "id": 1372316,
+          "name": "Alison O'Donnell",
+          "character": "DI Alison 'Tosh' McIntosh",
+          "profile_path": "/wnlXm7oUq2sogVUoZzbTxOGsHc4.jpg"
+        },
+        {
+          "id": 55364,
+          "name": "Steven Robertson",
+          "character": "DC Sandy Wilson",
+          "profile_path": "/aJFkWzmeJ8SgIiNCpgvgo5LDXDp.jpg"
+        }
+      ]
+    }
+  },
+  {
+    "id": 41727,
+    "media_type": "tv",
+    "name": "Banshee",
+    "overview": "Banshee is an American drama television series set in a small town in Pennsylvania Amish country and features an enigmatic ex-con posing as a murdered sheriff who imposes his own brand of justice while also cooking up plans that serve his own interests.",
+    "poster_path": "/5nXFiz8Rn8eezVjSTZBd7HmnF1G.jpg",
+    "backdrop_path": "/mo9bfYdewzmHxnaeURB2jRPvGuX.jpg",
+    "first_air_date": "2013-01-11",
+    "vote_average": 8.0,
+    "genres": [
+      {
+        "id": 80,
+        "name": "Crime"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      }
+    ],
+    "episode_run_time": [50],
+    "genre_ids": [80, 18],
+    "credits": {
+      "cast": [
+        {
+          "id": 60373,
+          "name": "Antony Starr",
+          "character": "Lucas Hood",
+          "profile_path": "/xx3As5SWcE8vYOKZgtjDjqmT3jc.jpg"
+        },
+        {
+          "id": 29930,
+          "name": "Ivana Miličević",
+          "character": "Anastasia / Carrie Hopewell",
+          "profile_path": "/3bWPeAnqRwuCAoYBDig3E3cFx5m.jpg"
+        },
+        {
+          "id": 1255311,
+          "name": "Hoon Lee",
+          "character": "Job",
+          "profile_path": "/bpeejclOnQVYzmxSmrO6rt9oJT4.jpg"
+        },
+        {
+          "id": 13936,
+          "name": "Frankie Faison",
+          "character": "Sugar Bates",
+          "profile_path": "/3717JOXK2Z8qelfyvScDGimfFBf.jpg"
+        },
+        {
+          "id": 4455,
+          "name": "Ulrich Thomsen",
+          "character": "Kai Proctor",
+          "profile_path": "/qjXAPbuO8CicunlQs07c1fbFG67.jpg"
+        },
+        {
+          "id": 111116,
+          "name": "Matthew Rauch",
+          "character": "Clay Burton",
+          "profile_path": "/y2SAw8H4qZGU5cOjazg5LeybiKr.jpg"
+        }
+      ]
+    }
+  }
+]

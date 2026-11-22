@@ -325,7 +325,7 @@ export type Database = {
     }
     Functions: {
       most_liked_titles: {
-        Args: { p_limit?: number }
+        Args: { p_limit: number; p_media_type: string } | { p_limit?: number }
         Returns: {
           like_count: number
           media_type: string

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import "server-only";
+import fixtureData from "./fixtures.json";
 export type MediaType = "movie" | "tv";
 const itemSchema = z.object({
   id: z.number(),
@@ -32,104 +33,8 @@ const detailSchema = itemSchema.extend({
     .optional(),
 });
 export type Title = z.infer<typeof detailSchema> & { media_type: MediaType };
-const fixtures: Title[] = [
-  {
-    id: 101,
-    media_type: "movie",
-    title: "Glass Tide",
-    overview:
-      "A missing brother draws an engineer back to her hometown, where the local dam conceals dangerous secrets.",
-    poster_path: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
-    backdrop_path: "/7h6TqPB3ESmjuVbxCxAeB1c9OB1.jpg",
-    release_date: "2025-03-14",
-    vote_average: 8.4,
-    genre_ids: [53, 18],
-    genres: [
-      { id: 53, name: "Thriller" },
-      { id: 18, name: "Drama" },
-    ],
-    runtime: 108,
-    credits: {
-      cast: [
-        { id: 1, name: "Livia Torres", character: "Elena" },
-        { id: 2, name: "Caio Diaz", character: "Rafael" },
-      ],
-    },
-  },
-  {
-    id: 102,
-    media_type: "movie",
-    title: "The Last Ferry",
-    overview: "A final crossing brings strangers together.",
-    poster_path: "/kqjL17yufvn9OVLyXYpvtyrFfak.jpg",
-    backdrop_path: "/nAxGnGHOsfzufThz20zgmRwKur3.jpg",
-    release_date: "2024-06-01",
-    vote_average: 8.2,
-    genre_ids: [18],
-  },
-  {
-    id: 103,
-    media_type: "movie",
-    title: "Crimson Valley",
-    overview: "A journey into the unknown.",
-    poster_path: "/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
-    backdrop_path: "/wW7Wt5bXzPy4VOEE4LTIUDyDgBo.jpg",
-    release_date: "2024-01-01",
-    vote_average: 7.9,
-    genre_ids: [53],
-  },
-  {
-    id: 201,
-    media_type: "tv",
-    name: "The Long Night",
-    overview: "A town holds its breath through one long night.",
-    poster_path: "/z2yahl2uefxDCl0nogcRBstwruJ.jpg",
-    backdrop_path: "/9faGSFi5jam6pDWGNd0p8JcJgXQ.jpg",
-    first_air_date: "2025-01-01",
-    vote_average: 8.6,
-    genre_ids: [18],
-    genres: [{ id: 18, name: "Drama" }],
-    credits: { cast: [] },
-  },
-  {
-    id: 202,
-    media_type: "tv",
-    name: "Beyond the Pines",
-    overview: "Old secrets surface in a small town.",
-    poster_path: "/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg",
-    backdrop_path: "/suopoADq0k8YZr4dQXcU6pToj6s.jpg",
-    first_air_date: "2023-01-01",
-    vote_average: 8.1,
-    genre_ids: [18],
-  },
-  {
-    id: 105,
-    media_type: "movie",
-    title: "The Unseen",
-    overview: "A story waiting to be discovered.",
-    poster_path: null,
-    backdrop_path: null,
-    release_date: "2024-01-01",
-    vote_average: 7.5,
-    genre_ids: [18],
-  },
-  {
-    id: 104,
-    media_type: "movie",
-    title: "Open Water",
-    overview: "A story of second chances.",
-    poster_path: "/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-    backdrop_path: "/iNh3BivHyg5sQRPP1KOkzguEX0H.jpg",
-    release_date: "2022-01-01",
-    vote_average: 8.3,
-    genre_ids: [18],
-  },
-];
-export const titleName = (item: Title) => item.title || item.name || "Untitled";
-export const year = (item: Title) =>
-  (item.release_date || item.first_air_date || "").slice(0, 4);
-export const imageUrl = (path: string | null | undefined, size = "w500") =>
-  path ? `https://image.tmdb.org/t/p/${size}${path}` : undefined;
+const fixtures: Title[] = fixtureData as Title[];
+export { titleName, year, imageUrl } from "./tmdb-display";
 async function request(path: string, locale: string, revalidate?: number) {
   const token = process.env.TMDB_READ_TOKEN;
   if (!token) throw new Error("TMDB_READ_TOKEN is not configured");
@@ -149,14 +54,24 @@ export async function getTrending(
   locale: string,
   type: "all" | MediaType = "all",
 ): Promise<Title[]> {
-  if (process.env.FILMGRAM_FIXTURES === "1")
-    return fixtures.filter((x) => type === "all" || x.media_type === type);
+  if (process.env.FILMGRAM_FIXTURES === "1") {
+    if (type !== "all") return fixtures.filter((x) => x.media_type === type);
+    const films = fixtures.filter((x) => x.media_type === "movie");
+    const series = fixtures.filter((x) => x.media_type === "tv");
+    return films.flatMap((film, i) =>
+      series[i] ? [film, series[i]] : [film],
+    ) as Title[];
+  }
   const data = z
-    .object({ results: z.array(itemSchema) })
+    .object({ results: z.array(z.unknown()) })
     .parse(await request(`/trending/${type}/day`, locale, 600));
-  return data.results.flatMap((x) => {
+  return data.results.flatMap((entry) => {
+    const parsed = itemSchema.safeParse(entry);
+    if (!parsed.success) return [];
+    const x = parsed.data;
     const media = x.media_type || (type === "all" ? undefined : type);
-    return media ? [{ ...x, media_type: media }] : [];
+    const name = media === "movie" ? x.title : x.name;
+    return media && name?.trim() ? [{ ...x, media_type: media }] : [];
   });
 }
 export async function getDetail(
@@ -189,12 +104,58 @@ export async function getTopRated(
   const lists = await Promise.all(
     types.map(async (media) => {
       const data = z
-        .object({ results: z.array(itemSchema) })
+        .object({ results: z.array(z.unknown()) })
         .parse(await request(`/${media}/top_rated`, locale));
-      return data.results.map((x) => ({ ...x, media_type: media }));
+      return data.results.flatMap((entry) => {
+        const parsed = itemSchema.safeParse(entry);
+        if (
+          !parsed.success ||
+          !(media === "movie" ? parsed.data.title : parsed.data.name)?.trim()
+        )
+          return [];
+        return [{ ...parsed.data, media_type: media }];
+      });
     }),
   );
   return lists
     .flat()
     .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+}
+
+export async function getPopular(
+  locale: string,
+  type: "all" | MediaType = "all",
+): Promise<Title[]> {
+  if (process.env.FILMGRAM_FIXTURES === "1") {
+    if (type !== "all")
+      return fixtures.filter((x) => x.media_type === type).slice(0, 12);
+    const films = fixtures.filter((x) => x.media_type === "movie");
+    const series = fixtures.filter((x) => x.media_type === "tv");
+    return films
+      .flatMap((film, i) => (series[i] ? [film, series[i]] : [film]))
+      .slice(0, 12) as Title[];
+  }
+  const types: MediaType[] = type === "all" ? ["movie", "tv"] : [type];
+  const lists = await Promise.all(
+    types.map(async (media) => {
+      const data = z
+        .object({ results: z.array(z.unknown()) })
+        .parse(await request(`/${media}/popular`, locale, 600));
+      return data.results.flatMap((entry) => {
+        const parsed = itemSchema.safeParse(entry);
+        if (
+          !parsed.success ||
+          !(media === "movie" ? parsed.data.title : parsed.data.name)?.trim()
+        )
+          return [];
+        return [{ ...parsed.data, media_type: media }];
+      });
+    }),
+  );
+  return (lists[0] || [])
+    .flatMap((item, i) => {
+      const other = lists[1]?.[i];
+      return other ? [item, other] : [item];
+    })
+    .slice(0, 12);
 }

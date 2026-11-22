@@ -59,7 +59,7 @@ test.describe("signed-in account", () => {
     const stranger = await browser.newContext();
     try {
       await signUp(stranger, baseURL);
-      await page.goto("/en/title/movie/101");
+      await page.goto("/en/title/movie/1726");
       const save = page.getByRole("button", { name: "Save", exact: true });
       await expect(save).toBeVisible();
       await save.click();
@@ -72,7 +72,7 @@ test.describe("signed-in account", () => {
       await expect(saved).toBeVisible();
 
       const strangerPage = await stranger.newPage();
-      await strangerPage.goto(`${baseURL}/en/title/movie/101`);
+      await strangerPage.goto(`${baseURL}/en/title/movie/1726`);
       await expect(
         strangerPage.getByRole("button", { name: "Save", exact: true }),
       ).toBeVisible();
@@ -109,7 +109,7 @@ test.describe("signed-in account", () => {
       ).toBeVisible();
 
       const review = `Quiet thriller with a vivid sense of place. ${randomUUID()}`;
-      await page.goto("/en/title/movie/101");
+      await page.goto("/en/title/movie/1726");
       const rating = page.locator('select[name="rating"]');
       await rating.selectOption("4");
       await page.getByRole("textbox", { name: "Write a review" }).fill(review);
@@ -143,7 +143,7 @@ test.describe("signed-in account", () => {
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("heading", { name })).toBeVisible();
 
-    for (const title of ["movie/101", "tv/201"]) {
+    for (const title of ["movie/1726", "tv/1434"]) {
       await page.goto(`/en/title/${title}`);
       await page
         .getByRole("combobox", { name: "Choose a playlist" })
@@ -161,18 +161,18 @@ test.describe("signed-in account", () => {
 
     await page.goto("/en/playlists");
     await expect(
-      page.getByRole("link", { name: /1\. Glass Tide/ }),
+      page.getByRole("link", { name: /1\. Iron Man/ }),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /2\. The Long Night/ }),
+      page.getByRole("link", { name: /2\. Family Guy/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Move up", exact: true }).click();
     await expect(
-      page.getByRole("link", { name: /1\. The Long Night/ }),
+      page.getByRole("link", { name: /1\. Family Guy/ }),
     ).toBeVisible();
     await page.reload();
     await expect(
-      page.getByRole("link", { name: /2\. Glass Tide/ }),
+      page.getByRole("link", { name: /2\. Iron Man/ }),
     ).toBeVisible();
   });
 });

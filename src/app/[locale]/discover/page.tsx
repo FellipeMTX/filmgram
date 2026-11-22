@@ -3,14 +3,13 @@ import {
   getTrending,
   getTopRated,
   getDetail,
-  imageUrl,
-  titleName,
-  year,
+  getPopular,
   type MediaType,
   type Title,
 } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
+import { Hero } from "@/features/catalog/Hero";
 import { Shelf } from "@/features/catalog/Cards";
 import styles from "./page.module.css";
 export default async function Discover({
@@ -31,7 +30,14 @@ export default async function Discover({
     currentUser(),
     supabase(),
   ]);
-  const hero = items[0];
+  const hero = [...items.slice(0, 3), ...topRated, ...items]
+    .filter(
+      (item, index, all) =>
+        all.findIndex(
+          (x) => x.id === item.id && x.media_type === item.media_type,
+        ) === index,
+    )
+    .slice(0, 5);
   let watched: {
     media_type: MediaType;
     tmdb_id: number;
@@ -42,7 +48,10 @@ export default async function Discover({
   let liked: { media_type: MediaType; tmdb_id: number }[] = [];
   if (db) {
     const [{ data: likes }, { data: history }] = await Promise.all([
-      db.rpc("most_liked_titles", { p_limit: 12 }),
+      db.rpc(
+        "most_liked_titles",
+        type === "all" ? { p_limit: 12 } : { p_limit: 12, p_media_type: type },
+      ),
       user
         ? db
             .from("watched")
@@ -83,6 +92,7 @@ export default async function Discover({
         ),
     )
   ).filter((x): x is Title => !!x);
+  const popular = mostLiked.length < 10 ? await getPopular(locale, type) : [];
   const recent: Title[] = watched
     .filter((x) => type === "all" || x.media_type === type)
     .map((x) => ({
@@ -114,33 +124,12 @@ export default async function Discover({
           ))}
         </div>
       </div>
-      {hero ? (
-        <section
-          className={styles.hero}
-          style={{
-            backgroundImage: `linear-gradient(90deg,#100e0d 2%,#100e0dbb 38%,#100e0d18 80%),linear-gradient(0deg,#100e0d 0%,transparent 42%),url(${imageUrl(hero.backdrop_path, "original") || ""})`,
-          }}
-        >
-          <div className={`${styles.heroInner} container`}>
-            <p className="eyebrow">✦ &nbsp; {t.trendingToday}</p>
-            <h1>{titleName(hero)}</h1>
-            <p className={styles.heroMeta}>
-              {hero.media_type === "movie" ? t.film : t.seriesOne} <i>·</i>{" "}
-              {year(hero) || "—"} <i>·</i> <span>★</span>{" "}
-              {hero.vote_average?.toFixed(1) || "—"} TMDB
-            </p>
-            <p className={styles.overview}>{hero.overview}</p>
-            <Link
-              className="button primary"
-              href={`/${locale}/title/${hero.media_type}/${hero.id}`}
-            >
-              {t.viewDetails} <span>↗</span>
-            </Link>
-          </div>
-        </section>
-      ) : (
-        <p className="container muted">{t.noResults}</p>
-      )}
+      <Hero
+        key={type}
+        items={hero}
+        locale={locale}
+        trendingKeys={items.slice(0, 3).map((x) => `${x.media_type}-${x.id}`)}
+      />
       <div className="container">
         <Shelf
           title={t.recommended}
@@ -148,9 +137,17 @@ export default async function Discover({
           locale={locale}
           empty={t.noRecommendations}
         />
-        <Shelf title={t.trending} items={items} locale={locale} />
-        <Shelf title={t.topRated} items={topRated} locale={locale} />
-        <Shelf title={t.mostLiked} items={mostLiked} locale={locale} />
+        <Shelf title={t.trending} items={items.slice(0, 12)} locale={locale} />
+        <Shelf
+          title={t.topRated}
+          items={topRated.slice(0, 12)}
+          locale={locale}
+        />
+        <Shelf
+          title={mostLiked.length >= 10 ? t.mostLiked : t.popularTmdb}
+          items={mostLiked.length >= 10 ? mostLiked : popular}
+          locale={locale}
+        />
         <Shelf
           title={t.recent}
           items={recent}
