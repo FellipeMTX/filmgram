@@ -88,19 +88,38 @@ describe("featured carousel", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(frame).toBeUndefined();
   });
-  it("preserves explicit pause when focus leaves the banner", () => {
+  it("pauses on hover and focus, then resumes the remaining active time", () => {
     render(<Hero items={items} locale="en" trendingKeys={[]} />);
-    advance(2000);
-    fireEvent.click(screen.getByRole("button", { name: "Pause highlights" }));
     const section = screen.getByRole("region", { name: /featured/i });
-    fireEvent.focus(section);
-    fireEvent.blur(section, { relatedTarget: document.body });
+    advance(2000);
+    fireEvent.pointerEnter(section, { pointerType: "mouse" });
     advance(10000);
     expect(screen.getByRole("heading", { name: "First" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Play highlights" }));
-    advance(3999);
+    fireEvent.pointerLeave(section, { pointerType: "mouse" });
+    advance(1000);
+    fireEvent.focus(screen.getByRole("link", { name: /First/i }));
+    advance(10000);
+    expect(screen.getByRole("heading", { name: "First" })).toBeInTheDocument();
+    fireEvent.blur(section, { relatedTarget: document.body });
+    advance(2999);
     expect(screen.getByRole("heading", { name: "First" })).toBeInTheDocument();
     advance(1);
     expect(screen.getByRole("heading", { name: "Second" })).toBeInTheDocument();
+  });
+  it("selects a different slide when its dot is clicked and resets progress", () => {
+    render(<Hero items={items} locale="en" trendingKeys={[]} />);
+    advance(5000);
+    const dot = screen.getByRole("button", { name: "Show highlight 2 of 2" });
+    fireEvent.click(dot);
+    expect(screen.getByRole("heading", { name: "Second" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Second/i })).toHaveAttribute(
+      "href",
+      "/en/title/movie/2",
+    );
+    expect(dot).toHaveAttribute("aria-current", "true");
+    advance(1000);
+    expect(screen.getByRole("heading", { name: "Second" })).toBeInTheDocument();
+    advance(5000);
+    expect(screen.getByRole("heading", { name: "First" })).toBeInTheDocument();
   });
 });

@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
 import { imageUrl, titleName, year } from "@/integrations/tmdb-display";
 import type { Title } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
@@ -18,7 +17,6 @@ export function Hero({
   trendingKeys: string[];
 }) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -46,14 +44,7 @@ export function Hero({
   useEffect(() => {
     if (progress.current)
       progress.current.style.transform = `scaleX(${elapsed.current / DURATION})`;
-    if (
-      !playing ||
-      hovered ||
-      focused ||
-      hidden ||
-      reducedMotion ||
-      items.length < 2
-    )
+    if (hovered || focused || hidden || reducedMotion || items.length < 2)
       return;
     let previous = performance.now();
     let frame: number;
@@ -71,16 +62,7 @@ export function Hero({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [
-    focused,
-    hidden,
-    hovered,
-    index,
-    items.length,
-    playing,
-    reducedMotion,
-    reset,
-  ]);
+  }, [focused, hidden, hovered, index, items.length, reducedMotion, reset]);
 
   const select = (i: number) => {
     elapsed.current = 0;
@@ -157,7 +139,7 @@ export function Hero({
             <span className="text-primary">★</span>{" "}
             {item.vote_average?.toFixed(1) || "—"} TMDB
           </p>
-          <p className="mt-[22px] mb-7 max-w-[480px] text-sm leading-[1.65] text-hero-description mobile:hidden">
+          <p className="mt-[22px] mb-7 w-full text-justify text-sm leading-[1.65] text-hero-description mobile:hidden">
             {item.overview}
           </p>
         </div>
@@ -193,16 +175,6 @@ export function Hero({
               </button>
             ))}
           </div>
-          {!reducedMotion && (
-            <button
-              type="button"
-              aria-label={playing ? t.pauseHighlights : t.playHighlights}
-              onClick={() => setPlaying((value) => !value)}
-              className="absolute left-[calc(100%+8px)] grid h-7 w-7 place-items-center rounded-full bg-controls-background text-button-foreground hover:bg-accent"
-            >
-              {playing ? <Pause size={12} /> : <Play size={12} />}
-            </button>
-          )}
         </div>
       )}
     </section>

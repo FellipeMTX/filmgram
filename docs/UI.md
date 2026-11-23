@@ -29,9 +29,9 @@ do not move data access or secrets into them. Preserve form field names, hidden 
 required/default values and explicit submit types. Native checkbox submission must omit
 `is_public` when unchecked because the server action uses `FormData.has`.
 
-Hero autoplay measures 6000ms of active time. Hover, focus, explicit pause, hidden pages
-and reduced-motion preference suspend progression. Manual slide selection resets progress.
-The pause control is separate from the dots, and all controls are siblings of the banner link.
+Hero autoplay measures 6000ms of active time. Hover, focus, hidden pages and reduced-motion preference suspend progression.
+Manual slide selection resets progress. The dot controls are siblings of the banner link,
+and the synopsis uses the available width with justified text.
 
 ## Verification
 
@@ -50,3 +50,10 @@ reduced motion or a controlled clock, and matching viewports to compare the base
 - Sol review confirmed visible focus above hero artwork, reduced-motion behavior,
   accessible language option names and unchanged Server Action contracts.
 - Theme switching remains a future feature; only semantic token infrastructure ships here.
+
+## Local development origin
+
+`next.config.ts` explicitly allows `127.0.0.1` for development assets. The development
+server binds to `0.0.0.0` for WSL access, while the app is opened through loopback.
+Without this exact allowlist entry, Next may block dev assets requested by the integrated
+browser and leave server-rendered controls unhydrated. No wildcard origin is permitted.

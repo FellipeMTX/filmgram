@@ -5,7 +5,7 @@ test("header keeps its selected flag and centers desktop navigation", async ({
 }) => {
   for (const locale of ["en", "pt-BR", "es"]) {
     await page.goto(`/${locale}/discover?type=all`);
-    for (const width of [320, 700, 701, 768, 900, 1650]) {
+    for (const width of [320, 700, 701, 768, 838, 900, 1650]) {
       await page.setViewportSize({ width, height: 900 });
       const header = page.locator("header");
       await expect(header.getByRole("combobox").locator("svg")).toHaveCount(2);
@@ -35,7 +35,7 @@ test("header keeps its selected flag and centers desktop navigation", async ({
   }
 });
 
-test("hero shows real progress, only dots in the capsule, and a reachable pause", async ({
+test("hero shows progress, changes slides on click, and has no pause control", async ({
   page,
 }) => {
   await page.clock.install();
@@ -51,8 +51,9 @@ test("hero shows real progress, only dots in the capsule, and a reachable pause"
     hero.getByRole("button", { name: "Previous titles" }),
   ).toHaveCount(0);
   await expect(hero.getByText("View details", { exact: true })).toHaveCount(0);
-  const pause = hero.getByRole("button", { name: "Pause highlights" });
-  await expect(pause).toBeInViewport();
+  await expect(
+    hero.getByRole("button", { name: /Pause highlights|Play highlights/ }),
+  ).toHaveCount(0);
   await page.clock.runFor(3000);
   const fraction = await first.evaluate((button) => {
     const track = button.firstElementChild!;
@@ -63,15 +64,19 @@ test("hero shows real progress, only dots in the capsule, and a reachable pause"
   });
   expect(fraction).toBeGreaterThan(0.2);
   expect(fraction).toBeLessThan(0.9);
-  await pause.click();
-  await page.mouse.move(0, 0);
-  await page.keyboard.press("Tab");
-  const current = await hero.getByRole("link").getAttribute("href");
-  await page.clock.runFor(12000);
-  await expect(hero.getByRole("link")).toHaveAttribute("href", current!);
-  await expect(
-    hero.getByRole("button", { name: "Play highlights" }),
-  ).toBeVisible();
+  const originalHref = await hero.getByRole("link").getAttribute("href");
+  const third = hero.getByRole("button", { name: "Show highlight 3 of 5" });
+  await third.click();
+  await expect(third).toHaveAttribute("aria-current", "true");
+  await expect(hero.getByRole("link")).not.toHaveAttribute(
+    "href",
+    originalHref!,
+  );
+  await expect(page).toHaveURL(/\/en\/discover\?type=movie$/);
+  const description = hero.locator("a p").last();
+  expect(await description.evaluate((p) => getComputedStyle(p).textAlign)).toBe(
+    "justify",
+  );
 });
 
 test("language change preserves the title route and query", async ({
