@@ -54,6 +54,13 @@ test("hero shows progress, changes slides on click, and has no pause control", a
   await expect(
     hero.getByRole("button", { name: /Pause highlights|Play highlights/ }),
   ).toHaveCount(0);
+  // Freeze elapsed wall time before measuring the six-second cycle.
+  await page.clock.pauseAt(
+    new Date((await page.evaluate(() => Date.now())) + 100),
+  );
+  await first.click();
+  await first.evaluate((button) => button.blur());
+  await page.mouse.move(0, 0);
   await page.clock.runFor(3000);
   const fraction = await first.evaluate((button) => {
     const track = button.firstElementChild!;

@@ -134,4 +134,31 @@ describe("filmography", () => {
       totalPages: 1,
     });
   });
+  it("searches localized and original names without accents before pagination", () => {
+    const works = normalizePersonWorks(
+      [
+        {
+          id: 1,
+          media_type: "movie",
+          title: "A Origem",
+          original_title: "Inception",
+          character: "Cobb",
+        },
+        {
+          id: 2,
+          media_type: "movie",
+          title: "Amélie",
+          original_title: "Le Fabuleux Destin",
+          character: "Amélie",
+        },
+      ],
+      [],
+    );
+    expect(
+      filterAndPaginateWorks(works, { q: "INCEPT", page: "2" }),
+    ).toMatchObject({ total: 1, page: 1, works: [{ id: 1 }] });
+    expect(
+      filterAndPaginateWorks(works, { q: "amelie" }).works.map((x) => x.id),
+    ).toEqual([2]);
+  });
 });

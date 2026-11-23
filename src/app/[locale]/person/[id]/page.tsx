@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/features/catalog/Cards";
+import { SearchField } from "@/components/SearchField";
+import { FilmographyDisclosure } from "@/features/people/FilmographyDisclosure";
+import { RecentWorks } from "@/features/people/RecentWorks";
+import { PeopleRating, PeopleReviews } from "@/features/people/PeopleReviews";
+import { getPersonReviewData } from "@/features/people/review-queries";
+import { currentUser, supabase } from "@/integrations/supabase";
 import { MediaImage } from "@/features/catalog/MediaImage";
 import {
   filterAndPaginateWorks,
@@ -31,6 +37,9 @@ export default async function PersonPage({
     type?: string | string[];
     activity?: string | string[];
     page?: string | string[];
+    q?: string | string[];
+    view?: string | string[];
+    reviewPage?: string | string[];
   }>;
 }) {
   const { locale, id } = await params;
@@ -40,16 +49,41 @@ export default async function PersonPage({
   const person = await getPersonDetails(locale, numericId);
   if (!person) notFound();
   const t = messages(locale);
-  const result = filterAndPaginateWorks(person.works, await searchParams);
+  const search = await searchParams;
+  const result = filterAndPaginateWorks(person.works, search);
   const { type, activity, page, totalPages } = result;
-  const href = (nextType: string, nextActivity: string, nextPage = 1) => {
+  const [db, user] = await Promise.all([supabase(), currentUser()]);
+  const reviewPage =
+    typeof search.reviewPage === "string" &&
+    /^[1-9]\d*$/.test(search.reviewPage)
+      ? Number(search.reviewPage)
+      : 1;
+  const reviewData = await getPersonReviewData(
+    db,
+    person.id,
+    user?.id,
+    Number.isSafeInteger(reviewPage) ? reviewPage : 1,
+  );
+  const href = (
+    nextType: string,
+    nextActivity: string,
+    nextPage = 1,
+    expanded = false,
+  ) => {
     const query = new URLSearchParams({
       type: nextType,
       activity: nextActivity,
     });
+    if (result.q) query.set("q", result.q);
     if (nextPage > 1) query.set("page", String(nextPage));
+    if (expanded) query.set("view", "all");
     return `/${locale}/person/${person.id}?${query}`;
   };
+  const reviewParams = new URLSearchParams({ type, activity });
+  if (result.q) reviewParams.set("q", result.q);
+  if (page > 1) reviewParams.set("page", String(page));
+  if (search.view === "all") reviewParams.set("view", "all");
+  const reviewBasePath = `/${locale}/person/${person.id}?${reviewParams}`;
   const roleNames: Record<string, string> = {
     Director: t.roleDirector,
     Producer: t.roleProducer,
@@ -86,17 +120,17 @@ export default async function PersonPage({
         <div
           className={cn(
             container,
-            "relative grid grid-cols-[220px_minmax(0,650px)] items-start gap-x-[34px] gap-y-4 pt-[52px] pb-[35px] mobile:grid-cols-[105px_minmax(0,1fr)] mobile:gap-x-[18px] mobile:pt-8 mobile:pb-7",
+            "relative grid grid-cols-[clamp(260px,22vw,320px)_minmax(0,1fr)] items-start gap-x-[34px] gap-y-4 pt-[52px] pb-[35px] mobile:grid-cols-[105px_minmax(0,1fr)] mobile:gap-x-[18px] mobile:pt-8 mobile:pb-7",
           )}
         >
-          <div className="relative row-span-2 grid aspect-[2/3] w-[220px] mobile:row-span-1 shrink-0 place-items-center overflow-hidden rounded-[5px] bg-title-placeholder text-center text-title-muted shadow-[0_12px_28px_#0005] mobile:w-[105px] [&_img]:absolute [&_img]:inset-0 [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
+          <div className="relative row-span-3 grid aspect-[2/3] w-full mobile:row-span-1 shrink-0 place-items-center overflow-hidden rounded-[5px] bg-title-placeholder text-center text-title-muted shadow-[0_12px_28px_#0005] mobile:w-[105px] [&_img]:absolute [&_img]:inset-0 [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
             <MediaImage
               src={imageUrl(person.profile_path, "w500")}
               alt={person.name}
               fallback={t.personNoPhoto}
             />
           </div>
-          <div className="min-w-0 max-w-[650px] [overflow-wrap:anywhere]">
+          <div className="min-w-0 [overflow-wrap:anywhere]">
             {profession && <p className={eyebrow}>{profession}</p>}
             <h1 className="mt-[13px] mb-4 break-words font-display text-[clamp(42px,6vw,74px)] leading-none font-bold tracking-[-0.035em] mobile:my-[10px] mobile:text-[37px]">
               {person.name}
@@ -132,7 +166,10 @@ export default async function PersonPage({
               )}
             </div>
           </div>
-          <p className="col-start-2 m-0 max-w-[590px] whitespace-pre-line text-sm leading-[1.7] text-detail-meta [overflow-wrap:anywhere] mobile:col-span-2 mobile:col-start-1 mobile:text-xs mobile:leading-[1.5]">
+          <div className="col-start-2 mobile:col-span-2 mobile:col-start-1">
+            <PeopleRating data={reviewData} locale={locale} />
+          </div>
+          <p className="col-start-2 m-0 whitespace-pre-line text-sm leading-[1.7] text-detail-meta [overflow-wrap:anywhere] mobile:col-span-2 mobile:col-start-1 mobile:text-xs mobile:leading-[1.5]">
             {person.biography?.trim() || t.noBiography}
           </p>
         </div>
@@ -144,6 +181,7 @@ export default async function PersonPage({
         )}
         aria-labelledby="filmography-heading"
       >
+        <RecentWorks works={person.works} locale={locale} today={today} />
         <div className="mb-5">
           <h2
             id="filmography-heading"
@@ -155,6 +193,22 @@ export default async function PersonPage({
             {t.personWorks} · {result.total}
           </p>
         </div>
+        <form
+          action={`/${locale}/person/${person.id}`}
+          method="get"
+          className="mb-5 max-w-[600px]"
+        >
+          <input type="hidden" name="type" value={type} />
+          <input type="hidden" name="activity" value={activity} />
+          <SearchField
+            key={result.q}
+            label={t.searchWorks}
+            clearLabel={t.clearSearch}
+            clearHref={`/${locale}/person/${person.id}?${new URLSearchParams({ type, activity })}`}
+            submitLabel={t.search}
+            initialValue={result.q}
+          />
+        </form>
         <div className="mb-6 flex flex-wrap justify-between gap-2.5 border-b border-border pb-[15px] mobile:block">
           <nav aria-label={t.mediaType} className="flex flex-wrap gap-[7px]">
             {(
@@ -205,81 +259,117 @@ export default async function PersonPage({
           </nav>
         </div>
         {result.works.length ? (
-          <div className="grid grid-cols-6 gap-[18px] mobile:grid-cols-2 mobile:gap-x-[14px] mobile:gap-y-5">
-            {result.works.map((work) => {
-              const released = validCreditDate(
-                work.media_type === "movie"
-                  ? work.release_date
-                  : work.first_air_date,
-              );
-              const roles = [
-                ...work.jobs.map((job) => roleNames[job] || job),
-                ...(work.characters.length
-                  ? work.characters
-                  : work.acting
-                    ? [t.acting]
-                    : []),
-              ];
-              return (
-                <article
-                  key={`${work.media_type}-${work.id}`}
-                  className="relative min-w-0"
-                >
-                  <Card item={work} locale={locale} />
-                  {released && released > today && (
-                    <span className="mt-1 inline-block text-[11px] font-bold text-primary">
-                      {t.upcoming}
+          <>
+            <FilmographyDisclosure
+              key={`${type}:${activity}:${result.q}:${page}:${search.view || ""}`}
+              cards={result.works.map((work) => {
+                const released = validCreditDate(
+                  work.media_type === "movie"
+                    ? work.release_date
+                    : work.first_air_date,
+                );
+                const roles = [
+                  ...work.jobs.map((job) => roleNames[job] || job),
+                  ...(work.characters.length
+                    ? work.characters
+                    : work.acting
+                      ? [t.acting]
+                      : []),
+                ];
+                return (
+                  <article
+                    key={`${work.media_type}-${work.id}`}
+                    className="relative min-w-0"
+                  >
+                    <Card item={work} locale={locale} />
+                    {released && released > today && (
+                      <span className="mt-1 inline-block text-[11px] font-bold text-primary">
+                        {t.upcoming}
+                      </span>
+                    )}
+                    {roles.length > 0 && (
+                      <p className="mt-1.5 text-[11px] leading-[1.4] text-detail-meta [overflow-wrap:anywhere]">
+                        {roles.join(" · ")}
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+              initiallyExpanded={page > 1 || search.view === "all"}
+              firstPageUrl={href(type, activity)}
+              more={t.showMore}
+              less={t.showLess}
+              pagination={
+                totalPages > 1 && (
+                  <nav
+                    aria-label={t.filmography}
+                    className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm"
+                  >
+                    {page > 1 ? (
+                      <Link
+                        href={href(type, activity, page - 1, true)}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {t.previousPage}
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled="true"
+                        className="text-muted-foreground"
+                      >
+                        {t.previousPage}
+                      </span>
+                    )}
+                    <span>
+                      {t.page} {page} {t.of} {totalPages}
                     </span>
-                  )}
-                  {roles.length > 0 && (
-                    <p className="mt-1.5 text-[11px] leading-[1.4] text-detail-meta [overflow-wrap:anywhere]">
-                      {roles.join(" · ")}
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+                    {page < totalPages ? (
+                      <Link
+                        href={href(type, activity, page + 1, true)}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {t.nextPage}
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled="true"
+                        className="text-muted-foreground"
+                      >
+                        {t.nextPage}
+                      </span>
+                    )}
+                  </nav>
+                )
+              }
+            />
+            <noscript>
+              <Link href={`${href(type, activity)}&view=all`}>
+                {t.showMore}
+              </Link>
+            </noscript>
+          </>
         ) : (
           <p className="py-5 text-sm text-muted-foreground">
             {t.noPersonWorks}
           </p>
         )}
-        {totalPages > 1 && (
-          <nav
-            aria-label={t.filmography}
-            className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm"
-          >
-            {page > 1 ? (
-              <Link
-                href={href(type, activity, page - 1)}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                {t.previousPage}
-              </Link>
-            ) : (
-              <span aria-disabled="true" className="text-muted-foreground">
-                {t.previousPage}
-              </span>
-            )}
-            <span>
-              {t.page} {page} {t.of} {totalPages}
-            </span>
-            {page < totalPages ? (
-              <Link
-                href={href(type, activity, page + 1)}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                {t.nextPage}
-              </Link>
-            ) : (
-              <span aria-disabled="true" className="text-muted-foreground">
-                {t.nextPage}
-              </span>
-            )}
-          </nav>
-        )}
       </section>
+      <div className={cn(container, "pb-20")}>
+        <PeopleReviews
+          data={reviewData}
+          locale={locale}
+          personId={person.id}
+          userId={user?.id}
+          works={person.works}
+          basePath={reviewBasePath}
+        />
+      </div>
     </main>
   );
 }

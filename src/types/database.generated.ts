@@ -105,6 +105,73 @@ export type Database = {
           },
         ]
       }
+      person_review_works: {
+        Row: {
+          media_type: string
+          position: number
+          review_id: string
+          tmdb_id: number
+        }
+        Insert: {
+          media_type: string
+          position: number
+          review_id: string
+          tmdb_id: number
+        }
+        Update: {
+          media_type?: string
+          position?: number
+          review_id?: string
+          tmdb_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_review_works_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "person_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_reviews: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          person_tmdb_id: number
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          person_tmdb_id: number
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          person_tmdb_id?: number
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_items: {
         Row: {
           created_at: string
@@ -342,6 +409,13 @@ export type Database = {
           tmdb_id: number
         }[]
       }
+      person_rating_stats: {
+        Args: { p_person_id: number }
+        Returns: {
+          average_rating: number
+          review_count: number
+        }[]
+      }
       profile_stats: {
         Args: { p_profile_id: string }
         Returns: {
@@ -365,6 +439,16 @@ export type Database = {
           p_playlist_id: string
         }
         Returns: undefined
+      }
+      save_person_review: {
+        Args: {
+          p_body: string
+          p_expected_updated_at?: string
+          p_person_id: number
+          p_rating: number
+          p_works: Json
+        }
+        Returns: string
       }
       title_like_count: {
         Args: { p_media_type: string; p_tmdb_id: number }

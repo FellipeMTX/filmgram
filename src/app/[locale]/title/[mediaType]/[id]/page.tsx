@@ -189,6 +189,35 @@ export default async function Detail({
           </div>
         </section>
       )}
+      <section
+        className={cn(
+          container,
+          "pt-[35px] mobile:pt-[30px] [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-semibold",
+        )}
+      >
+        <h2>{t.cast}</h2>
+        {item.credits?.cast?.length ? (
+          <Rail
+            variant="cast"
+            label={t.cast}
+            previous={t.previous}
+            next={t.next}
+          >
+            {item.credits.cast.slice(0, 6).map((c) => (
+              <PersonCard
+                key={c.id}
+                id={c.id}
+                name={c.name}
+                profilePath={c.profile_path}
+                role={c.character}
+                locale={locale}
+              />
+            ))}
+          </Rail>
+        ) : (
+          <p className="text-muted-foreground">{t.noCast}</p>
+        )}
+      </section>
       <div
         className={cn(
           container,
@@ -291,30 +320,6 @@ export default async function Detail({
             ))
           ) : (
             <p className="text-muted-foreground">{t.noReviews}</p>
-          )}
-        </section>
-        <section className="col-span-full w-full">
-          <h2>{t.cast}</h2>
-          {item.credits?.cast?.length ? (
-            <Rail
-              variant="cast"
-              label={t.cast}
-              previous={t.previous}
-              next={t.next}
-            >
-              {item.credits.cast.slice(0, 6).map((c) => (
-                <PersonCard
-                  key={c.id}
-                  id={c.id}
-                  name={c.name}
-                  profilePath={c.profile_path}
-                  role={c.character}
-                  locale={locale}
-                />
-              ))}
-            </Rail>
-          ) : (
-            <p className="text-muted-foreground">{t.noCast}</p>
           )}
         </section>
       </div>

@@ -12,7 +12,9 @@ test("cast links to the actor profile and filmography links back to a title", as
   await expect(
     page.getByRole("heading", { name: "Filmography", exact: true }),
   ).toBeVisible();
-  const film = page.locator('main a[href="/en/title/movie/1726"]');
+  const film = page.locator(
+    '#filmography-works a[href="/en/title/movie/1726"]',
+  );
   await expect(film).toHaveCount(1);
   await film.click();
   await expect(page).toHaveURL(/\/en\/title\/movie\/1726$/);
@@ -45,14 +47,14 @@ test("movie direction appears before ratings and links to a shared professional 
   ).toBeVisible();
   await page.getByRole("link", { name: "Directing", exact: true }).click();
   await expect(page).toHaveURL(/activity=directing/);
-  await expect(page.locator('main a[href="/en/title/movie/1726"]')).toHaveCount(
-    1,
-  );
+  await expect(
+    page.locator('#filmography-works a[href="/en/title/movie/1726"]'),
+  ).toHaveCount(1);
   await page.getByRole("link", { name: "Acting", exact: true }).click();
   await expect(page).toHaveURL(/activity=acting/);
-  await expect(page.locator('main a[href="/en/title/movie/1726"]')).toHaveCount(
-    1,
-  );
+  await expect(
+    page.locator('#filmography-works a[href="/en/title/movie/1726"]'),
+  ).toHaveCount(1);
 });
 
 test("co-directors are listed independently without changing series credits", async ({
@@ -79,7 +81,9 @@ test("media filters and language switching preserve the professional and activit
   await page.getByRole("link", { name: "Series", exact: true }).click();
   await expect(page).toHaveURL(/type=tv/);
   await expect(page).toHaveURL(/activity=directing/);
-  await expect(page.locator('main a[href*="/title/movie/"]')).toHaveCount(0);
+  await expect(
+    page.locator('#filmography-works a[href*="/title/movie/"]'),
+  ).toHaveCount(0);
   await page.getByRole("link", { name: "Films", exact: true }).click();
   await expect(page).toHaveURL(/type=movie/);
   await page.getByRole("combobox", { name: "Language", exact: true }).click();
@@ -109,10 +113,19 @@ test("pagination follows filtering and missing data has a readable fallback", as
   await expect(
     page.getByText("No biography available.", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator('main a[href*="/title/movie/"]')).toHaveCount(24);
+  const width = page.viewportSize()!.width;
+  await expect(page.locator("#filmography-works article:visible")).toHaveCount(
+    width <= 700 ? 4 : width < 1024 ? 8 : 12,
+  );
+  await page.getByRole("button", { name: "Show more", exact: true }).click();
+  await expect(
+    page.locator('#filmography-works a[href*="/title/movie/"]'),
+  ).toHaveCount(24);
   await page.getByRole("link", { name: "Next page", exact: true }).click();
   await expect(page).toHaveURL(/page=2/);
-  await expect(page.locator('main a[href*="/title/movie/"]')).toHaveCount(1);
+  await expect(
+    page.locator('#filmography-works a[href*="/title/movie/"]'),
+  ).toHaveCount(1);
   await page.getByRole("link", { name: "Series", exact: true }).click();
   await expect(page).not.toHaveURL(/[?&]page=2(?:&|$)/);
   await expect(page).toHaveURL(/type=tv/);
@@ -142,4 +155,86 @@ test("professional profiles fit narrow layouts and missing IDs show not-found", 
       page.getByRole("heading", { name: "Page not found", exact: true }),
     ).toBeVisible();
   }
+});
+
+test("search resets pagination, preserves filters, and clears without affecting recent works", async ({
+  page,
+}) => {
+  await page.goto("/en/person/15277?type=movie&activity=acting");
+  const recent = page.getByRole("region", { name: "Recent works" });
+  await expect(recent.getByRole("link", { name: /Iron Man/ })).toBeVisible();
+  const filmography = page.getByRole("region", { name: "Filmography" });
+  const search = filmography.getByRole("searchbox", { name: "Search works" });
+  await search.fill("iron");
+  await filmography
+    .getByRole("button", { name: "Search", exact: true })
+    .click();
+  await expect(page).toHaveURL(/q=iron/);
+  await expect(page).toHaveURL(/type=movie/);
+  await expect(page).toHaveURL(/activity=acting/);
+  await expect(
+    filmography.locator('#filmography-works a[href="/en/title/movie/1726"]'),
+  ).toBeVisible();
+  await filmography.getByRole("link", { name: "Clear search" }).click();
+  await expect(search).toHaveValue("");
+  await expect(page).not.toHaveURL(/[?&]q=iron/);
+  await expect(page).toHaveURL(/activity=acting/);
+  await filmography.getByRole("link", { name: "Series", exact: true }).click();
+  await expect(page).toHaveURL(/type=tv/);
+  await expect(recent.getByRole("link", { name: /Iron Man/ })).toBeVisible();
+});
+
+test("collapsed filmography presents two responsive rows and a bounded DOM", async ({
+  page,
+}) => {
+  await page.goto("/en/person/90000001");
+  for (const [width, count] of [
+    [390, 4],
+    [701, 8],
+    [1023, 8],
+    [1024, 12],
+    [1650, 12],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator("#filmography-works article")).toHaveCount(12);
+    await expect(
+      page.locator("#filmography-works article:visible"),
+    ).toHaveCount(count);
+  }
+  await page.getByRole("button", { name: "Show more" }).click();
+  await expect(page.locator("#filmography-works article:visible")).toHaveCount(
+    24,
+  );
+  await page.getByRole("link", { name: "Next page" }).click();
+  await page.getByRole("link", { name: "Previous page" }).click();
+  await expect(page.locator("#filmography-works article:visible")).toHaveCount(
+    24,
+  );
+  await page.getByRole("link", { name: "Show less" }).click();
+  await expect(page.locator("#filmography-works article:visible")).toHaveCount(
+    12,
+  );
+});
+
+test("direction and cast appear before the review form", async ({ page }) => {
+  await page.goto("/en/title/movie/1726");
+  const direction = await page
+    .getByRole("heading", { name: "Direction", exact: true })
+    .boundingBox();
+  const cast = await page
+    .getByRole("heading", { name: "Cast", exact: true })
+    .boundingBox();
+  const rating = await page
+    .getByRole("heading", { name: "Your rating", exact: true })
+    .boundingBox();
+  expect(direction!.y).toBeLessThan(cast!.y);
+  expect(cast!.y).toBeLessThan(rating!.y);
+  await page.goto("/en/title/tv/42009");
+  const tvCast = await page
+    .getByRole("heading", { name: "Cast", exact: true })
+    .boundingBox();
+  const tvRating = await page
+    .getByRole("heading", { name: "Your rating", exact: true })
+    .boundingBox();
+  expect(tvCast!.y).toBeLessThan(tvRating!.y);
 });

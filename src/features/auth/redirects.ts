@@ -34,7 +34,7 @@ export function safeReturnPath(raw: string | null | undefined): string {
     const url = new URL(raw, origin);
     if (
       url.origin !== origin ||
-      !/^\/(en|pt-BR|es)\/(?:discover|following|playlists|profile\/[a-zA-Z0-9_]+|title\/(?:movie|tv)\/[1-9][0-9]*|credits)\/?$/.test(
+      !/^\/(en|pt-BR|es)\/(?:discover|following|playlists|profile\/[a-zA-Z0-9_]+|title\/(?:movie|tv)\/[1-9][0-9]*|person\/[1-9][0-9]*|credits)\/?$/.test(
         url.pathname,
       )
     )

@@ -74,10 +74,23 @@ and distinct jobs. Acting and directing are derived from the actual credits, not
 primary department. Films use release date and series use first-air date for sorting; unknown
 dates are last and ties are stable. Future dates are labeled below cards without overlapping badges.
 
-The `type` and `activity` URL filters are applied before pagination (24 works). Changing a filter
-resets the page; invalid values fall back and out-of-range page numbers are clamped. The count
-represents distinct matching works reported by TMDB, not a guarantee of complete career coverage.
-The mobile layout keeps the portrait visible and places the biography at full content width.
+The `type`, `activity`, and title search filters are applied before pagination (24 works).
+Search matches localized and original titles with accent- and case-insensitive comparison.
+Changing a filter or search resets the page; invalid values fall back and out-of-range page
+numbers are clamped. The initial filmography shows two rows at each viewport, with a control to
+expand the current page and reach pagination. The count represents distinct matching works
+reported by TMDB, not a guarantee of complete career coverage.
+
+Recent works show up to six released credits independently of the filmography filters and
+activity, excluding future and undated credits. Future works can still appear in the full
+filmography with an upcoming label. The mobile layout keeps the portrait visible and places
+the biography at full content width.
+
+Professional ratings and reviews are public on the professional profile. A signed-in account
+can save one rating from 1 to 5 per professional, with optional text and up to ten related works;
+the profile shows the average and total across all ratings, independently of the review page.
+Editing and deleting require ownership. Professional reviews do not appear in the following
+feed or account profile in this release.
 
 Tests include real sample people and movie credits, plus a clearly named synthetic pagination
 profile (90000001) available only when `FILMGRAM_FIXTURES=1`.

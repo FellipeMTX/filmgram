@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { MediaType, Title } from "@/integrations/tmdb";
 
 export type PersonWork = Title & {
+  original_title?: string;
+  original_name?: string;
   characters: string[];
   jobs: string[];
   acting: boolean;
@@ -16,6 +18,8 @@ const creditSchema = z.object({
   media_type: z.enum(["movie", "tv"]),
   title: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
+  original_title: z.string().nullable().optional(),
+  original_name: z.string().nullable().optional(),
   overview: z.string().nullable().optional(),
   poster_path: z.string().nullable().optional(),
   backdrop_path: z.string().nullable().optional(),
@@ -63,6 +67,10 @@ export function normalizePersonWorks(
     // Individual credits may each carry different optional metadata.
     if (!work.title && item.title?.trim()) work.title = item.title;
     if (!work.name && item.name?.trim()) work.name = item.name;
+    if (!work.original_title && item.original_title?.trim())
+      work.original_title = item.original_title;
+    if (!work.original_name && item.original_name?.trim())
+      work.original_name = item.original_name;
     if (!work.overview && item.overview?.trim()) work.overview = item.overview;
     if (!work.poster_path && item.poster_path)
       work.poster_path = item.poster_path;
@@ -111,9 +119,22 @@ export function normalizePersonWorks(
     );
 }
 
+export function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .trim();
+}
+
 export function filterAndPaginateWorks(
   works: PersonWork[],
-  query: { type?: QueryValue; activity?: QueryValue; page?: QueryValue },
+  query: {
+    type?: QueryValue;
+    activity?: QueryValue;
+    page?: QueryValue;
+    q?: QueryValue;
+  },
 ) {
   const type: WorkType =
     query.type === "movie" || query.type === "tv" ? query.type : "all";
@@ -121,10 +142,16 @@ export function filterAndPaginateWorks(
     query.activity === "acting" || query.activity === "directing"
       ? query.activity
       : "all";
+  const q = typeof query.q === "string" ? query.q.trim().slice(0, 100) : "";
+  const normalizedQuery = normalizeSearch(q);
   const filtered = works.filter(
     (work) =>
       (type === "all" || work.media_type === type) &&
-      (activity === "all" || work[activity]),
+      (activity === "all" || work[activity]) &&
+      (!normalizedQuery ||
+        [work.title, work.name, work.original_title, work.original_name].some(
+          (name) => normalizeSearch(name || "").includes(normalizedQuery),
+        )),
   );
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / 24));
@@ -140,5 +167,6 @@ export function filterAndPaginateWorks(
     total,
     type,
     activity,
+    q,
   };
 }
