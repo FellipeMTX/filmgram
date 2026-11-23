@@ -61,6 +61,20 @@
           "name": "Shaun Toub",
           "character": "Yinsen",
           "profile_path": "/6fuJ9D50bYuMAhrlEgVqzgqF0LU.jpg"
+        },
+        {
+          "id": 15277,
+          "name": "Jon Favreau",
+          "character": "Hogan",
+          "profile_path": "/8MtRRnEHaBSw8Ztdl8saXiw1egP.jpg"
+        }
+      ],
+      "crew": [
+        {
+          "id": 15277,
+          "name": "Jon Favreau",
+          "job": "Director",
+          "profile_path": "/8MtRRnEHaBSw8Ztdl8saXiw1egP.jpg"
         }
       ]
     }
@@ -769,6 +783,20 @@
           "name": "Anthony Mackie",
           "character": "Sam Wilson / Captain America",
           "profile_path": "/vecvTm7SimizluJkyIwBxeLbvRm.jpg"
+        }
+      ],
+      "crew": [
+        {
+          "id": 19272,
+          "name": "Joe Russo",
+          "job": "Director",
+          "profile_path": "/o0OXjFzL10jCy89iAs7UzzSbyoK.jpg"
+        },
+        {
+          "id": 19271,
+          "name": "Anthony Russo",
+          "job": "Director",
+          "profile_path": "/xbINBnWn28YygYWUJ1aSAw0xPRv.jpg"
         }
       ]
     }
