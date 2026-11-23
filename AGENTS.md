@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Filmgram visual system
+
+Use Tailwind utilities and the adapted shadcn components in `src/components/ui`.
+Read `docs/UI.md` before changing visual primitives or theme tokens. Preserve the existing
+Filmgram identity and Server Action form contracts. Keep route navigation as links.
