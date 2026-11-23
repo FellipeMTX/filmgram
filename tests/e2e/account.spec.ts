@@ -70,12 +70,18 @@ test.describe("signed-in account", () => {
       await expect(saved).toBeVisible();
       await page.reload();
       await expect(saved).toBeVisible();
+      await page.goto("/en/profile/me");
+      await page.getByRole("link", { name: "View favorites" }).click();
+      await expect(page).toHaveURL(/\/en\/favorites$/);
+      await expect(page.getByRole("link", { name: "Iron Man" })).toBeVisible();
 
       const strangerPage = await stranger.newPage();
       await strangerPage.goto(`${baseURL}/en/title/movie/1726`);
       await expect(
         strangerPage.getByRole("button", { name: "Save", exact: true }),
       ).toBeVisible();
+      await strangerPage.goto(`${baseURL}/en/favorites`);
+      await expect(strangerPage.getByText("No favorites yet.")).toBeVisible();
     } finally {
       await stranger.close();
     }
@@ -121,6 +127,14 @@ test.describe("signed-in account", () => {
         page.getByRole("article").getByText(review, { exact: true }),
       ).toBeVisible();
 
+      const authorLink = page
+        .getByRole("article")
+        .filter({ hasText: review })
+        .getByRole("link", { name: "Filmgram user" });
+      await expect(authorLink).toHaveAttribute(
+        "href",
+        `/en/profile/${profile.handle}`,
+      );
       await followerPage.goto(`${baseURL}/en/following`);
       await expect(
         followerPage.getByText(review, { exact: true }),
@@ -129,8 +143,74 @@ test.describe("signed-in account", () => {
       await expect(
         followerPage.getByText(review, { exact: false }),
       ).toBeVisible();
+      await page.getByRole("button", { name: "Delete review" }).click();
+      await expect(page.getByText(review, { exact: true })).toHaveCount(0);
+      await followerPage.reload();
+      await expect(
+        followerPage.getByText(review, { exact: false }),
+      ).toHaveCount(0);
+      await followerPage.goto(`${baseURL}/en/following`);
+      await expect(followerPage.getByText(review, { exact: true })).toHaveCount(
+        0,
+      );
     } finally {
       await follower.close();
+    }
+  });
+
+  test("playlist links respect public and private visibility", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Expected the Playwright app origin");
+    const { client, userId } = await signUp(page.context(), baseURL);
+    const { data: profile, error: profileError } = await client
+      .from("profiles")
+      .select("handle")
+      .eq("id", userId)
+      .single();
+    if (profileError || !profile) throw new Error("Expected a public profile");
+    const { data: lists, error } = await client
+      .from("playlists")
+      .insert([
+        { user_id: userId, name: "Public E2E playlist", is_public: true },
+        { user_id: userId, name: "Private E2E playlist", is_public: false },
+      ])
+      .select("id,name");
+    if (error || !lists)
+      throw new Error(error?.message ?? "Expected playlists");
+    const publicList = lists.find(
+      (list) => list.name === "Public E2E playlist",
+    )!;
+    const privateList = lists.find(
+      (list) => list.name === "Private E2E playlist",
+    )!;
+    await page.goto(`/en/playlists/${privateList.id}`);
+    await expect(
+      page.getByRole("heading", { name: privateList.name }),
+    ).toBeVisible();
+    const visitor = await browser.newContext();
+    try {
+      const visitorPage = await visitor.newPage();
+      await visitorPage.goto(`${baseURL}/en/profile/${profile.handle}`);
+      await expect(
+        visitorPage.getByRole("link", { name: /Public E2E playlist/ }),
+      ).toHaveAttribute("href", `/en/playlists/${publicList.id}`);
+      await expect(visitorPage.getByText(privateList.name)).toHaveCount(0);
+      await visitorPage
+        .getByRole("link", { name: /Public E2E playlist/ })
+        .click();
+      await expect(
+        visitorPage.getByRole("heading", { name: publicList.name }),
+      ).toBeVisible();
+      await visitorPage.goto(`${baseURL}/en/playlists/${privateList.id}`);
+      await expect(
+        visitorPage.getByRole("heading", { name: "Page not found" }),
+      ).toBeVisible();
+      await expect(visitorPage.getByText(privateList.name)).toHaveCount(0);
+    } finally {
+      await visitor.close();
     }
   });
 
@@ -160,6 +240,8 @@ test.describe("signed-in account", () => {
     }
 
     await page.goto("/en/playlists");
+    await page.getByRole("link", { name, exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/playlists\/[0-9a-f-]+$/);
     await expect(
       page.getByRole("link", { name: /1\. Iron Man/ }),
     ).toBeVisible();
@@ -173,6 +255,10 @@ test.describe("signed-in account", () => {
     await page.reload();
     await expect(
       page.getByRole("link", { name: /2\. Iron Man/ }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Remove" }).first().click();
+    await expect(
+      page.getByRole("link", { name: /1\. Iron Man/ }),
     ).toBeVisible();
   });
 });

@@ -19,6 +19,7 @@ export function Rail({
   next: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const hoverTimer = useRef<number | undefined>(undefined);
   const [edges, setEdges] = useState({ left: false, right: false });
   const update = useCallback(() => {
     const el = ref.current;
@@ -36,23 +37,53 @@ export function Rail({
     observer.observe(el);
     return () => observer.disconnect();
   }, [update, children]);
+  const cancelHover = useCallback(() => {
+    window.clearTimeout(hoverTimer.current);
+  }, []);
+  useEffect(() => cancelHover, [cancelHover]);
   const move = (direction: number) =>
     ref.current?.scrollBy({
       left: direction * (ref.current.clientWidth * 0.8),
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
     });
+  function arrow(direction: -1 | 1, available: boolean, label: string) {
+    return (
+      <button
+        type="button"
+        className={`${styles.arrow} ${direction === -1 ? styles.left : styles.right}`}
+        aria-label={label}
+        aria-disabled={!available}
+        tabIndex={available ? 0 : -1}
+        onPointerEnter={(e) => {
+          if (e.pointerType !== "mouse" || !available) return;
+          cancelHover();
+          hoverTimer.current = window.setTimeout(() => move(direction), 240);
+        }}
+        onPointerLeave={cancelHover}
+        onClick={() => {
+          cancelHover();
+          if (available) move(direction);
+        }}
+      >
+        {direction === -1 ? "‹" : "›"}
+      </button>
+    );
+  }
   return (
-    <div className={styles.rail}>
-      {edges.left && (
-        <button
-          type="button"
-          className={`${styles.arrow} ${styles.left}`}
-          aria-label={previous}
-          onClick={() => move(-1)}
-        >
-          ‹
-        </button>
-      )}
+    <div
+      className={styles.rail}
+      onKeyDown={(e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        const direction = e.key === "ArrowLeft" ? -1 : 1;
+        if (direction === -1 ? edges.left : edges.right) {
+          e.preventDefault();
+          move(direction);
+        }
+      }}
+    >
+      {arrow(-1, edges.left, previous)}
       <div
         ref={ref}
         className={styles.row}
@@ -62,16 +93,7 @@ export function Rail({
       >
         {children}
       </div>
-      {edges.right && (
-        <button
-          type="button"
-          className={`${styles.arrow} ${styles.right}`}
-          aria-label={next}
-          onClick={() => move(1)}
-        >
-          ›
-        </button>
-      )}
+      {arrow(1, edges.right, next)}
     </div>
   );
 }

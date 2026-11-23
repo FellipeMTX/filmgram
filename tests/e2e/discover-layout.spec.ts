@@ -197,3 +197,63 @@ test("the title poster fills the banner column on desktop", async ({
   expect(edges.top).toBeLessThan(2);
   expect(edges.bottom).toBeLessThan(2);
 });
+
+test("highlight content and controls stay separate with a long title", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "Checks multiple viewport widths");
+  await page.goto("/en/discover");
+  const hero = page.getByRole("region", { name: "Featured titles" });
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await hero.getByRole("heading", { level: 1 }).evaluate((heading) => {
+      heading.textContent = "An exceptionally long title ".repeat(8);
+    });
+    const linkButton = await hero.locator("a .button").boundingBox();
+    const controls = await hero
+      .getByRole("button", { name: "Next titles" })
+      .boundingBox();
+    if (!linkButton || !controls)
+      throw new Error("Expected hero content and controls");
+    expect(linkButton.y + linkButton.height).toBeLessThanOrEqual(controls.y);
+  }
+});
+
+test("rail retains keyboard focus when reaching an edge", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "Checks keyboard focus");
+  await page.goto("/en/discover?type=movie");
+  const rail = shelf(page, "Trending now");
+  const next = rail.getByRole("button", { name: "Next titles" });
+  await next.focus();
+  for (
+    let i = 0;
+    i < 8 && (await next.getAttribute("aria-disabled")) !== "true";
+    i++
+  ) {
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(450);
+  }
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+  await expect(next).toBeFocused();
+  await expect(next).toBeVisible();
+});
+
+test("credits and official TMDB attribution are reachable in each language", async ({
+  page,
+}) => {
+  for (const locale of ["en", "pt-BR", "es"]) {
+    await page.goto(`/${locale}/discover`);
+    await page.locator('footer a[href$="/credits"]').click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/credits$`));
+    await expect(
+      page.getByRole("img", { name: "The Movie Database" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+      ),
+    ).toBeVisible();
+  }
+});

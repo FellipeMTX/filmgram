@@ -155,9 +155,6 @@ export default async function Discover({
           empty={t.noWatched}
         />
       </div>
-      <footer className="footer container">
-        FILMGRAM <span>·</span> {t.tagline} <small>{t.attribution}</small>
-      </footer>
     </main>
   );
 }

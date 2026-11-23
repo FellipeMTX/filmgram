@@ -1,4 +1,4 @@
-import { toggleTitle, addToPlaylist } from "@/features/auth/actions";
+import { toggleTitle, addToPlaylist } from "@/features/social/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 export function TitleFields({ item }: { item: Title }) {

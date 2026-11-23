@@ -21,6 +21,11 @@ export function Header({ locale }: { locale: string }) {
   }
   return (
     <>
+      {query.get("auth_error") === "1" && (
+        <div role="alert" className="container">
+          {t.authError}
+        </div>
+      )}
       <header className={styles.header}>
         <Link href={`/${locale}/discover`} className={styles.logo}>
           Filmgram<span>.</span>

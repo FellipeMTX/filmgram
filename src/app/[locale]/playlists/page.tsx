@@ -5,8 +5,8 @@ import {
   createPlaylist,
   removePlaylistItem,
   reorderPlaylist,
-  signIn,
-} from "@/features/auth/actions";
+} from "@/features/social/actions";
+import { signIn } from "@/features/auth/actions";
 type Item = {
   id: string;
   media_type: string;
@@ -78,7 +78,11 @@ export default async function Playlists({
           );
           return (
             <section className="panel" key={list.id}>
-              <h2>{list.name}</h2>
+              <h2>
+                <Link href={`/${locale}/playlists/${list.id}`}>
+                  {list.name}
+                </Link>
+              </h2>
               <p className="muted">
                 {list.is_public ? t.publicLabel : t.private}{" "}
                 {list.description && `· ${list.description}`}
@@ -101,6 +105,11 @@ export default async function Playlists({
                           <form action={reorderPlaylist} key={delta}>
                             <input
                               type="hidden"
+                              name="expected_ids"
+                              value={items.map((i) => i.id).join(",")}
+                            />
+                            <input
+                              type="hidden"
                               name="playlist_id"
                               value={list.id}
                             />
@@ -119,6 +128,11 @@ export default async function Playlists({
                         );
                       })}
                       <form action={removePlaylistItem}>
+                        <input
+                          type="hidden"
+                          name="playlist_id"
+                          value={list.id}
+                        />
                         <input type="hidden" name="id" value={item.id} />
                         <button className="iconButton" aria-label={t.remove}>
                           ×

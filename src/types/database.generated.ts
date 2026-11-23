@@ -324,6 +324,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      append_playlist_item: {
+        Args: {
+          p_media_title: string
+          p_media_type: string
+          p_playlist_id: string
+          p_poster_path?: string
+          p_tmdb_id: number
+        }
+        Returns: undefined
+      }
       most_liked_titles: {
         Args: { p_limit: number; p_media_type: string } | { p_limit?: number }
         Returns: {
@@ -344,8 +354,16 @@ export type Database = {
           series_count: number
         }[]
       }
+      remove_playlist_item: {
+        Args: { p_item_id: string; p_playlist_id: string }
+        Returns: undefined
+      }
       reorder_playlist_items: {
-        Args: { p_item_ids: string[]; p_playlist_id: string }
+        Args: {
+          p_expected_ids: string[]
+          p_item_ids: string[]
+          p_playlist_id: string
+        }
         Returns: undefined
       }
       title_like_count: {

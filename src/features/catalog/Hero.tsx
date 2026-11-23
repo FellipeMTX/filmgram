@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { imageUrl, titleName, year } from "@/integrations/tmdb-display";
 import type { Title } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
@@ -15,9 +15,33 @@ export function Hero({
   trendingKeys: string[];
 }) {
   const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const start = useRef<number | null>(null);
   const t = messages(locale),
     item = items[index];
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    function updatePreference() {
+      setReducedMotion(preference.matches);
+    }
+    updatePreference();
+    preference.addEventListener("change", updatePreference);
+    return () => preference.removeEventListener("change", updatePreference);
+  }, []);
+
+  useEffect(() => {
+    if (!playing || hovered || focused || reducedMotion || items.length < 2)
+      return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setIndex((current) => (current + 1) % items.length);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [focused, hovered, index, items.length, playing, reducedMotion]);
+
   if (!item) return <p className="container muted">{t.noResults}</p>;
   const move = (n: number) =>
     setIndex((i) => (i + n + items.length) % items.length);
@@ -25,6 +49,14 @@ export function Hero({
     <section
       className={styles.hero}
       aria-label={t.featured}
+      onPointerEnter={(e) => {
+        if (e.pointerType === "mouse") setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
+      }}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") {
           e.preventDefault();
@@ -71,24 +103,39 @@ export function Hero({
           <span className="button primary">{t.viewDetails} ↗</span>
         </div>
       </Link>
-      <div className={`${styles.heroControls} container`}>
-        <button type="button" aria-label={t.previous} onClick={() => move(-1)}>
-          ‹
-        </button>
-        {items.map((x, i) => (
+      {items.length > 1 && (
+        <div className={styles.heroControls}>
           <button
             type="button"
-            key={`${x.media_type}-${x.id}`}
-            className={i === index ? styles.activeDot : styles.dot}
-            aria-label={`${t.highlight} ${i + 1} ${t.of} ${items.length}`}
-            aria-current={i === index ? "true" : undefined}
-            onClick={() => setIndex(i)}
-          />
-        ))}
-        <button type="button" aria-label={t.next} onClick={() => move(1)}>
-          ›
-        </button>
-      </div>
+            aria-label={t.previous}
+            onClick={() => move(-1)}
+          >
+            ‹
+          </button>
+          {items.map((x, i) => (
+            <button
+              type="button"
+              key={`${x.media_type}-${x.id}`}
+              className={i === index ? styles.activeDot : styles.dot}
+              aria-label={`${t.highlight} ${i + 1} ${t.of} ${items.length}`}
+              aria-current={i === index ? "true" : undefined}
+              onClick={() => setIndex(i)}
+            />
+          ))}
+          <button type="button" aria-label={t.next} onClick={() => move(1)}>
+            ›
+          </button>
+          {!reducedMotion && (
+            <button
+              type="button"
+              aria-label={playing ? t.pauseHighlights : t.playHighlights}
+              onClick={() => setPlaying((value) => !value)}
+            >
+              <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

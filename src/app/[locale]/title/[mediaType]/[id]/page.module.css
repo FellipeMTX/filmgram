@@ -59,7 +59,7 @@
 }
 .content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 60px;
   padding-top: 35px;
   padding-bottom: 80px;
@@ -68,22 +68,9 @@
   font: 600 26px var(--display);
   margin: 0 0 20px;
 }
-.content h2:not(:first-child) {
-  margin-top: 40px;
-}
-.cast {
-  display: flex;
-  gap: 22px;
-  flex-wrap: wrap;
-}
-.cast div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.cast span {
-  color: #9f8e80;
-  font-size: 12px;
+.content > .castSection {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 .reviewForm,
 .reviewForm label {
@@ -200,11 +187,11 @@
 .content section {
   min-width: 0;
 }
-.content :global([role="region"]):has(.castMember) > .castMember {
-  flex-basis: 120px;
+.castSection :global([role="region"]) > .castMember {
+  flex: 1 0 120px;
 }
 @media (max-width: 700px) {
-  .content :global([role="region"]):has(.castMember) > .castMember {
+  .castSection :global([role="region"]) > .castMember {
     flex-basis: 88px;
   }
 }
