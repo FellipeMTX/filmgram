@@ -19,6 +19,7 @@ import { submitReview, deleteReview } from "@/features/social/actions";
 import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
 import { MediaImage } from "@/features/catalog/MediaImage";
+import { PersonCard } from "@/features/people/PersonCard";
 
 export default async function Detail({
   params,
@@ -93,6 +94,21 @@ export default async function Detail({
   }
   const myReview = reviews.find((r) => r.user_id === user?.id);
   const poster = imageUrl(item.poster_path);
+  const directors =
+    mediaType === "movie"
+      ? [
+          ...new Map(
+            (item.credits?.crew || [])
+              .filter(
+                (person) =>
+                  person.job === "Director" &&
+                  Number.isSafeInteger(person.id) &&
+                  person.id > 0,
+              )
+              .map((person) => [person.id, person]),
+          ).values(),
+        ]
+      : [];
   return (
     <main>
       <div
@@ -147,6 +163,32 @@ export default async function Detail({
           </div>
         </div>
       </div>
+      {directors.length > 0 && (
+        <section
+          className={cn(container, "pt-[35px] mobile:pt-[30px]")}
+          aria-labelledby="directors-heading"
+        >
+          <h2
+            id="directors-heading"
+            className="mt-0 mb-5 font-display text-[26px] font-semibold"
+          >
+            {t.directors}
+          </h2>
+          <div className="flex flex-wrap gap-[22px]">
+            {directors.map((person) => (
+              <div key={person.id} className="w-[120px] mobile:w-[88px]">
+                <PersonCard
+                  id={person.id}
+                  name={person.name}
+                  profilePath={person.profile_path}
+                  role={t.roleDirector}
+                  locale={locale}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <div
         className={cn(
           container,
@@ -261,20 +303,14 @@ export default async function Detail({
               next={t.next}
             >
               {item.credits.cast.slice(0, 6).map((c) => (
-                <div
-                  className="flex basis-[120px] shrink-0 grow flex-col items-center gap-[5px] text-center text-[13px] mobile:basis-[88px] [&_span]:text-xs [&_span]:text-detail-muted"
+                <PersonCard
                   key={c.id}
-                >
-                  <div className="relative grid aspect-square h-[120px] w-[120px] max-w-full place-items-center overflow-hidden rounded-[50%] bg-title-placeholder text-[32px] text-title-muted mobile:h-[88px] mobile:w-[88px] [&_img]:absolute [&_img]:inset-0 [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
-                    <MediaImage
-                      src={imageUrl(c.profile_path, "w185")}
-                      alt=""
-                      fallback={c.name.slice(0, 1)}
-                    />
-                  </div>
-                  <strong>{c.name}</strong>
-                  <span>{c.character}</span>
-                </div>
+                  id={c.id}
+                  name={c.name}
+                  profilePath={c.profile_path}
+                  role={c.character}
+                  locale={locale}
+                />
               ))}
             </Rail>
           ) : (

@@ -24,3 +24,10 @@ Connect the repository to Vercel and use the Next.js preset. Configure `TMDB_REA
 Before sharing the release, check the public catalog and detail route with a live TMDB key in a private browser window. When accounts are enabled, verify Google sign-in from a detail page returns to that title.
 
 See [the implementation plan](docs/PLANEJAMENTO.md) for product stages and the architecture.
+
+## People profiles
+
+Open a cast member or a movie's director to view their public profile. For example,
+`/en/person/15277` shows Jon Favreau's acting and directing credits on one page.
+Profiles include available biography and personal metadata, movie/TV and activity filters,
+and a paginated filmography. Links and filters preserve the selected locale.
