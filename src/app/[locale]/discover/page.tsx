@@ -11,7 +11,7 @@ import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
 import { Hero } from "@/features/catalog/Hero";
 import { Shelf } from "@/features/catalog/Cards";
-import styles from "./page.module.css";
+import { container } from "@/lib/layout";
 export default async function Discover({
   params,
   searchParams,
@@ -104,8 +104,11 @@ export default async function Discover({
     }));
   return (
     <main>
-      <div className="container">
-        <div className={styles.filter} aria-label={t.mediaType}>
+      <div className={container}>
+        <div
+          className="flex h-[62px] items-center gap-[26px] mobile:my-2 mobile:mb-5 mobile:h-auto mobile:gap-2"
+          aria-label={t.mediaType}
+        >
           {(
             [
               ["all", t.all],
@@ -116,7 +119,7 @@ export default async function Discover({
             <Link
               key={value}
               aria-current={type === value ? "page" : undefined}
-              className={type === value ? styles.selected : ""}
+              className={`flex h-full items-center border-b-2 text-sm font-bold mobile:h-[38px] mobile:flex-1 mobile:justify-center mobile:rounded-[9px] mobile:border ${type === value ? "border-primary text-button-foreground mobile:bg-primary mobile:text-filter-foreground" : "border-transparent text-filter-muted mobile:border-filter-border"}`}
               href={`/${locale}/discover?type=${value}`}
             >
               {label}
@@ -130,7 +133,7 @@ export default async function Discover({
         locale={locale}
         trendingKeys={items.slice(0, 3).map((x) => `${x.media_type}-${x.id}`)}
       />
-      <div className="container">
+      <div className={container}>
         <Shelf
           title={t.recommended}
           items={recommended}

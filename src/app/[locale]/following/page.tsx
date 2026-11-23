@@ -1,3 +1,6 @@
+import { Card } from "@/components/ui/card";
+import { narrow, pageTitle, eyebrow } from "@/lib/layout";
+import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
@@ -40,48 +43,50 @@ export default async function Following({
     }
   }
   return (
-    <main className="container narrow">
-      <p className="eyebrow">{t.community}</p>
-      <h1 className="pageTitle">{t.following}</h1>
+    <main className={narrow}>
+      <p className={eyebrow}>{t.community}</p>
+      <h1 className={pageTitle}>{t.following}</h1>
       {!user ? (
         <>
-          <p className="muted">{t.signInPrompt}</p>
+          <p className="text-muted-foreground">{t.signInPrompt}</p>
           <form action={signIn}>
             <input type="hidden" name="next" value={`/${locale}/following`} />
-            <button className="button primary">{t.signIn}</button>
+            <Button type="submit">{t.signIn}</Button>
           </form>
         </>
       ) : reviews.length ? (
         reviews.map((r) => (
-          <article className="panel feedItem" key={r.id}>
-            <Link href={`/${locale}/profile/${r.profiles?.handle || ""}`}>
-              <strong>{r.profiles?.display_name || t.member}</strong>
-            </Link>
-            <small>{new Date(r.created_at).toLocaleDateString(locale)}</small>
-            <p>
-              <Link href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}>
-                {t.viewDetails} ↗
+          <Card asChild key={r.id}>
+            <article className="[&_small]:float-right [&_small]:text-muted-foreground">
+              <Link href={`/${locale}/profile/${r.profiles?.handle || ""}`}>
+                <strong>{r.profiles?.display_name || t.member}</strong>
               </Link>
-            </p>
-            <div className="stars">
-              {"★".repeat(r.rating)}
-              {"☆".repeat(5 - r.rating)}
-            </div>
-            {r.body && <p>{r.body}</p>}
-            {r.youtube_video_id && (
-              <a
-                className="button"
-                href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                ▶ YouTube
-              </a>
-            )}
-          </article>
+              <small>{new Date(r.created_at).toLocaleDateString(locale)}</small>
+              <p>
+                <Link href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}>
+                  {t.viewDetails} ↗
+                </Link>
+              </p>
+              <div className="text-[22px] text-primary">
+                {"★".repeat(r.rating)}
+                {"☆".repeat(5 - r.rating)}
+              </div>
+              {r.body && <p>{r.body}</p>}
+              {r.youtube_video_id && (
+                <a
+                  className={buttonVariants({ variant: "outline" })}
+                  href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  ▶ YouTube
+                </a>
+              )}
+            </article>
+          </Card>
         ))
       ) : (
-        <p className="muted">{t.followingEmpty}</p>
+        <p className="text-muted-foreground">{t.followingEmpty}</p>
       )}
     </main>
   );

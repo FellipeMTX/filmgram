@@ -1,3 +1,6 @@
+import { actionGroup } from "@/lib/layout";
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { toggleTitle, addToPlaylist } from "@/features/social/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
@@ -34,7 +37,7 @@ export function TitleActions({
   const t = messages(locale);
   if (!user) return null;
   return (
-    <div className="actionGroup">
+    <div className={actionGroup}>
       {(
         [
           ["favorites", states.favorites ? t.saved : t.save],
@@ -45,20 +48,24 @@ export function TitleActions({
         <form action={toggleTitle} key={table}>
           <TitleFields item={item} />
           <input type="hidden" name="table" value={table} />
-          <button
-            className={`button ${table === "favorites" ? "primary" : ""}`}
+          <Button
+            type="submit"
+            variant={table === "favorites" ? "default" : "outline"}
             aria-label={label}
             aria-pressed={!!states[table]}
           >
             {table === "favorites" ? "☆" : table === "watched" ? "✓" : "♡"}{" "}
             {label}
-          </button>
+          </Button>
         </form>
       ))}
       {playlists.length > 0 && (
-        <form action={addToPlaylist} className="inlineForm">
+        <form
+          action={addToPlaylist}
+          className="flex gap-2 [&_select]:max-w-[180px]"
+        >
           <TitleFields item={item} />
-          <select
+          <NativeSelect
             name="playlist_id"
             aria-label={t.selectPlaylist}
             required
@@ -72,8 +79,10 @@ export function TitleActions({
                 {p.name}
               </option>
             ))}
-          </select>
-          <button className="button">{t.add}</button>
+          </NativeSelect>
+          <Button type="submit" variant="outline">
+            {t.add}
+          </Button>
         </form>
       )}
     </div>

@@ -1,3 +1,5 @@
+import { container } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { isLocale, messages } from "@/i18n/messages";
@@ -16,7 +18,12 @@ export default async function LocaleLayout({
     <NextIntlClientProvider locale={locale} messages={messages(locale)}>
       <Header locale={locale} />
       {children}
-      <footer className="footer container">
+      <footer
+        className={cn(
+          container,
+          "border-t border-header-border pt-[30px] pb-[45px] font-bold tracking-[0.08em] mobile:text-xs [&_span]:text-primary",
+        )}
+      >
         FILMGRAM <span>·</span> {messages(locale).tagline}{" "}
         <Link href={`/${locale}/credits`}>{messages(locale).credits}</Link>
       </footer>
