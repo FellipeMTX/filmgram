@@ -7,9 +7,9 @@ Film and series discovery with a personal library, reviews, playlists, and a fol
 Use Node.js 22 and pnpm 10. Install with `pnpm install --frozen-lockfile` and copy `.env.example` to `.env.local`.
 
 - Set `TMDB_READ_TOKEN` to a TMDB API Read Access Token for live discovery.
-- Set `FILMGRAM_FIXTURES=1` for deterministic catalog data in local development. Run `pnpm dev` and open http://localhost:3000.
+- Set `FILMGRAM_FIXTURES=1` for deterministic catalog data in local development. Run `pnpm dev --hostname 127.0.0.1 --port 3103` and open http://127.0.0.1:3103.
 - To enable accounts locally, start Supabase with `supabase start` and copy the URL and publishable key from `supabase status` to the public Supabase variables. The local CLI may display its public key as an anon key.
-- For Google login, configure the provider in Supabase and register the Supabase callback URL in Google Cloud. Allow the Next.js callback `/auth/callback` on each app origin that will be used. Keep the Google client secret in the provider configuration.
+- For Google login with the local database, follow the [local OAuth setup](supabase/README.md#local-google-oauth).
 
 ## Checks
 
