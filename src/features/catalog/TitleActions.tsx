@@ -1,4 +1,4 @@
-import { toggleTitle, addToPlaylist, signIn } from "@/features/auth/actions";
+import { toggleTitle, addToPlaylist } from "@/features/social/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 export function TitleFields({ item }: { item: Title }) {
@@ -32,17 +32,7 @@ export function TitleActions({
   playlists: { id: string; name: string }[];
 }) {
   const t = messages(locale);
-  if (!user)
-    return (
-      <form action={signIn}>
-        <input
-          type="hidden"
-          name="next"
-          value={`/${locale}/title/${item.media_type}/${item.id}`}
-        />
-        <button className="button primary">{t.signIn}</button>
-      </form>
-    );
+  if (!user) return null;
   return (
     <div className="actionGroup">
       {(

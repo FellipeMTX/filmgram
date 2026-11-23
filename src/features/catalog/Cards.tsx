@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { imageUrl, titleName, year, type Title } from "@/integrations/tmdb";
+import { imageUrl, titleName, year } from "@/integrations/tmdb-display";
+import type { Title } from "@/integrations/tmdb";
+import { Rail } from "./Rail";
+import { MediaImage } from "./MediaImage";
 import { messages } from "@/i18n/messages";
 import styles from "./Cards.module.css";
 export function Card({ item, locale }: { item: Title; locale: string }) {
@@ -11,11 +14,7 @@ export function Card({ item, locale }: { item: Title; locale: string }) {
       href={`/${locale}/title/${item.media_type}/${item.id}`}
     >
       <div className={styles.poster}>
-        {image ? (
-          <img src={image} alt="" loading="lazy" />
-        ) : (
-          <span>{t.noPoster}</span>
-        )}
+        <MediaImage src={image} alt="" fallback={t.noPoster} />
         <span className={styles.cardBadge}>
           {item.media_type === "movie" ? t.film : t.seriesOne}
         </span>
@@ -41,14 +40,19 @@ export function Shelf({
   locale: string;
   empty?: string;
 }) {
+  const headingId = `shelf-${title.replace(/[^a-z0-9]/gi, "-")}`;
   return (
-    <section className={styles.shelf}>
+    <section className={styles.shelf} aria-labelledby={headingId}>
       <div className={styles.sectionHeading}>
-        <h2>{title}</h2>
+        <h2 id={headingId}>{title}</h2>
         <span>✦</span>
       </div>
       {items.length ? (
-        <div className={styles.row}>
+        <Rail
+          label={title}
+          previous={messages(locale).previous}
+          next={messages(locale).next}
+        >
           {items.map((item) => (
             <Card
               key={`${item.media_type}-${item.id}`}
@@ -56,7 +60,7 @@ export function Shelf({
               locale={locale}
             />
           ))}
-        </div>
+        </Rail>
       ) : (
         <p className="muted">{empty || messages(locale).noResults}</p>
       )}

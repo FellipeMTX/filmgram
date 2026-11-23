@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
-import { signIn, signOut, toggleFollow } from "@/features/auth/actions";
+import { signIn, signOut } from "@/features/auth/actions";
+import { toggleFollow } from "@/features/social/actions";
 export default async function Profile({
   params,
 }: {
@@ -109,6 +110,7 @@ export default async function Profile({
         )}
         {user?.id === profile.id && (
           <form action={signOut}>
+            <input type="hidden" name="next" value={`/${locale}/discover`} />
             <button className="button">{t.signOut}</button>
           </form>
         )}
@@ -139,12 +141,20 @@ export default async function Profile({
           </div>
         ))}
       </section>
+      {user?.id === profile.id && (
+        <section className="panel">
+          <h2>{t.favorites}</h2>
+          <Link className="button" href={`/${locale}/favorites`}>
+            {t.viewFavorites}
+          </Link>
+        </section>
+      )}
       <section className="panel">
         <h2>{t.playlists}</h2>
         {playlists?.length ? (
           playlists.map((p) => (
             <p key={p.id}>
-              <Link href={`/${locale}/playlists`}>{p.name} ↗</Link>
+              <Link href={`/${locale}/playlists/${p.id}`}>{p.name} ↗</Link>
             </p>
           ))
         ) : (
