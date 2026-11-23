@@ -1,3 +1,5 @@
+import { narrow, pageTitle, eyebrow } from "@/lib/layout";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { currentUser, supabase } from "@/integrations/supabase";
 import { signIn } from "@/features/auth/actions";
@@ -15,15 +17,15 @@ export default async function Favorites({
   const db = await supabase();
   const favorites = user && db ? await getFavorites(db, user.id) : [];
   return (
-    <main className="container narrow">
-      <p className="eyebrow">{t.collection}</p>
-      <h1 className="pageTitle">{t.favorites}</h1>
+    <main className={narrow}>
+      <p className={eyebrow}>{t.collection}</p>
+      <h1 className={pageTitle}>{t.favorites}</h1>
       {!user ? (
         <>
-          <p className="muted">{t.signInPrompt}</p>
+          <p className="text-muted-foreground">{t.signInPrompt}</p>
           <form action={signIn}>
             <input type="hidden" name="next" value={`/${locale}/favorites`} />
-            <button className="button primary">{t.signIn}</button>
+            <Button type="submit">{t.signIn}</Button>
           </form>
         </>
       ) : favorites.length ? (
@@ -39,7 +41,7 @@ export default async function Favorites({
           ))}
         </ul>
       ) : (
-        <p className="muted">{t.noFavorites}</p>
+        <p className="text-muted-foreground">{t.noFavorites}</p>
       )}
     </main>
   );

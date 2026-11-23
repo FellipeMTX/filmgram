@@ -1,4 +1,7 @@
 "use client";
+import { container } from "@/lib/layout";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useParams } from "next/navigation";
 import { messages } from "@/i18n/messages";
 export default function ErrorPage({
@@ -10,11 +13,11 @@ export default function ErrorPage({
   const params = useParams(),
     t = messages(String(params.locale));
   return (
-    <main className="container state">
+    <main className={cn(container, "py-20")}>
       <h1>{t.error}</h1>
-      <button className="button primary" onClick={reset}>
+      <Button type="button" onClick={reset}>
         {t.tryAgain}
-      </button>
+      </Button>
     </main>
   );
 }

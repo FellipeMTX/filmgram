@@ -1,3 +1,6 @@
+import { Card } from "@/components/ui/card";
+import { narrow, pageTitle } from "@/lib/layout";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { messages } from "@/i18n/messages";
@@ -15,12 +18,12 @@ export default async function Profile({
     db = await supabase();
   if (username === "me" && !user)
     return (
-      <main className="container narrow">
-        <h1 className="pageTitle">{t.profile}</h1>
-        <p className="muted">{t.signInPrompt}</p>
+      <main className={narrow}>
+        <h1 className={pageTitle}>{t.profile}</h1>
+        <p className="text-muted-foreground">{t.signInPrompt}</p>
         <form action={signIn}>
           <input type="hidden" name="next" value={`/${locale}/profile/me`} />
-          <button className="button primary">{t.signIn}</button>
+          <Button type="submit">{t.signIn}</Button>
         </form>
       </main>
     );
@@ -83,9 +86,9 @@ export default async function Profile({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
   return (
-    <main className="container narrow">
-      <div className="profileHeader">
-        <div className="avatar">
+    <main className={narrow}>
+      <div className="mb-[30px] flex items-center gap-6 mobile:flex-wrap [&_form]:ml-auto mobile:[&_form]:ml-0 [&_h1]:m-0">
+        <div className="grid h-[95px] w-[95px] place-items-center overflow-hidden rounded-full bg-avatar font-display text-[36px] font-bold mobile:h-[70px] mobile:w-[70px] [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="" />
           ) : (
@@ -93,8 +96,8 @@ export default async function Profile({
           )}
         </div>
         <div>
-          <h1 className="pageTitle">{profile.display_name}</h1>
-          <p className="muted">@{profile.handle}</p>
+          <h1 className={pageTitle}>{profile.display_name}</h1>
+          <p className="text-muted-foreground">@{profile.handle}</p>
           <p>
             {stats?.follower_count || 0} {t.followers} &nbsp; · &nbsp;{" "}
             {stats?.following_count || 0} {t.followingCount}
@@ -103,79 +106,95 @@ export default async function Profile({
         {user && user.id !== profile.id && (
           <form action={toggleFollow}>
             <input type="hidden" name="following_id" value={profile.id} />
-            <button className="button primary">
-              {follow ? t.unfollow : t.follow}
-            </button>
+            <Button type="submit">{follow ? t.unfollow : t.follow}</Button>
           </form>
         )}
         {user?.id === profile.id && (
           <form action={signOut}>
             <input type="hidden" name="next" value={`/${locale}/discover`} />
-            <button className="button">{t.signOut}</button>
+            <Button type="submit" variant="outline">
+              {t.signOut}
+            </Button>
           </form>
         )}
       </div>
-      <section className="panel">
-        <h2>{t.viewingHabits}</h2>
-        <div className="stats">
-          <div>
-            <strong>{stats?.movie_count || 0}</strong>
-            {t.films}
-          </div>
-          <div>
-            <strong>{stats?.series_count || 0}</strong>
-            {t.series}
-          </div>
-        </div>
-        {topGenres.map(([id, count]) => (
-          <div className="genreRow" key={id}>
-            <span>{genreLabels[id]?.[lang] || `#${id}`}</span>
+      <Card asChild>
+        <section className="[&_h2]:mt-0 [&_h2]:mb-[14px] [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold">
+          <h2>{t.viewingHabits}</h2>
+          <div className="flex gap-[15px] [&_div]:flex [&_div]:min-w-[120px] [&_div]:flex-col [&_div]:border [&_div]:border-stats-border [&_div]:p-[15px] [&_div]:text-center [&_strong]:text-[25px]">
             <div>
-              <i
-                style={{
-                  width: `${Math.round((count / Math.max((stats?.movie_count || 0) + (stats?.series_count || 0), 1)) * 100)}%`,
-                }}
-              />
+              <strong>{stats?.movie_count || 0}</strong>
+              {t.films}
             </div>
-            <span>{count}</span>
+            <div>
+              <strong>{stats?.series_count || 0}</strong>
+              {t.series}
+            </div>
           </div>
-        ))}
-      </section>
-      {user?.id === profile.id && (
-        <section className="panel">
-          <h2>{t.favorites}</h2>
-          <Link className="button" href={`/${locale}/favorites`}>
-            {t.viewFavorites}
-          </Link>
+          {topGenres.map(([id, count]) => (
+            <div
+              className="mt-4 grid grid-cols-[140px_1fr_25px] items-center gap-2.5 text-[13px] [&_div]:h-2 [&_div]:overflow-hidden [&_div]:rounded-[5px] [&_div]:bg-muted [&_i]:block [&_i]:h-full [&_i]:rounded-[5px] [&_i]:bg-primary"
+              key={id}
+            >
+              <span>{genreLabels[id]?.[lang] || `#${id}`}</span>
+              <div>
+                <i
+                  style={{
+                    width: `${Math.round((count / Math.max((stats?.movie_count || 0) + (stats?.series_count || 0), 1)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span>{count}</span>
+            </div>
+          ))}
         </section>
+      </Card>
+      {user?.id === profile.id && (
+        <Card asChild>
+          <section className="[&_h2]:mt-0 [&_h2]:mb-[14px] [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold">
+            <h2>{t.favorites}</h2>
+            <Link
+              className={buttonVariants({ variant: "outline" })}
+              href={`/${locale}/favorites`}
+            >
+              {t.viewFavorites}
+            </Link>
+          </section>
+        </Card>
       )}
-      <section className="panel">
-        <h2>{t.playlists}</h2>
-        {playlists?.length ? (
-          playlists.map((p) => (
-            <p key={p.id}>
-              <Link href={`/${locale}/playlists/${p.id}`}>{p.name} ↗</Link>
-            </p>
-          ))
-        ) : (
-          <p className="muted">{t.noPlaylists}</p>
-        )}
-      </section>
-      <section className="panel">
-        <h2>{t.reviews}</h2>
-        {reviews?.length ? (
-          reviews.map((r) => (
-            <p key={r.id}>
-              <Link href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}>
-                <span className="stars">{"★".repeat(r.rating)}</span> &nbsp;{" "}
-                {r.body || t.viewDetails} ↗
-              </Link>
-            </p>
-          ))
-        ) : (
-          <p className="muted">{t.noReviews}</p>
-        )}
-      </section>
+      <Card asChild>
+        <section className="[&_h2]:mt-0 [&_h2]:mb-[14px] [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold">
+          <h2>{t.playlists}</h2>
+          {playlists?.length ? (
+            playlists.map((p) => (
+              <p key={p.id}>
+                <Link href={`/${locale}/playlists/${p.id}`}>{p.name} ↗</Link>
+              </p>
+            ))
+          ) : (
+            <p className="text-muted-foreground">{t.noPlaylists}</p>
+          )}
+        </section>
+      </Card>
+      <Card asChild>
+        <section className="[&_h2]:mt-0 [&_h2]:mb-[14px] [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold">
+          <h2>{t.reviews}</h2>
+          {reviews?.length ? (
+            reviews.map((r) => (
+              <p key={r.id}>
+                <Link href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}>
+                  <span className="text-[22px] text-primary">
+                    {"★".repeat(r.rating)}
+                  </span>{" "}
+                  &nbsp; {r.body || t.viewDetails} ↗
+                </Link>
+              </p>
+            ))
+          ) : (
+            <p className="text-muted-foreground">{t.noReviews}</p>
+          )}
+        </section>
+      </Card>
     </main>
   );
 }

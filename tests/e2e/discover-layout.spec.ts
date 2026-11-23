@@ -209,13 +209,13 @@ test("highlight content and controls stay separate with a long title", async ({
     await hero.getByRole("heading", { level: 1 }).evaluate((heading) => {
       heading.textContent = "An exceptionally long title ".repeat(8);
     });
-    const linkButton = await hero.locator("a .button").boundingBox();
+    const content = await hero.getByRole("heading", { level: 1 }).boundingBox();
     const controls = await hero
-      .getByRole("button", { name: "Next titles" })
+      .getByRole("button", { name: "Show highlight 1 of 5" })
       .boundingBox();
-    if (!linkButton || !controls)
+    if (!content || !controls)
       throw new Error("Expected hero content and controls");
-    expect(linkButton.y + linkButton.height).toBeLessThanOrEqual(controls.y);
+    expect(content.y + content.height).toBeLessThanOrEqual(controls.y);
   }
 });
 

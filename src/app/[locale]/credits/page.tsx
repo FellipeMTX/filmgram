@@ -1,3 +1,5 @@
+import { container } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { messages } from "@/i18n/messages";
 
@@ -9,7 +11,7 @@ export default async function Credits({
   const { locale } = await params;
   const t = messages(locale);
   return (
-    <main className="container" style={{ paddingBlock: "48px 80px" }}>
+    <main className={cn(container, "pt-12 pb-20")}>
       <h1>{t.credits}</h1>
       <a href="https://www.themoviedb.org" aria-label="The Movie Database">
         <Image

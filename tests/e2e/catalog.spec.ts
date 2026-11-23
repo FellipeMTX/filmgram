@@ -50,9 +50,10 @@ test("title route resolves in all three locales", async ({ page }) => {
 
 test("language selection keeps the current film", async ({ page }) => {
   await page.goto("/en/title/movie/1726");
+  await page.getByRole("combobox", { name: "Language", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "Language", exact: true })
-    .selectOption("pt-BR");
+    .getByRole("option", { name: "Português (Brasil)", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/pt-BR\/title\/movie\/1726$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
 });
