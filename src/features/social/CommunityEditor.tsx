@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichReviewEditor } from "./RichReviewEditor";
+import { parseReviewContent } from "./review-content";
 import { NativeSelect } from "@/components/ui/native-select";
 import { messages } from "@/i18n/messages";
 import { submitReviewFromModal } from "./actions";
@@ -145,6 +145,8 @@ export function CommunityEditor() {
   const ctx = useCommunityEditor();
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [document, setDocument] =
+    useState<Parameters<typeof RichReviewEditor>[0]["document"]>(null);
   if (!ctx || !ctx.editing) return null;
   const { own, locale, mediaType, tmdbId, userId, next, refresh, setEditing } =
     ctx;
@@ -164,6 +166,7 @@ export function CommunityEditor() {
         event.preventDefault();
         if (saving) return;
         const form = new FormData(event.currentTarget);
+        form.set("body_document", JSON.stringify(document));
         setSaving(true);
         setError(false);
         try {
@@ -193,33 +196,29 @@ export function CommunityEditor() {
           ))}
         </NativeSelect>
       </label>
-      <label className="block text-sm font-bold">
-        {t.writeReview}
-        <Textarea
-          className="w-full"
-          name="body"
-          rows={4}
-          defaultValue={own?.body || ""}
+      <div className="space-y-1">
+        <p className="text-sm font-bold">{t.writeReview}</p>
+        <RichReviewEditor
+          locale={locale}
+          body={own?.body || ""}
+          document={parseReviewContent(own?.body_document)}
+          video={own?.youtube_video_id || null}
+          onChange={setDocument}
         />
-      </label>
-      <label className="block text-sm font-bold">
-        {t.addVideo}
-        <Input
-          name="youtube"
-          type="url"
-          defaultValue={
-            own?.youtube_video_id
-              ? `https://www.youtube.com/watch?v=${own.youtube_video_id}`
-              : ""
-          }
-        />
-      </label>
-      <Button type="submit" disabled={saving}>
-        {t.publish}
-      </Button>{" "}
-      <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
-        {locale === "en" ? "Cancel" : "Cancelar"}
-      </Button>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setEditing(false)}
+          disabled={saving}
+        >
+          {locale === "en" ? "Cancel" : "Cancelar"}
+        </Button>
+        <Button type="submit" disabled={saving || !document}>
+          {t.publish}
+        </Button>
+      </div>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {locale === "pt-BR"

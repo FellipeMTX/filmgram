@@ -1,4 +1,5 @@
 import "server-only";
+import type { Json } from "@/types/database.generated";
 import { supabase } from "@/integrations/supabase";
 import { getFeedTitle, type MediaType } from "@/integrations/tmdb";
 import { isLocale } from "@/i18n/messages";
@@ -16,6 +17,7 @@ export type FeedItem = {
   tmdb_id: number;
   rating: number;
   body: string | null;
+  body_document: Json | null;
   youtube_video_id: string | null;
   created_at: string;
   display_name: string;

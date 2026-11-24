@@ -22,6 +22,8 @@ import {
 } from "@/features/social/CommunityEditor";
 import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
+import { ReviewRichText } from "@/components/ReviewRichText";
+import { reviewYoutubeId } from "@/features/social/review-content";
 
 const ReviewPostModal = createContext<{
   open: boolean;
@@ -33,6 +35,7 @@ export const useReviewPostModal = () => useContext(ReviewPostModal);
 const labels = {
   en: {
     more: "Read more",
+    less: "Show less",
     title: "View title",
     close: "Close full review",
     full: "Full review",
@@ -40,6 +43,7 @@ const labels = {
   },
   "pt-BR": {
     more: "Ver mais",
+    less: "Ver menos",
     title: "Ver ficha",
     close: "Fechar resenha completa",
     full: "Resenha completa",
@@ -47,6 +51,7 @@ const labels = {
   },
   es: {
     more: "Ver más",
+    less: "Ver menos",
     title: "Ver ficha",
     close: "Cerrar reseña completa",
     full: "Reseña completa",
@@ -68,6 +73,7 @@ export type ReviewPostProps = {
   year?: string | number | null;
   rating?: number | null;
   text: string;
+  content?: unknown;
   titleHref: string;
   backdropUrl?: string | null;
   posterUrl?: string | null;
@@ -75,7 +81,11 @@ export type ReviewPostProps = {
   interaction?: ReactNode;
 };
 
-function Byline({ author, date }: Pick<ReviewPostProps, "author" | "date">) {
+function Byline({
+  author,
+  date,
+  follow,
+}: Pick<ReviewPostProps, "author" | "date"> & { follow?: ReactNode }) {
   const initials = author.name
     .trim()
     .split(/\s+/)
@@ -84,25 +94,28 @@ function Byline({ author, date }: Pick<ReviewPostProps, "author" | "date">) {
     .join("")
     .toUpperCase();
   return (
-    <div className="mb-3 flex items-center gap-2.5">
-      <Avatar>
-        <AvatarImage src={author.avatarUrl ?? undefined} alt="" />
-        <AvatarFallback className="bg-avatar text-xs text-foreground">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 text-sm">
-        <strong>
-          {author.href ? (
-            <Link href={author.href} className="hover:text-primary">
-              {author.name}
-            </Link>
-          ) : (
-            author.name
-          )}
-        </strong>
-        <div className="text-xs text-subtle">{date}</div>
+    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <Avatar>
+          <AvatarImage src={author.avatarUrl ?? undefined} alt="" />
+          <AvatarFallback className="bg-avatar text-xs text-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 text-sm">
+          <strong>
+            {author.href ? (
+              <Link href={author.href} className="hover:text-primary">
+                {author.name}
+              </Link>
+            ) : (
+              author.name
+            )}
+          </strong>
+          {follow}
+        </div>
       </div>
+      <time className="shrink-0 text-right text-xs text-subtle">{date}</time>
     </div>
   );
 }
@@ -191,7 +204,7 @@ export function ReviewPost(props: ReviewPostProps) {
   const artwork = [backdropUrl, posterUrl].find(
     (url) => url && !failedArtwork.includes(url),
   );
-  const copyRef = useRef<HTMLParagraphElement>(null);
+  const copyRef = useRef<HTMLDivElement>(null);
   const inlineHost = useRef<HTMLDivElement>(null);
   const modalHost = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -199,6 +212,7 @@ export function ReviewPost(props: ReviewPostProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"read" | "discussion">("read");
   const [overflow, setOverflow] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [interactionContainer, setInteractionContainer] =
     useState<HTMLDivElement | null>(null);
 
@@ -215,8 +229,10 @@ export function ReviewPost(props: ReviewPostProps) {
   useEffect(() => {
     const node = copyRef.current;
     if (!node) return;
-    const measure = () =>
-      setOverflow(node.scrollHeight > node.clientHeight + 1);
+    const measure = () => {
+      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
+      setOverflow(node.scrollHeight > lineHeight * 6 + 1);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
@@ -272,16 +288,21 @@ export function ReviewPost(props: ReviewPostProps) {
             {t.open}: {title}
           </button>
         )}
-        <div className="flex items-start gap-3">
-          <Byline author={author} date={date} />
-          {props.placement === "title" && props.authorId && (
-            <FollowReviewAuthor
-              authorId={props.authorId}
-              userId={props.viewerId || null}
-              followed={!!props.followed}
-              locale={props.locale}
-            />
-          )}
+        <div className="mb-3 flex items-start gap-3">
+          <Byline
+            author={author}
+            date={date}
+            follow={
+              props.placement === "title" && props.authorId ? (
+                <FollowReviewAuthor
+                  authorId={props.authorId}
+                  userId={props.viewerId || null}
+                  followed={!!props.followed}
+                  locale={props.locale}
+                />
+              ) : null
+            }
+          />
           {props.placement === "title" && (
             <CommunityEditControl reviewId={props.reviewId} />
           )}
@@ -313,14 +334,40 @@ export function ReviewPost(props: ReviewPostProps) {
             />
           </button>
         )}
-        <div className="mt-3 mb-4 text-sm">
-          <p
+        <div className="relative mt-3 mb-4 text-sm">
+          <div
             ref={copyRef}
-            className="line-clamp-6 whitespace-pre-line leading-[1.55]"
+            aria-hidden={expanded}
+            className={`${expanded ? "invisible absolute w-full" : ""} line-clamp-6 whitespace-pre-line leading-[1.55]`}
           >
-            {text}
-          </p>
-          {overflow && (
+            <ReviewRichText
+              content={props.content}
+              fallback={text}
+              locale={props.locale}
+              showMedia={false}
+              showLinks={!overflow}
+            />
+          </div>
+          {expanded && (
+            <ReviewRichText
+              content={props.content}
+              fallback={text}
+              locale={props.locale}
+              showMedia={false}
+              className="leading-[1.55]"
+            />
+          )}
+          {overflow && props.placement === "title" && (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+              className="mt-1 font-bold text-primary hover:underline"
+            >
+              {expanded ? t.less : t.more}
+            </button>
+          )}
+          {overflow && props.placement !== "title" && (
             <Dialog.Trigger asChild>
               <button
                 onClick={(event) => {
@@ -335,9 +382,17 @@ export function ReviewPost(props: ReviewPostProps) {
             </Dialog.Trigger>
           )}
         </div>
-        {props.placement === "title" && trailerUrl && (
-          <ReviewVideo url={trailerUrl} locale={props.locale} />
-        )}
+        {props.placement === "title" &&
+          (reviewYoutubeId(props.content) || trailerUrl) && (
+            <ReviewVideo
+              url={
+                reviewYoutubeId(props.content)
+                  ? `https://www.youtube.com/watch?v=${reviewYoutubeId(props.content)}`
+                  : trailerUrl!
+              }
+              locale={props.locale}
+            />
+          )}
         {props.placement === "title" && (
           <CommunityCardEditor reviewId={props.reviewId} />
         )}
@@ -445,18 +500,25 @@ export function ReviewPost(props: ReviewPostProps) {
                 titleHref={titleHref}
                 selected={(own, data) => (
                   <>
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <Byline author={author} date={date} />
-                      {data?.selectedAuthorId && (
-                        <FollowReviewAuthor
-                          authorId={data.selectedAuthorId}
-                          userId={data.userId}
-                          followed={data.followed.includes(
-                            data.selectedAuthorId,
-                          )}
-                          locale={props.locale}
-                        />
-                      )}
+                    <div>
+                      <Byline
+                        author={author}
+                        date={date}
+                        follow={
+                          data?.selectedAuthorId ? (
+                            <FollowReviewAuthor
+                              authorId={data.selectedAuthorId}
+                              userId={data.userId}
+                              followed={data.followed.includes(
+                                data.selectedAuthorId,
+                              )}
+                              locale={props.locale}
+                            />
+                          ) : null
+                        }
+                      />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                       {(own?.id === props.reviewId
                         ? own.rating
                         : props.rating) != null && (
@@ -482,21 +544,35 @@ export function ReviewPost(props: ReviewPostProps) {
                       )}
                       <CommunityEditControl reviewId={props.reviewId} />
                     </div>
-                    <p className="mt-3 whitespace-pre-line text-sm leading-[1.55]">
-                      {own?.id === props.reviewId ? own.body : text}
-                    </p>
-                    {(own?.id === props.reviewId
-                      ? own.youtube_video_id
-                      : trailerUrl) && (
-                      <ReviewVideo
-                        url={
-                          own?.id === props.reviewId
-                            ? `https://www.youtube.com/watch?v=${own.youtube_video_id}`
-                            : trailerUrl!
-                        }
-                        locale={props.locale}
-                      />
-                    )}
+                    <ReviewRichText
+                      content={
+                        own?.id === props.reviewId
+                          ? own.body_document
+                          : props.content
+                      }
+                      fallback={
+                        (own?.id === props.reviewId ? own.body : text) || ""
+                      }
+                      locale={props.locale}
+                      className="mt-3 text-sm leading-[1.55]"
+                    />
+                    {!reviewYoutubeId(
+                      own?.id === props.reviewId
+                        ? own.body_document
+                        : props.content,
+                    ) &&
+                      (own?.id === props.reviewId
+                        ? own.youtube_video_id
+                        : trailerUrl) && (
+                        <ReviewVideo
+                          url={
+                            own?.id === props.reviewId
+                              ? `https://www.youtube.com/watch?v=${own.youtube_video_id}`
+                              : trailerUrl!
+                          }
+                          locale={props.locale}
+                        />
+                      )}
                     <CommunityCardEditor reviewId={props.reviewId} />
                     <div
                       ref={(node) => {

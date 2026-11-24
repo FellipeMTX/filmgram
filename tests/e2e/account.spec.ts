@@ -132,14 +132,36 @@ test.describe("signed-in account", () => {
         .click();
       const rating = page.locator('select[name="rating"]');
       await rating.selectOption("4");
-      await page.getByRole("textbox", { name: "Write a review" }).fill(review);
+      const editor = page.getByRole("textbox", { name: "Write a review" });
+      await editor.fill(review);
+      await editor.press("Control+A");
+      await page.getByRole("button", { name: "Bold", exact: true }).click();
+      await page.getByRole("button", { name: "Italic", exact: true }).click();
+      await expect(editor.locator("strong em, em strong")).toHaveCount(1);
       await page
-        .getByRole("textbox", { name: /YouTube URL/ })
-        .fill("https://youtu.be/dQw4w9WgXcQ");
+        .getByRole("button", { name: "Align center", exact: true })
+        .click();
+      await page.getByRole("button", { name: "Add link", exact: true }).click();
+      await page
+        .getByRole("textbox", { name: "Link URL" })
+        .fill("https://example.com/review");
+      await page.getByRole("button", { name: "Apply", exact: true }).click();
+      await expect(
+        editor.locator('a[href="https://example.com/review"]'),
+      ).toHaveCount(1);
+      await editor.press("Control+End");
+      await editor.press("Enter");
+      await editor.pressSequentially("https://youtu.be/dQw4w9WgXcQ");
       await page.getByRole("button", { name: "Publish", exact: true }).click();
       await expect(
         page.getByRole("article").getByText(review, { exact: true }),
       ).toBeVisible();
+      await expect(
+        page
+          .getByRole("article")
+          .locator("strong em, em strong")
+          .filter({ hasText: review }),
+      ).toHaveCount(1);
 
       const authorLink = page
         .getByRole("article")
@@ -158,6 +180,10 @@ test.describe("signed-in account", () => {
         followerPage.getByText(review, { exact: false }),
       ).toBeVisible();
       await page.getByRole("button", { name: "Delete review" }).click();
+      await page
+        .getByRole("dialog", { name: "Delete this review?" })
+        .getByRole("button", { name: "Delete review" })
+        .click();
       await expect(page.getByText(review, { exact: true })).toHaveCount(0);
       await followerPage.reload();
       await expect(

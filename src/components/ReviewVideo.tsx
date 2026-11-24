@@ -1,27 +1,13 @@
+import { reviewVideoId } from "@/features/social/review-content";
+
 const playerTitles = {
   en: "YouTube video player",
   "pt-BR": "Reprodutor de vídeo do YouTube",
   es: "Reproductor de vídeo de YouTube",
 };
 
-function videoId(value: string): string | null {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    const id =
-      host === "youtu.be"
-        ? url.pathname.slice(1)
-        : host === "youtube.com" || host === "m.youtube.com"
-          ? url.searchParams.get("v")
-          : null;
-    return id && /^[\w-]{11}$/.test(id) ? id : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ReviewVideo({ url, locale }: { url: string; locale: string }) {
-  const id = videoId(url);
+  const id = reviewVideoId(url);
   if (!id) return null;
 
   return (

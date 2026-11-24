@@ -92,6 +92,7 @@ export function FollowingFeed({
             year={r.year || undefined}
             rating={r.rating}
             text={r.body || ""}
+            content={r.body_document}
             titleHref={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}
             backdropUrl={imageUrl(r.backdrop, "w780")}
             posterUrl={imageUrl(r.poster, "w185")}

@@ -1,6 +1,5 @@
 import { container, eyebrow } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import {
   getDetail,
@@ -11,7 +10,6 @@ import {
 } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
-import { deleteReview } from "@/features/social/actions";
 import { TitleReviewContext } from "@/features/social/TitleReviewContext";
 import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
@@ -20,6 +18,7 @@ import { PersonCard } from "@/features/people/PersonCard";
 import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
 import { ReviewPost } from "@/components/ReviewPost";
 import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
+import type { Json } from "@/types/database.generated";
 
 export default async function Detail({
   params,
@@ -40,6 +39,7 @@ export default async function Detail({
     id: string;
     rating: number;
     body: string | null;
+    body_document: Json | null;
     youtube_video_id: string | null;
     user_id: string;
     created_at: string;
@@ -95,7 +95,7 @@ export default async function Detail({
       const target = await db
         .from("reviews")
         .select(
-          "id,rating,body,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
+          "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
         )
         .eq("media_type", mediaType)
         .eq("tmdb_id", Number(id))
@@ -209,7 +209,7 @@ export default async function Detail({
                 : ""}
             </p>
             <p className="text-xl font-bold [&_span]:text-primary [&_small]:text-xs [&_small]:font-medium [&_small]:text-cast-foreground">
-              <span>★</span> {item.vote_average?.toFixed(1) || "—"}{" "}
+              <span>★</span> {item.vote_average?.toFixed(1) || "—"}/10{" "}
               <small>TMDB</small>{" "}
               <small>
                 {" "}
@@ -317,6 +317,7 @@ export default async function Detail({
                   year={year(item)}
                   rating={r.rating}
                   text={r.body || ""}
+                  content={r.body_document}
                   titleHref={`/${locale}/title/${mediaType}/${id}`}
                   backdropUrl={imageUrl(item.backdrop_path, "w780")}
                   posterUrl={poster}

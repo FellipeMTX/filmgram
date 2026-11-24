@@ -16,7 +16,8 @@ import { ReviewDiscussion } from "./ReviewDiscussion";
 import { FollowReviewAuthor } from "./FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ReviewCard } from "@/components/ReviewCard";
+import { ReviewRichText } from "@/components/ReviewRichText";
+import { reviewYoutubeId } from "@/features/social/review-content";
 
 type Context = Awaited<ReturnType<typeof loadTitleReviewContext>>;
 const labels = {
@@ -184,7 +185,7 @@ export function TitleReviewContext({
                 minimumFractionDigits: 1,
                 maximumFractionDigits: 1,
               }).format(data.average)}
-              /5 · {data.count} {l.average}
+              /5 Filmgram · {data.count} {l.average}
             </p>
           )}
         </div>
@@ -209,9 +210,19 @@ export function TitleReviewContext({
             </Button>
           )}
         </div>
+        {onTitlePage && data && (
+          <p className="text-sm">
+            <span className="text-primary">★</span>{" "}
+            {new Intl.NumberFormat(locale, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            }).format(data.average)}
+            /5 Filmgram · {data.count} {l.average}
+          </p>
+        )}
         {!own && <CommunityEditor />}
         {selected && !deletedSelected && (
-          <ReviewCard>{selected(own || null, data)}</ReviewCard>
+          <article className="rounded-xl border border-border bg-card p-4">{selected(own || null, data)}</article>
         )}
         {onTitlePage ? (
           children
@@ -233,12 +244,12 @@ export function TitleReviewContext({
               <p className="text-sm text-subtle">{l.empty}</p>
             )}
             {others.map((r) => (
-              <ReviewCard
+              <article
                 key={r.id}
                 className="rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex flex-wrap justify-between gap-2 text-sm">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <Avatar>
                       <AvatarImage
                         src={r.profiles?.avatar_url || undefined}
@@ -273,11 +284,16 @@ export function TitleReviewContext({
                         followed={data?.followed.includes(r.user_id) || false}
                         locale={locale}
                       />
-                      <div className="text-xs text-subtle">
-                        {new Date(r.created_at).toLocaleDateString(locale)}
-                      </div>
                     </div>
                   </div>
+                  <time
+                    dateTime={r.created_at}
+                    className="shrink-0 text-right text-xs text-subtle"
+                  >
+                    {new Date(r.created_at).toLocaleDateString(locale)}
+                  </time>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-primary">
                     {"★".repeat(r.rating)}
                     {"☆".repeat(5 - r.rating)}{" "}
@@ -285,10 +301,13 @@ export function TitleReviewContext({
                   </span>
                   <CommunityEditControl reviewId={r.id} />
                 </div>
-                {r.body && (
-                  <p className="mt-3 whitespace-pre-line text-sm">{r.body}</p>
-                )}
-                {r.youtube_video_id && (
+                <ReviewRichText
+                  content={r.body_document}
+                  fallback={r.body || ""}
+                  locale={locale}
+                  className="mt-3 text-sm"
+                />
+                {r.youtube_video_id && !reviewYoutubeId(r.body_document) && (
                   <ReviewVideo
                     url={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
                     locale={locale}
@@ -303,7 +322,7 @@ export function TitleReviewContext({
                   initialCommentCount={data?.summaries[r.id]?.commentCount}
                   initialLiked={data?.summaries[r.id]?.liked}
                 />
-              </ReviewCard>
+              </article>
             ))}
             {data?.next && (
               <Button

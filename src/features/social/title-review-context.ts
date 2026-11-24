@@ -34,7 +34,7 @@ export async function loadTitleReviewContext(
   let query = db
     .from("reviews")
     .select(
-      "id,rating,body,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
+      "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
     )
     .eq("media_type", mediaType)
     .eq("tmdb_id", id)
@@ -55,7 +55,7 @@ export async function loadTitleReviewContext(
     user
       ? db
           .from("reviews")
-          .select("id,rating,body,youtube_video_id")
+          .select("id,rating,body,body_document,youtube_video_id")
           .eq("media_type", mediaType)
           .eq("tmdb_id", id)
           .eq("user_id", user.id)
