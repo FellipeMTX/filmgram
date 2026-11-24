@@ -42,7 +42,7 @@ export async function updatePlaylistDetail(
     });
   } else return { error: "failed" };
   if (result.error)
-    return { error: result.error.code === "40001" ? "conflict" : "failed" };
+    return { error: result.error.code === "PT409" ? "conflict" : "failed" };
   revalidatePath("/", "layout");
   return {};
 }

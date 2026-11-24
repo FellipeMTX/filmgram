@@ -334,9 +334,11 @@ test.describe("signed-in account", () => {
     });
     expect(changed.error).toBeNull();
     await page.getByRole("button", { name: "Move up: Family Guy" }).click();
-    await expect(page.getByRole("alert")).toContainText("order changed");
+    await expect(page.locator("main").getByRole("alert")).toContainText(
+      "order changed",
+    );
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
     await expect(rows.nth(0)).toContainText("Family Guy");
     await page.getByRole("button", { name: "Move up: Iron Man" }).click();
     await expect(rows.nth(0)).toContainText("Iron Man");

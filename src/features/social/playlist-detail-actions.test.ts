@@ -33,7 +33,7 @@ describe("playlist detail actions", () => {
     expect(revalidatePath).toHaveBeenCalled();
   });
   it("returns an inline conflict when the order changed", async () => {
-    rpc.mockResolvedValue({ error: { code: "40001" } });
+    rpc.mockResolvedValue({ error: { code: "PT409" } });
     expect(await updatePlaylistDetail({}, form("down"))).toEqual({
       error: "conflict",
     });
