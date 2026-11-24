@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -28,6 +29,11 @@ type ExistingReview = {
   updatedAt: string;
   works: Reference[];
 };
+// Controlled fields must wait for React before accepting input.
+const subscribe = () => () => {};
+const isHydrated = () => true;
+const isServerRender = () => false;
+
 const keyOf = (ref: Reference) => `${ref.mediaType}:${ref.tmdbId}`;
 export function PersonReviewForm({
   locale,
@@ -41,6 +47,7 @@ export function PersonReviewForm({
   review: ExistingReview | null;
 }) {
   const t = messages(locale);
+  const hydrated = useSyncExternalStore(subscribe, isHydrated, isServerRender);
   const [saveState, saveAction, saving] = useActionState(savePersonReview, {});
   const [deleteState, deleteAction, deleting] = useActionState(
     deletePersonReview,
@@ -103,7 +110,7 @@ export function PersonReviewForm({
     );
   }
   return (
-    <div>
+    <fieldset disabled={!hydrated} className="min-w-0 border-0 p-0">
       <form
         action={saveAction}
         onSubmit={() => setLatestAction("save")}
@@ -268,6 +275,6 @@ export function PersonReviewForm({
             : t.reviewDeletedPerson}
         </p>
       )}
-    </div>
+    </fieldset>
   );
 }
