@@ -64,7 +64,7 @@ begin
 end $$;
 revoke all on function public.create_review_comment(uuid,uuid,text), public.update_review_comment(uuid,text), public.delete_review_comment(uuid) from public, anon;
 grant execute on function public.create_review_comment(uuid,uuid,text), public.update_review_comment(uuid,text), public.delete_review_comment(uuid) to authenticated;
- 
+
 create function public.review_comments_page(p_review_id uuid, p_parent_id uuid, p_after_created_at timestamptz, p_after_id uuid, p_limit integer)
 returns table(id uuid, review_id uuid, parent_id uuid, user_id uuid, body text, created_at timestamptz, updated_at timestamptz, deleted_at timestamptz, display_name text, handle text, avatar_url text)
 language sql stable security invoker set search_path = '' as $$
@@ -100,4 +100,3 @@ revoke all on function public.set_review_like(uuid,boolean) from public, anon;
 grant execute on function public.set_review_like(uuid,boolean) to authenticated;
 revoke all on function public.review_like_summaries(uuid[]) from public;
 grant execute on function public.review_like_summaries(uuid[]) to anon, authenticated;
-
