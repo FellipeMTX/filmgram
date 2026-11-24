@@ -16,6 +16,9 @@ import { ArrowUpRight, X, Play } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TitleReviewContext } from "@/features/social/TitleReviewContext";
+import { CommunityEditControl } from "@/features/social/CommunityEditor";
+import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
+import { ReviewVideo } from "@/components/ReviewVideo";
 
 const ReviewPostModal = createContext<{
   open: boolean;
@@ -54,6 +57,9 @@ export type ReviewPostProps = {
   mediaType?: "movie" | "tv";
   locale: string;
   author: { name: string; href?: string; avatarUrl?: string | null };
+  authorId?: string;
+  viewerId?: string | null;
+  followed?: boolean;
   date: string;
   title: string;
   year?: string | number | null;
@@ -220,7 +226,14 @@ export function ReviewPost(props: ReviewPostProps) {
   }, [text]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && interactionContainer && inlineHost.current)
+          inlineHost.current.appendChild(interactionContainer);
+        setOpen(nextOpen);
+      }}
+    >
       {/* The card accepts pointer clicks; the equivalent button below provides keyboard access. */}
       <article
         id={`review-${props.reviewId}`}
@@ -256,7 +269,17 @@ export function ReviewPost(props: ReviewPostProps) {
             {t.open}: {title}
           </button>
         )}
-        <Byline author={author} date={date} />
+        <div className="flex items-start gap-3">
+          <Byline author={author} date={date} />
+          {props.placement === "title" && props.authorId && (
+            <FollowReviewAuthor
+              authorId={props.authorId}
+              userId={props.viewerId || null}
+              followed={!!props.followed}
+              locale={props.locale}
+            />
+          )}
+        </div>
         <Heading {...props} />
         {artwork && props.placement !== "title" && (
           <button
@@ -316,6 +339,9 @@ export function ReviewPost(props: ReviewPostProps) {
             <Play size={17} /> YouTube <ArrowUpRight size={14} />
           </a>
         )}
+        {props.placement === "title" && (
+          <CommunityEditControl reviewId={props.reviewId} />
+        )}
         <div
           ref={(node) => {
             inlineHost.current = node;
@@ -365,7 +391,18 @@ export function ReviewPost(props: ReviewPostProps) {
             <X size={20} />
           </Dialog.Close>
           <div className="max-h-[min(calc(100dvh-26px),760px)] overflow-auto overscroll-contain">
-            <header className="relative flex min-h-[clamp(142px,28vw,245px)] items-end overflow-hidden bg-secondary p-[clamp(14px,3vw,24px)]">
+            <Link
+              href={`${titleHref}?review=${props.reviewId}#review-${props.reviewId}`}
+              aria-label={`${t.title}: ${title}`}
+              onNavigate={() => {
+                if (props.placement === "title") {
+                  if (interactionContainer && inlineHost.current)
+                    inlineHost.current.appendChild(interactionContainer);
+                  setOpen(false);
+                }
+              }}
+              className="relative flex min-h-[clamp(142px,28vw,245px)] items-end overflow-hidden bg-secondary p-[clamp(14px,3vw,24px)]"
+            >
               {artwork && (
                 <Image
                   src={artwork}
@@ -399,19 +436,28 @@ export function ReviewPost(props: ReviewPostProps) {
                   {title}
                 </p>
               </div>
-            </header>
+            </Link>
             {props.mediaType && (
               <TitleReviewContext
                 locale={props.locale}
                 mediaType={props.mediaType}
                 tmdbId={props.tmdbId}
                 reviewId={props.reviewId}
-                onTitlePage={props.placement === "title"}
                 titleHref={titleHref}
-                selected={(own) => (
+                selected={(own, data) => (
                   <>
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <Byline author={author} date={date} />
+                      {data?.selectedAuthorId && (
+                        <FollowReviewAuthor
+                          authorId={data.selectedAuthorId}
+                          userId={data.userId}
+                          followed={data.followed.includes(
+                            data.selectedAuthorId,
+                          )}
+                          locale={props.locale}
+                        />
+                      )}
                       {(own?.id === props.reviewId
                         ? own.rating
                         : props.rating) != null && (
@@ -439,16 +485,19 @@ export function ReviewPost(props: ReviewPostProps) {
                     <p className="mt-3 whitespace-pre-line text-sm leading-[1.55]">
                       {own?.id === props.reviewId ? own.body : text}
                     </p>
-                    {trailerUrl && (
-                      <a
-                        href={trailerUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-subtle hover:text-primary"
-                      >
-                        <Play size={17} /> YouTube <ArrowUpRight size={14} />
-                      </a>
+                    {(own?.id === props.reviewId
+                      ? own.youtube_video_id
+                      : trailerUrl) && (
+                      <ReviewVideo
+                        url={
+                          own?.id === props.reviewId
+                            ? `https://www.youtube.com/watch?v=${own.youtube_video_id}`
+                            : trailerUrl!
+                        }
+                        locale={props.locale}
+                      />
                     )}
+                    <CommunityEditControl reviewId={props.reviewId} />
                     <div
                       ref={(node) => {
                         modalHost.current = node;

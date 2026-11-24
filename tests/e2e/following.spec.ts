@@ -148,6 +148,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
         tmdb_id: 1726,
         rating: 4,
         body: [...lines, lastLine].join("\n"),
+        youtube_video_id: "dQw4w9WgXcQ",
       },
       {
         id: shortId,
@@ -193,6 +194,17 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await expect(
       dialog.getByText(/Line seven closes the review/),
     ).toBeVisible();
+    await expect(dialog.locator("iframe")).toHaveCount(0);
+    await expect(
+      dialog.getByRole("link", { name: /watch on youtube/i }),
+    ).toHaveAttribute("href", "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    await dialog.getByRole("button", { name: /play youtube video/i }).click();
+    await expect(dialog.locator("iframe")).toBeFocused();
+    await expect(dialog.locator("iframe")).toHaveAttribute(
+      "src",
+      /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ/,
+    );
+    await dialog.getByRole("link", { name: /watch on youtube/i }).focus();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(more).toBeFocused();
@@ -216,9 +228,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await expect(dialog.getByRole("textbox", { name: /comment/i })).toHaveValue(
       draft,
     );
-    await dialog
-      .getByRole("link", { name: /view this review on the title page/i })
-      .click();
+    await dialog.getByRole("link", { name: /^view title:/i }).click();
     await expect(page).toHaveURL(/\/en\/title\/movie\/1726/);
     const linkedReview = page.locator(`#review-${longId}`);
     await expect(linkedReview.getByText(note)).toBeVisible();
@@ -319,6 +329,18 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
       .getAttribute("data-comment-id");
     expect(parentId).toBeTruthy();
     const parent = post.locator(`[data-comment-id="${parentId}"]`);
+    await expect(parent.locator("time[datetime]")).toBeVisible();
+    await parent
+      .getByRole("button", { name: "Like comment", exact: true })
+      .click();
+    await expect(
+      parent.getByRole("button", { name: "Unlike comment", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(parent).toContainText("1 like");
+    await parent
+      .getByRole("button", { name: "Unlike comment", exact: true })
+      .click();
+    await expect(parent).toContainText("0 likes");
     await parent.getByRole("button", { name: "Reply", exact: true }).click();
     await expect(
       post.getByRole("textbox", { name: "Write a comment" }),

@@ -16,7 +16,7 @@ export async function loadTitleReviewContext(
   locale: string,
   mediaType: MediaType,
   id: number,
-  selectedId: string,
+  selectedId: string | null,
   cursor?: { createdAt: string; id: string },
 ) {
   if (
@@ -26,7 +26,7 @@ export async function loadTitleReviewContext(
     !["en", "es", "pt-BR"].includes(locale)
   )
     throw new Error("Invalid title");
-  reviewIdSchema.parse(selectedId);
+  if (selectedId) reviewIdSchema.parse(selectedId);
   if (cursor) cursorSchema.parse(cursor);
   const db = await supabase();
   if (!db) throw new Error("Database unavailable");
@@ -38,15 +38,15 @@ export async function loadTitleReviewContext(
     )
     .eq("media_type", mediaType)
     .eq("tmdb_id", id)
-    .neq("id", selectedId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(PAGE_SIZE + 1);
+  if (selectedId) query = query.neq("id", selectedId);
   if (cursor)
     query = query.or(
       `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
     );
-  const [result, item, stats, own] = await Promise.all([
+  const [result, item, stats, own, selected] = await Promise.all([
     query,
     getDetail(locale, mediaType, id),
     db
@@ -61,11 +61,36 @@ export async function loadTitleReviewContext(
           .eq("user_id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    selectedId
+      ? db
+          .from("reviews")
+          .select("user_id")
+          .eq("id", selectedId)
+          .eq("media_type", mediaType)
+          .eq("tmdb_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
   if (result.error) throw result.error;
   if (stats.error) throw stats.error;
   if (own.error) throw own.error;
+  if (selected.error) throw selected.error;
   const reviews = (result.data || []).slice(0, PAGE_SIZE);
+  const authorIds = [
+    ...new Set([
+      ...reviews.map((r) => r.user_id),
+      ...(selected.data ? [selected.data.user_id] : []),
+    ]),
+  ];
+  const follows =
+    user && authorIds.length
+      ? await db
+          .from("follows")
+          .select("following_id")
+          .eq("follower_id", user.id)
+          .in("following_id", authorIds)
+      : { data: [], error: null };
+  if (follows.error) throw follows.error;
   const last = reviews.at(-1);
   const summaries = await getReviewLikeSummaries(
     db,
@@ -74,6 +99,8 @@ export async function loadTitleReviewContext(
   return {
     reviews,
     own: own.data,
+    selectedAuthorId: selected.data?.user_id || null,
+    followed: follows.data.map((f) => f.following_id),
     count: Number(stats.data?.review_count || 0),
     average: Number(stats.data?.average_rating || 0),
     next:

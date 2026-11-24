@@ -34,6 +34,15 @@ export type Database = {
   }
   public: {
     Tables: {
+      review_comment_likes: {
+        Row: { comment_id: string; user_id: string; created_at: string }
+        Insert: { comment_id: string; user_id: string; created_at?: string }
+        Update: { comment_id?: string; user_id?: string; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "review_comment_likes_comment_id_fkey"; columns: ["comment_id"]; isOneToOne: false; referencedRelation: "review_comments"; referencedColumns: ["id"] },
+          { foreignKeyName: "review_comment_likes_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -479,6 +488,8 @@ export type Database = {
       flat_review_comments: { Row: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }; Relationships: [] }
     }
     Functions: {
+      review_comment_like_summaries: { Args: { p_comment_ids: string[] }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
+      set_review_comment_like: { Args: { p_comment_id: string; p_liked: boolean }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
       title_reviews_followed_first: { Args: { p_media_type: string; p_tmdb_id: number; p_highlighted_review_id: string | null; p_limit: number }; Returns: { id: string; rating: number; body: string | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null }[] }
       create_review_comment_with_mention: { Args: { p_review_id: string; p_target_comment_id: string | null; p_body: string }; Returns: string }
       flat_review_comments_page: { Args: { p_review_id: string; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }[] }

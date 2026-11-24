@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { loadReviewComments } from "./discussion-loader";
 import {
   setReviewLike,
+  setReviewCommentLike,
   createReviewComment,
   updateReviewComment,
   deleteReviewComment,
@@ -23,6 +24,9 @@ const labels = {
   en: {
     like: "Like review",
     unlike: "Unlike review",
+    likeComment: "Like comment",
+    unlikeComment: "Unlike comment",
+    commentLikes: (n: number) => `${n} ${n === 1 ? "like" : "likes"}`,
     comments: "Comments",
     placeholder: "Write a comment",
     submit: "Post comment",
@@ -41,6 +45,9 @@ const labels = {
   "pt-BR": {
     like: "Curtir resenha",
     unlike: "Descurtir resenha",
+    likeComment: "Curtir comentário",
+    unlikeComment: "Descurtir comentário",
+    commentLikes: (n: number) => `${n} ${n === 1 ? "curtida" : "curtidas"}`,
     comments: "Comentários",
     placeholder: "Escreva um comentário",
     submit: "Publicar comentário",
@@ -59,6 +66,9 @@ const labels = {
   es: {
     like: "Me gusta la reseña",
     unlike: "Ya no me gusta",
+    likeComment: "Me gusta el comentario",
+    unlikeComment: "Ya no me gusta el comentario",
+    commentLikes: (n: number) => `${n} me gusta`,
     comments: "Comentarios",
     placeholder: "Escribe un comentario",
     submit: "Publicar comentario",
@@ -75,6 +85,26 @@ const labels = {
     sending: "Guardando…",
   },
 };
+
+function relativeTime(date: string, locale: string) {
+  const seconds = Math.round((new Date(date).getTime() - Date.now()) / 1000);
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 31536000],
+    ["month", 2592000],
+    ["week", 604800],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+    ["second", 1],
+  ];
+  const [unit, divisor] = units.find(
+    ([, size]) => Math.abs(seconds) >= size,
+  ) || ["second", 1];
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+    Math.round(seconds / divisor),
+    unit,
+  );
+}
 
 export function ReviewDiscussion({
   reviewId,
@@ -237,127 +267,174 @@ export function ReviewDiscussion({
       <div
         key={c.id}
         data-comment-id={c.id}
-        className="border-t border-border pt-3"
+        className="flex gap-2 border-t border-border pt-3"
       >
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Avatar size="sm">
-            <AvatarImage src={c.profile?.avatarUrl || undefined} alt="" />
-            <AvatarFallback aria-hidden="true">
-              {c.profile?.displayName
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((name) => name[0])
-                .join("")
-                .toUpperCase() || "·"}
-            </AvatarFallback>
-          </Avatar>
-          {c.profile?.handle ? (
-            <Link
-              className="font-bold hover:text-primary"
-              href={`/${locale}/profile/${c.profile.handle}`}
-            >
-              {c.profile.displayName || c.profile.handle}
-            </Link>
-          ) : (
-            <strong>Filmgram</strong>
-          )}
-          <time className="text-muted-foreground" dateTime={c.createdAt}>
-            {new Date(c.createdAt).toLocaleDateString(locale)}
-          </time>
-        </div>
-        {editing === c.id ? (
-          <div className="my-2 space-y-2">
-            <Textarea
-              aria-label={l.edit}
-              value={editBody}
-              onChange={(e) => setEditBody(e.target.value)}
-            />
-            <Button
-              size="sm"
-              disabled={pending || !editBody.trim()}
-              onClick={() =>
-                run(async () => {
-                  mergeComment(
-                    await updateReviewComment(
-                      actionForm({ comment_id: c.id, body: editBody }),
-                    ),
-                  );
-                  setEditing(null);
-                })
-              }
-            >
-              {l.save}
-            </Button>{" "}
-            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
-              {l.cancel}
-            </Button>
-          </div>
-        ) : (
-          <p className="my-2 whitespace-pre-wrap break-words text-sm">
-            {!c.deletedAt && (c.parentId || c.replyToHandle) && (
-              <>
-                {c.replyToHandle ? (
-                  <Link
-                    className="font-semibold text-primary hover:underline"
-                    href={`/${locale}/profile/${c.replyToHandle}`}
-                  >
-                    @{c.replyToHandle}
-                  </Link>
-                ) : (
-                  <span className="text-muted-foreground">[{l.removed}]</span>
-                )}{" "}
-              </>
-            )}
-            {c.deletedAt ? l.removed : c.body}
-          </p>
-        )}
-        {!c.deletedAt && (
-          <div className="flex flex-wrap gap-2">
-            {c.profile?.handle && userId && (
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-primary"
-                onClick={() => {
-                  setReplyTo(c);
-                  composer.current?.focus();
-                }}
+        <Avatar size="sm">
+          <AvatarImage src={c.profile?.avatarUrl || undefined} alt="" />
+          <AvatarFallback aria-hidden="true">
+            {c.profile?.displayName
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((name) => name[0])
+              .join("")
+              .toUpperCase() || "·"}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm leading-relaxed">
+            {c.profile?.handle ? (
+              <Link
+                className="font-bold hover:text-primary"
+                href={`/${locale}/profile/${c.profile.handle}`}
               >
-                {l.reply}
-              </button>
-            )}
-            {userId && userId === c.userId && (
-              <>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-primary"
-                  onClick={() => {
-                    setEditing(c.id);
-                    setEditBody(c.body || "");
-                  }}
-                >
-                  {l.edit}
-                </button>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-primary"
-                  disabled={pending}
+                {c.profile.displayName || c.profile.handle}
+              </Link>
+            ) : (
+              <strong>Filmgram</strong>
+            )}{" "}
+            {editing === c.id ? (
+              <div className="my-2 space-y-2">
+                <Textarea
+                  aria-label={l.edit}
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  disabled={pending || !editBody.trim()}
                   onClick={() =>
                     run(async () => {
                       mergeComment(
-                        await deleteReviewComment(
-                          actionForm({ comment_id: c.id }),
+                        await updateReviewComment(
+                          actionForm({ comment_id: c.id, body: editBody }),
                         ),
                       );
-                      publishChange({ commentDelta: -1 });
+                      setEditing(null);
                     })
                   }
                 >
-                  {l.remove}
-                </button>
+                  {l.save}
+                </Button>{" "}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditing(null)}
+                >
+                  {l.cancel}
+                </Button>
+              </div>
+            ) : (
+              <span className="whitespace-pre-wrap break-words">
+                {!c.deletedAt && (c.parentId || c.replyToHandle) && (
+                  <>
+                    {c.replyToHandle ? (
+                      <Link
+                        className="font-semibold text-primary hover:underline"
+                        href={`/${locale}/profile/${c.replyToHandle}`}
+                      >
+                        @{c.replyToHandle}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        [{l.removed}]
+                      </span>
+                    )}{" "}
+                  </>
+                )}
+                {c.deletedAt ? l.removed : c.body}
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <time
+              dateTime={c.createdAt}
+              title={new Date(c.createdAt).toLocaleString(locale)}
+            >
+              {relativeTime(c.createdAt, locale)}
+            </time>
+            <span>{l.commentLikes(c.likeCount)}</span>
+            {!c.deletedAt && (
+              <>
+                {c.profile?.handle && userId && (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      setReplyTo(c);
+                      composer.current?.focus();
+                    }}
+                  >
+                    {l.reply}
+                  </button>
+                )}
+                {userId && userId === c.userId && (
+                  <>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setEditing(c.id);
+                        setEditBody(c.body || "");
+                      }}
+                    >
+                      {l.edit}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-primary"
+                      disabled={pending}
+                      onClick={() =>
+                        run(async () => {
+                          mergeComment(
+                            await deleteReviewComment(
+                              actionForm({ comment_id: c.id }),
+                            ),
+                          );
+                          publishChange({ commentDelta: -1 });
+                        })
+                      }
+                    >
+                      {l.remove}
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
+        </div>
+        {!c.deletedAt && (
+          <button
+            type="button"
+            aria-label={c.liked ? l.unlikeComment : l.likeComment}
+            aria-pressed={c.liked}
+            disabled={!userId || pending}
+            className="self-start p-1 text-muted-foreground hover:text-primary aria-pressed:text-primary disabled:opacity-60"
+            onClick={() =>
+              run(async () => {
+                const summary = await setReviewCommentLike(
+                  actionForm({ comment_id: c.id, liked: String(!c.liked) }),
+                );
+                setComments((previous) =>
+                  previous.map((item) =>
+                    item.id === c.id
+                      ? {
+                          ...item,
+                          likeCount: summary.count,
+                          liked: summary.liked,
+                        }
+                      : item,
+                  ),
+                );
+              })
+            }
+          >
+            <Heart
+              aria-hidden="true"
+              size={17}
+              className={c.liked ? "fill-current" : ""}
+            />
+          </button>
         )}
       </div>
     );

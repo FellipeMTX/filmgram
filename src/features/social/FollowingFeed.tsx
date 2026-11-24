@@ -108,7 +108,6 @@ export function FollowingFeed({
                 initialCount={r.likeCount}
                 initialCommentCount={r.commentCount}
                 initialLiked={r.liked}
-                detailHref={`/${locale}/title/${r.media_type}/${r.tmdb_id}?review=${r.id}#review-${r.id}`}
               />
             }
           />

@@ -1,9 +1,6 @@
 import { container, eyebrow } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/ui/native-select";
 import { notFound } from "next/navigation";
 import {
   getDetail,
@@ -14,7 +11,8 @@ import {
 } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
-import { submitReview, deleteReview } from "@/features/social/actions";
+import { deleteReview } from "@/features/social/actions";
+import { TitleReviewContext } from "@/features/social/TitleReviewContext";
 import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
 import { MediaImage } from "@/features/catalog/MediaImage";
@@ -51,11 +49,8 @@ export default async function Detail({
       avatar_url: string | null;
     } | null;
   }[] = [];
-  let myReview: Pick<
-    (typeof reviews)[number],
-    "id" | "rating" | "body" | "youtube_video_id"
-  > | null = null;
   let playlists: { id: string; name: string }[] = [];
+  let followedAuthors: string[] = [];
   const states: Record<string, boolean> = {};
   let likes = 0;
   let reviewLikes: Record<
@@ -68,7 +63,7 @@ export default async function Detail({
       /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review)
         ? review
         : null;
-    const [reviewsResult, countResult, ownReviewResult] = await Promise.all([
+    const [reviewsResult, countResult] = await Promise.all([
       db.rpc("title_reviews_followed_first", {
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
@@ -79,19 +74,8 @@ export default async function Detail({
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
       }),
-      user
-        ? db
-            .from("reviews")
-            .select("id,rating,body,youtube_video_id")
-            .eq("media_type", mediaType)
-            .eq("tmdb_id", Number(id))
-            .eq("user_id", user.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
     ]);
     if (reviewsResult.error) throw reviewsResult.error;
-    if (ownReviewResult.error) throw ownReviewResult.error;
-    myReview = ownReviewResult.data;
     reviews = reviewsResult.data.map((row) => ({
       ...row,
       profiles:
@@ -126,6 +110,12 @@ export default async function Detail({
     );
     likes = Number(countResult.data || 0);
     if (user) {
+      const followedResult = await db
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+      if (followedResult.error) throw followedResult.error;
+      followedAuthors = followedResult.data.map((row) => row.following_id);
       const [f, w, l, p] = await Promise.all([
         db
           .from("favorites")
@@ -281,68 +271,15 @@ export default async function Detail({
           <p className="text-muted-foreground">{t.noCast}</p>
         )}
       </section>
-      <div
-        className={cn(
-          container,
-          "grid grid-cols-2 gap-[60px] pt-[35px] pb-20 mobile:grid-cols-1 mobile:gap-[35px] mobile:pt-[30px] [&_section]:min-w-0 [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-semibold",
-        )}
-      >
-        <section>
-          <h2>{t.yourRating}</h2>
-          {user ? (
-            <form
-              action={submitReview}
-              className="flex flex-col gap-4 [&_[data-slot=native-select-wrapper]]:w-full [&_label]:flex [&_label]:flex-col [&_label]:gap-[9px] [&_label]:font-bold [&_button]:self-start"
-            >
-              <input type="hidden" name="media_type" value={mediaType} />
-              <input type="hidden" name="tmdb_id" value={id} />
-              <label>
-                {t.yourRating}
-                <NativeSelect
-                  name="rating"
-                  required
-                  defaultValue={myReview?.rating || ""}
-                >
-                  <option value="" disabled>
-                    ☆ ☆ ☆ ☆ ☆
-                  </option>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {"★".repeat(n)} ({n}/5)
-                    </option>
-                  ))}
-                </NativeSelect>
-              </label>
-              <label>
-                {t.writeReview}
-                <Textarea
-                  name="body"
-                  rows={4}
-                  defaultValue={myReview?.body || ""}
-                  placeholder={t.writeReview}
-                />
-              </label>
-              <label>
-                {t.addVideo}
-                <Input
-                  name="youtube"
-                  type="url"
-                  defaultValue={
-                    myReview?.youtube_video_id
-                      ? `https://www.youtube.com/watch?v=${myReview.youtube_video_id}`
-                      : ""
-                  }
-                  placeholder="https://youtube.com/watch?v=…"
-                />
-              </label>
-              <Button type="submit">{t.publish}</Button>
-            </form>
-          ) : (
-            <p className="text-muted-foreground">{t.signInPrompt}</p>
-          )}
-        </section>
-        <section>
-          <h2>{t.communityReviews}</h2>
+      <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
+        <TitleReviewContext
+          locale={locale}
+          mediaType={mediaType as MediaType}
+          tmdbId={Number(id)}
+          reviewId={null}
+          titleHref={`/${locale}/title/${mediaType}/${id}`}
+          onTitlePage
+        >
           {reviews.length ? (
             reviews.map((r) => (
               <div className="mb-6" key={r.id}>
@@ -350,6 +287,9 @@ export default async function Detail({
                   reviewId={r.id}
                   tmdbId={Number(id)}
                   locale={locale}
+                  authorId={r.user_id}
+                  viewerId={user?.id || null}
+                  followed={followedAuthors.includes(r.user_id)}
                   placement="title"
                   mediaType={mediaType as MediaType}
                   author={{
@@ -398,7 +338,7 @@ export default async function Detail({
           ) : (
             <p className="text-muted-foreground">{t.noReviews}</p>
           )}
-        </section>
+        </TitleReviewContext>
       </div>
     </main>
   );

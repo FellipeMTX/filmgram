@@ -2,15 +2,15 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/ui/native-select";
 import { messages } from "@/i18n/messages";
-import { submitReviewFromModal } from "./actions";
-import { signIn } from "@/features/auth/actions";
+import { CommunityEditor, CommunityEditorContext } from "./CommunityEditor";
 import { loadTitleReviewContext } from "./title-review-context";
 import { ReviewDiscussion } from "./ReviewDiscussion";
+import { FollowReviewAuthor } from "./FollowReviewAuthor";
+import { ReviewVideo } from "@/components/ReviewVideo";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Context = Awaited<ReturnType<typeof loadTitleReviewContext>>;
 const labels = {
@@ -21,7 +21,7 @@ const labels = {
     featured: "Featured review",
     other: "Other reviews",
     community: "Community reviews",
-    write: "Write my review",
+    write: "Write review",
     edit: "Edit my review",
     average: "community ratings",
     empty: "No other reviews yet.",
@@ -34,7 +34,7 @@ const labels = {
     featured: "Resenha em destaque",
     other: "Outras resenhas",
     community: "Resenhas da comunidade",
-    write: "Escrever minha resenha",
+    write: "Escrever resenha",
     edit: "Editar minha resenha",
     average: "avaliações da comunidade",
     empty: "Ainda não há outras resenhas.",
@@ -47,7 +47,7 @@ const labels = {
     featured: "Reseña destacada",
     other: "Otras reseñas",
     community: "Reseñas de la comunidad",
-    write: "Escribir mi reseña",
+    write: "Escribir reseña",
     edit: "Editar mi reseña",
     average: "valoraciones de la comunidad",
     empty: "Todavía no hay otras reseñas.",
@@ -63,22 +63,23 @@ export function TitleReviewContext({
   selected,
   titleHref,
   onTitlePage,
+  children,
 }: {
   locale: string;
   mediaType: "movie" | "tv";
   tmdbId: number;
-  reviewId: string;
-  selected: (own: Context["own"]) => ReactNode;
+  reviewId: string | null;
+  selected?: (own: Context["own"], data: Context | null) => ReactNode;
   titleHref: string;
   onTitlePage?: boolean;
+  children?: ReactNode;
 }) {
   const [data, setData] = useState<Context | null>(null);
+  const router = useRouter();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [editing, setEditing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-  const [saving, setSaving] = useState(false);
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   useEffect(() => {
@@ -99,238 +100,228 @@ export function TitleReviewContext({
   }, [locale, mediaType, tmdbId, reviewId, attempt]);
   const own = data?.own;
   const others = data?.reviews || [];
+  const refresh = async () => {
+    const updated = await loadTitleReviewContext(
+      locale,
+      mediaType,
+      tmdbId,
+      reviewId,
+    );
+    setData(updated);
+    if (onTitlePage) router.refresh();
+  };
   return (
-    <>
-      <div className="border-b border-border px-[clamp(14px,3vw,24px)] py-3 space-y-2">
-        {data?.overview && <p className="text-sm">{data.overview}</p>}
-        {data && (
-          <p className="text-sm">
-            <span className="text-primary">★</span>{" "}
-            {new Intl.NumberFormat(locale, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            }).format(data.average)}
-            /5 · {data.count} {l.average}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" onClick={() => setEditing(true)}>
-            {own ? l.edit : l.write}
-          </Button>
-          {!onTitlePage && (
-            <Link
-              href={titleHref}
-              className="text-sm text-subtle hover:text-primary"
-            >
-              {locale === "en" ? "View title" : "Ver ficha"} ↗
-            </Link>
+    <CommunityEditorContext.Provider
+      value={{
+        own: own || null,
+        editing,
+        setEditing,
+        locale,
+        mediaType,
+        tmdbId,
+        userId: data?.userId || null,
+        next: reviewId
+          ? `${titleHref}?review=${reviewId}#review-${reviewId}`
+          : titleHref,
+        refresh,
+      }}
+    >
+      {!onTitlePage && (
+        <div className="border-b border-border px-[clamp(14px,3vw,24px)] py-3 space-y-2">
+          {data?.overview && <p className="text-sm">{data.overview}</p>}
+          {data && (
+            <p className="text-sm">
+              <span className="text-primary">★</span>{" "}
+              {new Intl.NumberFormat(locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              }).format(data.average)}
+              /5 · {data.count} {l.average}
+            </p>
           )}
         </div>
-        {editing &&
-          (data?.userId ? (
-            <form
-              onSubmit={async (event) => {
-                event.preventDefault();
-                if (saving) return;
-                const form = new FormData(event.currentTarget);
-                setSaveError(false);
-                setSaving(true);
-                try {
-                  await submitReviewFromModal(form);
-                  const updated = await loadTitleReviewContext(
-                    locale,
-                    mediaType,
-                    tmdbId,
-                    reviewId,
-                  );
-                  setData(updated);
-                  setEditing(false);
-                } catch {
-                  setSaveError(true);
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              className="space-y-3 rounded-lg border border-primary/50 bg-background p-3"
+      )}
+      <section
+        className={
+          onTitlePage
+            ? "space-y-4 [overflow-wrap:anywhere]"
+            : "space-y-4 p-[clamp(12px,3vw,24px)] [overflow-wrap:anywhere]"
+        }
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-2xl font-bold">{l.community}</h2>
+          {!own && (
+            <Button
+              type="button"
+              disabled={!data}
+              aria-label={l.write}
+              onClick={() => setEditing(true)}
             >
-              <input type="hidden" name="media_type" value={mediaType} />
-              <input type="hidden" name="tmdb_id" value={tmdbId} />
-              <label className="block text-sm font-bold">
-                {t.yourRating}
-                <NativeSelect
-                  name="rating"
-                  required
-                  defaultValue={own?.rating || ""}
-                >
-                  <option value="" disabled>
-                    ☆ ☆ ☆ ☆ ☆
-                  </option>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {"★".repeat(n)} ({n}/5)
-                    </option>
-                  ))}
-                </NativeSelect>
-              </label>
-              <label className="block text-sm font-bold">
-                {t.writeReview}
-                <Textarea name="body" rows={4} defaultValue={own?.body || ""} />
-              </label>
-              <label className="block text-sm font-bold">
-                {t.addVideo}
-                <Input
-                  name="youtube"
-                  type="url"
-                  defaultValue={
-                    own?.youtube_video_id
-                      ? `https://www.youtube.com/watch?v=${own.youtube_video_id}`
-                      : ""
-                  }
-                />
-              </label>
-              <Button type="submit" disabled={saving}>
-                {saving ? l.loading : t.publish}
-              </Button>{" "}
-              {saveError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {l.error} {l.retry}
-                </p>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setEditing(false)}
-              >
-                {locale === "en" ? "Cancel" : "Cancelar"}
-              </Button>
-            </form>
-          ) : (
-            <form action={signIn}>
-              <input
-                type="hidden"
-                name="next"
-                value={`${titleHref}?review=${reviewId}#review-${reviewId}`}
-              />
-              <Button type="submit" variant="outline">
-                {t.signInPrompt}
-              </Button>
-            </form>
-          ))}
-      </div>
-      <section className="space-y-4 p-[clamp(12px,3vw,24px)] [overflow-wrap:anywhere]">
-        <h2 className="font-display text-2xl font-bold">{l.community}</h2>
-        <article className="rounded-xl border border-border bg-card p-4">
-          {selected(own || null)}
-        </article>
-        {!data && !error && <p role="status">{l.loading}</p>}
-        {error && (
-          <p role="alert">
-            {l.error}{" "}
-            <button
-              className="text-primary underline"
-              onClick={() => setAttempt((n) => n + 1)}
-            >
-              {l.retry}
-            </button>
-          </p>
-        )}
-        {data && !others.length && (
-          <p className="text-sm text-subtle">{l.empty}</p>
-        )}
-        {others.map((r) => (
-          <article
-            key={r.id}
-            className="rounded-xl border border-border bg-card p-4"
-          >
-            <div className="flex flex-wrap justify-between gap-2 text-sm">
-              <div>
-                <strong>
-                  {r.profiles?.handle ? (
-                    <Link
-                      className="hover:text-primary"
-                      href={`/${locale}/profile/${r.profiles.handle}`}
-                    >
-                      {r.profiles.display_name}
-                    </Link>
-                  ) : (
-                    t.member
-                  )}
-                </strong>
-                <div className="text-xs text-subtle">
-                  {new Date(r.created_at).toLocaleDateString(locale)}
-                </div>
-              </div>
-              <span className="text-primary">
-                {"★".repeat(r.rating)}
-                {"☆".repeat(5 - r.rating)}{" "}
-                <span className="text-foreground">{r.rating}/5</span>
-              </span>
-            </div>
-            {r.body && (
-              <p className="mt-3 whitespace-pre-line text-sm">{r.body}</p>
-            )}
-            {r.youtube_video_id && (
-              <a
-                className="mt-2 inline-block text-sm text-primary"
-                href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                YouTube ↗
-              </a>
-            )}
-            <ReviewDiscussion
-              reviewId={r.id}
-              locale={locale}
-              userId={data?.userId || null}
-              initialCount={data?.summaries[r.id]?.count}
-              initialCommentCount={data?.summaries[r.id]?.commentCount}
-              initialLiked={data?.summaries[r.id]?.liked}
-            />
+              +
+            </Button>
+          )}
+        </div>
+        {!own && <CommunityEditor />}
+        {selected && (
+          <article className="rounded-xl border border-border bg-card p-4">
+            {selected(own || null, data)}
           </article>
-        ))}
-        {data?.next && (
-          <Button
-            variant="outline"
-            disabled={loadingMore}
-            onClick={async () => {
-              setLoadingMore(true);
-              setError(false);
-              try {
-                const page = await loadTitleReviewContext(
-                  locale,
-                  mediaType,
-                  tmdbId,
-                  reviewId,
-                  data.next || undefined,
-                );
-                setData((previous) =>
-                  previous
-                    ? {
-                        ...page,
-                        reviews: [
-                          ...new Map(
-                            [...previous.reviews, ...page.reviews].map((r) => [
-                              r.id,
-                              r,
-                            ]),
-                          ).values(),
-                        ],
-                        summaries: { ...previous.summaries, ...page.summaries },
-                      }
-                    : page,
-                );
-              } catch {
-                setError(true);
-              } finally {
-                setLoadingMore(false);
-              }
-            }}
-          >
-            {loadingMore ? l.loading : l.more}
-          </Button>
+        )}
+        {onTitlePage ? (
+          children
+        ) : (
+          <>
+            {!data && !error && <p role="status">{l.loading}</p>}
+            {error && (
+              <p role="alert">
+                {l.error}{" "}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setAttempt((n) => n + 1)}
+                >
+                  {l.retry}
+                </button>
+              </p>
+            )}
+            {data && !others.length && (
+              <p className="text-sm text-subtle">{l.empty}</p>
+            )}
+            {others.map((r) => (
+              <article
+                key={r.id}
+                className="rounded-xl border border-border bg-card p-4"
+              >
+                <div className="flex flex-wrap justify-between gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Avatar>
+                      <AvatarImage
+                        src={r.profiles?.avatar_url || undefined}
+                        alt=""
+                      />
+                      <AvatarFallback>
+                        {(r.profiles?.display_name || t.member)
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part[0])
+                          .join("")
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <strong>
+                        {r.profiles?.handle ? (
+                          <Link
+                            className="hover:text-primary"
+                            href={`/${locale}/profile/${r.profiles.handle}`}
+                          >
+                            {r.profiles.display_name}
+                          </Link>
+                        ) : (
+                          t.member
+                        )}
+                      </strong>
+                      <FollowReviewAuthor
+                        authorId={r.user_id}
+                        userId={data?.userId || null}
+                        followed={data?.followed.includes(r.user_id) || false}
+                        locale={locale}
+                      />
+                      <div className="text-xs text-subtle">
+                        {new Date(r.created_at).toLocaleDateString(locale)}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-primary">
+                    {"★".repeat(r.rating)}
+                    {"☆".repeat(5 - r.rating)}{" "}
+                    <span className="text-foreground">{r.rating}/5</span>
+                  </span>
+                </div>
+                {r.body && (
+                  <p className="mt-3 whitespace-pre-line text-sm">{r.body}</p>
+                )}
+                {r.youtube_video_id && (
+                  <ReviewVideo
+                    url={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
+                    locale={locale}
+                  />
+                )}
+                {own?.id === r.id && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing(true)}
+                    >
+                      {l.edit}
+                    </Button>
+                    <CommunityEditor />
+                  </>
+                )}
+                <ReviewDiscussion
+                  reviewId={r.id}
+                  locale={locale}
+                  userId={data?.userId || null}
+                  initialCount={data?.summaries[r.id]?.count}
+                  initialCommentCount={data?.summaries[r.id]?.commentCount}
+                  initialLiked={data?.summaries[r.id]?.liked}
+                />
+              </article>
+            ))}
+            {data?.next && (
+              <Button
+                variant="outline"
+                disabled={loadingMore}
+                onClick={async () => {
+                  setLoadingMore(true);
+                  setError(false);
+                  try {
+                    const page = await loadTitleReviewContext(
+                      locale,
+                      mediaType,
+                      tmdbId,
+                      reviewId,
+                      data.next || undefined,
+                    );
+                    setData((previous) =>
+                      previous
+                        ? {
+                            ...page,
+                            reviews: [
+                              ...new Map(
+                                [...previous.reviews, ...page.reviews].map(
+                                  (r) => [r.id, r],
+                                ),
+                              ).values(),
+                            ],
+                            summaries: {
+                              ...previous.summaries,
+                              ...page.summaries,
+                            },
+                            followed: [
+                              ...new Set([
+                                ...previous.followed,
+                                ...page.followed,
+                              ]),
+                            ],
+                          }
+                        : page,
+                    );
+                  } catch {
+                    setError(true);
+                  } finally {
+                    setLoadingMore(false);
+                  }
+                }}
+              >
+                {loadingMore ? l.loading : l.more}
+              </Button>
+            )}
+          </>
         )}
       </section>
-    </>
+    </CommunityEditorContext.Provider>
   );
 }

@@ -14,6 +14,8 @@ export type ReviewComment = {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  likeCount: number;
+  liked: boolean;
   profile: {
     displayName: string;
     handle: string;
@@ -42,6 +44,21 @@ export async function getReviewLikeSummaries(
     ]),
   );
 }
+async function getReviewCommentLikes(db: Client, ids: string[]) {
+  if (!ids.length)
+    return new Map<string, { likeCount: number; liked: boolean }>();
+  const { data, error } = await db.rpc("review_comment_like_summaries", {
+    p_comment_ids: ids,
+  });
+  if (error) throw error;
+  return new Map(
+    data.map((row) => [
+      row.comment_id,
+      { likeCount: Number(row.like_count), liked: row.liked },
+    ]),
+  );
+}
+
 export async function getReviewComments(
   db: Client,
   reviewId: string,
@@ -60,7 +77,11 @@ export async function getReviewComments(
   });
   if (error) throw error;
   const rows = data.slice(0, pageSize);
-  const comments = rows.map(toComment);
+  const likes = await getReviewCommentLikes(
+    db,
+    rows.map((row) => row.id),
+  );
+  const comments = rows.map((row) => toComment(row, likes.get(row.id)));
   const last = comments.at(-1);
   return {
     comments,
@@ -81,11 +102,13 @@ export async function getReviewComment(
     .eq("id", id)
     .single();
   if (error) throw error;
-  return toComment(data);
+  const likes = await getReviewCommentLikes(db, [id]);
+  return toComment(data, likes.get(id));
 }
 
 function toComment(
   row: Database["public"]["Views"]["flat_review_comments"]["Row"],
+  likes?: { likeCount: number; liked: boolean },
 ): ReviewComment {
   return {
     id: row.id,
@@ -97,6 +120,8 @@ function toComment(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
+    likeCount: likes?.likeCount ?? 0,
+    liked: likes?.liked ?? false,
     profile:
       row.handle && row.display_name
         ? {

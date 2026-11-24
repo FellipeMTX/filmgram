@@ -79,3 +79,18 @@ export async function deleteReviewComment(form: FormData) {
   if (error) throw error;
   return getReviewComment(db, commentId);
 }
+
+export async function setReviewCommentLike(form: FormData) {
+  const commentId = id(form, "comment_id");
+  const liked = form.get("liked");
+  if (liked !== "true" && liked !== "false") throw new Error("Invalid like");
+  const db = await client();
+  const { data, error } = await db
+    .rpc("set_review_comment_like", {
+      p_comment_id: commentId,
+      p_liked: liked === "true",
+    })
+    .single();
+  if (error) throw error;
+  return { count: Number(data.like_count), liked: data.liked };
+}
