@@ -20,7 +20,7 @@ export default async function Following({
       <p className={eyebrow}>{t.community}</p>
       <h1 className={pageTitle}>{t.following}</h1>
       {feed ? (
-        <FollowingFeed initial={feed} locale={locale} />
+        <FollowingFeed initial={feed} locale={locale} userId={user!.id} />
       ) : (
         <>
           <p className="mb-4 text-muted-foreground">{t.signInPrompt}</p>

@@ -391,6 +391,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      set_review_like: { Args: { p_review_id: string; p_liked: boolean }; Returns: undefined }
+      review_like_summaries: { Args: { p_review_ids: string[] }; Returns: { review_id: string; like_count: number; liked: boolean; comment_count: number }[] }
+      create_review_comment: { Args: { p_review_id: string; p_parent_id: string | null; p_body: string }; Returns: string }
+      update_review_comment: { Args: { p_comment_id: string; p_body: string }; Returns: undefined }
+      delete_review_comment: { Args: { p_comment_id: string }; Returns: undefined }
+      review_comments_page: { Args: { p_review_id: string; p_parent_id: string | null; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null }[] }
+
       following_feed: {
         Args: { p_before_created_at?: string; p_before_id?: string }
         Returns: { id: string; media_type: string; tmdb_id: number; rating: number; body: string | null; youtube_video_id: string | null; created_at: string; display_name: string; handle: string; avatar_url: string | null }[]

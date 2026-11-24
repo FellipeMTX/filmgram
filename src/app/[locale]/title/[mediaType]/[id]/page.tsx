@@ -1,10 +1,9 @@
 import { container, eyebrow } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getDetail,
@@ -20,14 +19,20 @@ import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
 import { MediaImage } from "@/features/catalog/MediaImage";
 import { PersonCard } from "@/features/people/PersonCard";
+import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
+import { ReviewPost } from "@/components/ReviewPost";
+import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
 
 export default async function Detail({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; mediaType: string; id: string }>;
+  searchParams: Promise<{ review?: string }>;
 }) {
   const { locale, mediaType, id } = await params;
   if (!["movie", "tv"].includes(mediaType) || !/^\d+$/.test(id)) notFound();
+  const { review } = await searchParams;
   const item = await getDetail(locale, mediaType as MediaType, Number(id));
   if (!item) notFound();
   const t = messages(locale),
@@ -39,27 +44,51 @@ export default async function Detail({
     body: string | null;
     youtube_video_id: string | null;
     user_id: string;
-    profiles: { display_name: string; handle: string } | null;
+    created_at: string;
+    profiles: {
+      display_name: string;
+      handle: string;
+      avatar_url: string | null;
+    } | null;
   }[] = [];
   let playlists: { id: string; name: string }[] = [];
   const states: Record<string, boolean> = {};
   let likes = 0;
+  let reviewLikes: Record<
+    string,
+    { count: number; liked: boolean; commentCount: number }
+  > = {};
   if (db) {
-    const [reviewsResult, countResult] = await Promise.all([
+    const titleReviews = () =>
       db
         .from("reviews")
         .select(
-          "id,rating,body,youtube_video_id,user_id,profiles(display_name,handle)",
+          "id,rating,body,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
         )
         .eq("media_type", mediaType)
-        .eq("tmdb_id", Number(id))
-        .order("created_at", { ascending: false }),
+        .eq("tmdb_id", Number(id));
+    const [reviewsResult, countResult] = await Promise.all([
+      titleReviews().order("created_at", { ascending: false }),
       db.rpc("title_like_count", {
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
       }),
     ]);
-    reviews = (reviewsResult.data || []) as unknown as typeof reviews;
+    if (reviewsResult.error) throw reviewsResult.error;
+    reviews = reviewsResult.data || [];
+    if (
+      typeof review === "string" &&
+      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review) &&
+      !reviews.some((r) => r.id === review)
+    ) {
+      const target = await titleReviews().eq("id", review).maybeSingle();
+      if (target.error) throw target.error;
+      if (target.data) reviews = [target.data, ...reviews];
+    }
+    reviewLikes = await getReviewLikeSummaries(
+      db,
+      reviews.map((review) => review.id),
+    );
     likes = Number(countResult.data || 0);
     if (user) {
       const [f, w, l, p] = await Promise.all([
@@ -282,41 +311,54 @@ export default async function Detail({
           <h2>{t.communityReviews}</h2>
           {reviews.length ? (
             reviews.map((r) => (
-              <article
-                className="mb-6 border-b border-muted pb-6 [&_p]:leading-normal"
-                key={r.id}
-              >
-                {r.profiles?.handle ? (
-                  <Link href={`/${locale}/profile/${r.profiles.handle}`}>
-                    <strong>{r.profiles.display_name || t.member}</strong>
-                  </Link>
-                ) : (
-                  <strong>{t.member}</strong>
-                )}
-                <div className="mt-1.5 text-[22px] text-primary">
-                  {"★".repeat(r.rating)}
-                  {"☆".repeat(5 - r.rating)}
-                </div>
-                {r.body && <p>{r.body}</p>}
-                {user?.id === r.user_id && (
-                  <form action={deleteReview}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <Button type="submit" variant="outline">
-                      {t.deleteReview}
-                    </Button>
-                  </form>
-                )}
-                {r.youtube_video_id && (
-                  <a
-                    className={buttonVariants({ variant: "outline" })}
-                    href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    ▶ YouTube
-                  </a>
-                )}
-              </article>
+              <div className="mb-6" key={r.id}>
+                <ReviewPost
+                  reviewId={r.id}
+                  locale={locale}
+                  placement="title"
+                  mediaType={mediaType as MediaType}
+                  author={{
+                    name: r.profiles?.display_name || t.member,
+                    href: r.profiles?.handle
+                      ? `/${locale}/profile/${r.profiles.handle}`
+                      : undefined,
+                    avatarUrl: r.profiles?.avatar_url,
+                  }}
+                  date={new Date(r.created_at).toLocaleDateString(locale)}
+                  title={titleName(item)}
+                  year={year(item)}
+                  rating={r.rating}
+                  text={r.body || ""}
+                  titleHref={`/${locale}/title/${mediaType}/${id}`}
+                  backdropUrl={imageUrl(item.backdrop_path, "w780")}
+                  posterUrl={poster}
+                  trailerUrl={
+                    r.youtube_video_id
+                      ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
+                      : null
+                  }
+                  interaction={
+                    <>
+                      <ReviewDiscussion
+                        reviewId={r.id}
+                        locale={locale}
+                        userId={user?.id || null}
+                        initialCount={reviewLikes[r.id]?.count}
+                        initialCommentCount={reviewLikes[r.id]?.commentCount}
+                        initialLiked={reviewLikes[r.id]?.liked}
+                      />
+                      {user?.id === r.user_id && (
+                        <form action={deleteReview} className="mt-3">
+                          <input type="hidden" name="id" value={r.id} />
+                          <Button type="submit" variant="outline">
+                            {t.deleteReview}
+                          </Button>
+                        </form>
+                      )}
+                    </>
+                  }
+                />
+              </div>
             ))
           ) : (
             <p className="text-muted-foreground">{t.noReviews}</p>
