@@ -174,7 +174,9 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await artwork.click();
     await expect(dialog).toContainText("Line six");
     await expect(
-      dialog.getByText(/featured review|other reviews/i),
+      dialog.getByRole("heading", {
+        name: /^(featured review|other reviews)$/i,
+      }),
     ).toHaveCount(0);
     await expect(page).toHaveURL(originUrl);
     await page.keyboard.press("Escape");
@@ -511,6 +513,8 @@ test("localizes the reply composer and cancel state", async ({
           exact: true,
         }),
       ).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
     }
   } finally {
     await author.db.from("reviews").delete().eq("user_id", author.id);
