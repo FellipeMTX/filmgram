@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PlaylistCover } from "@/components/playlist-cover";
 import { Button } from "@/components/ui/button";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
 import { signIn } from "@/features/auth/actions";
 import { messages } from "@/i18n/messages";
@@ -176,7 +177,7 @@ export default async function Playlists({
               {group.title}
             </h2>
             {group.count === 0 ? (
-              <p className="text-muted-foreground">{t.noPlaylists}</p>
+              <SocialEmpty message={t.noPlaylists} />
             ) : (
               <div className="grid grid-cols-2 gap-5 min-[700px]:grid-cols-3 min-[900px]:grid-cols-4 min-[1200px]:grid-cols-5">
                 {group.lists.map((list) => {

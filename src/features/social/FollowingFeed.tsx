@@ -8,6 +8,7 @@ import { imageUrl } from "@/integrations/tmdb-display";
 import { messages } from "@/i18n/messages";
 import { loadFollowing } from "./feed-actions";
 import type { FeedPage } from "./feed";
+import { SocialEmpty } from "./SocialEmpty";
 
 const labels = {
   en: {
@@ -59,7 +60,12 @@ export function FollowingFeed({
   const t = messages(locale),
     l = labels[locale as keyof typeof labels] || labels.en;
   if (!items.length)
-    return <p className="text-muted-foreground">{t.followingEmpty}</p>;
+    return (
+      <SocialEmpty
+        message={t.followingEmpty}
+        action={{ href: `/${locale}/discover`, label: t.discover }}
+      />
+    );
   return (
     <div className="space-y-4">
       {items.map((r) => (
@@ -146,6 +152,9 @@ export function FollowingFeed({
           )}
         </article>
       ))}
+      <p role="status" className="sr-only">
+        {pending ? l.loading : ""}
+      </p>
       {failed && (
         <p role="alert" className="text-muted-foreground">
           {l.failed}

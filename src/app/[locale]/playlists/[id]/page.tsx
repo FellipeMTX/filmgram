@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlaylistCover } from "@/components/playlist-cover";
 import { PlaylistItems } from "@/features/social/PlaylistItemControls";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { getPlaylist } from "@/features/social/queries";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
@@ -83,7 +84,16 @@ export default async function PlaylistDetail({
           owner={user?.id === list.user_id}
         />
       ) : (
-        <p className="mt-6 text-muted-foreground">{empty}</p>
+        <div className="mt-6">
+          <SocialEmpty
+            message={empty}
+            action={
+              user?.id === list.user_id
+                ? { href: `/${locale}/discover`, label: t.discover }
+                : undefined
+            }
+          />
+        </div>
       )}
     </main>
   );

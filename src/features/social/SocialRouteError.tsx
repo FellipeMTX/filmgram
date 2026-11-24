@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
-import { narrow, pageTitle } from "@/lib/layout";
+import { container, narrow, pageTitle } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { useTransition } from "react";
@@ -39,11 +39,21 @@ export function SocialRouteError({
   const [pending, startTransition] = useTransition();
 
   return (
-    <main className={cn(narrow, route === "following" && "max-w-[760px]")}>
+    <main
+      className={cn(
+        route === "library"
+          ? `${container} pt-[55px] pb-[100px] mobile:pt-[25px]`
+          : narrow,
+        route === "following" && "max-w-[680px]",
+      )}
+    >
       <h1 className={pageTitle}>
         {route === "following" ? t.following : t.playlists}
       </h1>
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div
+        className="rounded-xl border border-border bg-card p-5"
+        aria-busy={pending}
+      >
         <p role="alert" className="mb-4 text-muted-foreground">
           {copy[lang][route]}
         </p>
