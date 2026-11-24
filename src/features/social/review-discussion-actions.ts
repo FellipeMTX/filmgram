@@ -1,4 +1,8 @@
 "use server";
+import {
+  getReviewComment,
+  getReviewLikeSummaries,
+} from "./review-discussion-queries";
 import { supabase } from "@/integrations/supabase";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +42,7 @@ export async function setReviewLike(form: FormData) {
     p_liked: liked === "true",
   });
   if (error) throw error;
+  return (await getReviewLikeSummaries(db, [reviewId]))[reviewId];
 }
 export async function createReviewComment(form: FormData) {
   const reviewId = id(form, "review_id");
@@ -45,12 +50,13 @@ export async function createReviewComment(form: FormData) {
   const parentId = rawParent ? id(form, "parent_id") : null;
   const text = body(form);
   const db = await client();
-  const { error } = await db.rpc("create_review_comment", {
+  const { data, error } = await db.rpc("create_review_comment", {
     p_review_id: reviewId,
     p_parent_id: parentId,
     p_body: text,
   });
   if (error) throw error;
+  return getReviewComment(db, data);
 }
 export async function updateReviewComment(form: FormData) {
   const commentId = id(form, "comment_id"),
@@ -61,6 +67,7 @@ export async function updateReviewComment(form: FormData) {
     p_body: text,
   });
   if (error) throw error;
+  return getReviewComment(db, commentId);
 }
 export async function deleteReviewComment(form: FormData) {
   const commentId = id(form, "comment_id");
@@ -69,4 +76,5 @@ export async function deleteReviewComment(form: FormData) {
     p_comment_id: commentId,
   });
   if (error) throw error;
+  return getReviewComment(db, commentId);
 }

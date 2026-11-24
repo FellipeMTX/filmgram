@@ -94,6 +94,15 @@ export function ReviewDiscussion({
   const l = labels[locale as keyof typeof labels] || labels.en;
   const pathname = usePathname();
   const modalOpen = useReviewPostModal();
+  const [previousModal, setPreviousModal] = useState(modalOpen);
+  const [modalExpanded, setModalExpanded] = useState(true);
+  if (previousModal !== modalOpen) {
+    setPreviousModal(modalOpen);
+    if (modalOpen) setModalExpanded(true);
+  }
+  const nextPath = pathname.includes("/title/")
+    ? `${pathname}?review=${reviewId}`
+    : pathname;
   const composer = useRef<HTMLTextAreaElement>(null);
   const [liked, setLiked] = useState(initialLiked),
     [count, setCount] = useState(initialCount);
@@ -148,6 +157,7 @@ export function ReviewDiscussion({
       active = false;
     };
   }, [modalOpen, loaded, reviewId]);
+  const expanded = modalOpen ? modalExpanded : open;
   function run(fn: () => Promise<void>) {
     if (pending) return;
     setError(false);
@@ -170,55 +180,41 @@ export function ReviewDiscussion({
         ...prev,
         [parent]: {
           comments: cursor
-            ? [
-                ...(prev[parent]?.comments || []),
-                ...page.comments.filter(
-                  (c) =>
-                    !prev[parent]?.comments.some(
-                      (existing) => existing.id === c.id,
-                    ),
-                ),
-              ]
+            ? mergeComments(prev[parent]?.comments || [], page.comments)
             : page.comments,
           next: page.nextCursor,
         },
       }));
     else {
       setComments((prev) =>
-        cursor
-          ? [
-              ...prev,
-              ...page.comments.filter(
-                (c) => !prev.some((existing) => existing.id === c.id),
-              ),
-            ]
-          : page.comments,
+        cursor ? mergeComments(prev, page.comments) : page.comments,
       );
       setNext(page.nextCursor);
       setLoaded(true);
     }
   }
-  async function refresh(all = false) {
-    async function windowFor(parent: string | null, size: number) {
-      let cursor: Cursor = null;
-      const result: ReviewComment[] = [];
-      do {
-        const page = await loadReviewComments(
-          reviewId,
-          parent,
-          cursor || undefined,
-        );
-        result.push(...page.comments);
-        cursor = page.nextCursor;
-      } while (cursor && (all || result.length <= size));
-      return { comments: result, next: cursor };
-    }
-    const roots = await windowFor(null, comments.length);
-    setComments(roots.comments);
-    setNext(roots.next);
-    for (const [id, page] of Object.entries(replies)) {
-      const refreshed = await windowFor(id, page.comments.length);
-      setReplies((prev) => ({ ...prev, [id]: refreshed }));
+  function mergeComments(current: ReviewComment[], incoming: ReviewComment[]) {
+    return [
+      ...new Map(
+        [...current, ...incoming].map((item) => [item.id, item]),
+      ).values(),
+    ].sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    );
+  }
+  function mergeComment(row: ReviewComment) {
+    const parent = row.parentId;
+    if (!parent) {
+      setComments((previous) => mergeComments(previous, [row]));
+    } else {
+      setReplies((previous) => ({
+        ...previous,
+        [parent]: {
+          comments: mergeComments(previous[parent]?.comments || [], [row]),
+          next: previous[parent]?.next || null,
+        },
+      }));
     }
   }
   function actionForm(extra: Record<string, string>) {
@@ -265,11 +261,12 @@ export function ReviewDiscussion({
               disabled={pending || !editBody.trim()}
               onClick={() =>
                 run(async () => {
-                  await updateReviewComment(
-                    actionForm({ comment_id: c.id, body: editBody }),
+                  mergeComment(
+                    await updateReviewComment(
+                      actionForm({ comment_id: c.id, body: editBody }),
+                    ),
                   );
                   setEditing(null);
-                  await refresh();
                 })
               }
             >
@@ -317,11 +314,12 @@ export function ReviewDiscussion({
                   disabled={pending}
                   onClick={() =>
                     run(async () => {
-                      await deleteReviewComment(
-                        actionForm({ comment_id: c.id }),
+                      mergeComment(
+                        await deleteReviewComment(
+                          actionForm({ comment_id: c.id }),
+                        ),
                       );
                       setCommentCount((n) => Math.max(0, n - 1));
-                      await refresh();
                     })
                   }
                 >
@@ -367,9 +365,13 @@ export function ReviewDiscussion({
           className="text-sm text-primary disabled:opacity-60"
           onClick={() =>
             run(async () => {
-              await setReviewLike(actionForm({ liked: String(!liked) }));
-              setCount((n) => n + (liked ? -1 : 1));
-              setLiked(!liked);
+              const summary = await setReviewLike(
+                actionForm({ liked: String(!liked) }),
+              );
+              if (summary) {
+                setCount(summary.count);
+                setLiked(summary.liked);
+              }
             })
           }
         >
@@ -377,17 +379,18 @@ export function ReviewDiscussion({
         </button>
         <button
           type="button"
-          aria-expanded={open || modalOpen}
+          aria-expanded={expanded}
           className="text-sm text-muted-foreground hover:text-primary"
           onClick={() => {
-            setOpen(!open);
+            if (modalOpen) setModalExpanded(!expanded);
+            else setOpen(!expanded);
             if (!loaded) run(() => load(null));
           }}
         >
           {l.comments} ({commentCount})
         </button>
       </div>
-      {(open || modalOpen) && (
+      {expanded && (
         <div className="space-y-3">
           {detailHref && (
             <Link
@@ -435,16 +438,17 @@ export function ReviewDiscussion({
                 disabled={pending || !draft.trim()}
                 onClick={() =>
                   run(async () => {
-                    await createReviewComment(
-                      actionForm({
-                        body: draft,
-                        ...(replyTo ? { parent_id: replyTo } : {}),
-                      }),
+                    mergeComment(
+                      await createReviewComment(
+                        actionForm({
+                          body: draft,
+                          ...(replyTo ? { parent_id: replyTo } : {}),
+                        }),
+                      ),
                     );
                     setCommentCount((n) => n + 1);
                     setDraft("");
                     setReplyTo(null);
-                    await refresh(true);
                   })
                 }
               >
@@ -456,7 +460,7 @@ export function ReviewDiscussion({
               <input
                 type="hidden"
                 name="next"
-                value={`${pathname}#review-${reviewId}`}
+                value={`${nextPath}#review-${reviewId}`}
               />
               <Button type="submit" size="sm" variant="outline">
                 {l.login}

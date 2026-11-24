@@ -87,3 +87,34 @@ export async function getReviewComments(
         : null,
   };
 }
+
+export async function getReviewComment(
+  db: Client,
+  id: string,
+): Promise<ReviewComment> {
+  const { data, error } = await db
+    .from("review_comments")
+    .select(
+      "id,review_id,parent_id,user_id,body,created_at,updated_at,deleted_at,profiles!review_comments_user_id_fkey(display_name,handle,avatar_url)",
+    )
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    reviewId: data.review_id,
+    parentId: data.parent_id,
+    userId: data.user_id,
+    body: data.body,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    deletedAt: data.deleted_at,
+    profile: data.profiles
+      ? {
+          displayName: data.profiles.display_name,
+          handle: data.profiles.handle,
+          avatarUrl: data.profiles.avatar_url,
+        }
+      : null,
+  };
+}

@@ -25,7 +25,10 @@ const rows = Array.from({ length: 13 }, (_, i) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.user.mockResolvedValue({ data: { user: { id: "viewer" } } });
-  mocks.rpc.mockResolvedValue({ data: rows, error: null });
+  mocks.rpc.mockImplementation(async (rpc: string) => ({
+    data: rpc === "following_feed" ? rows : [],
+    error: null,
+  }));
   mocks.title.mockRejectedValue(new Error("offline"));
 });
 it("preserves reviews when metadata fails and returns a stable cursor", async () => {
@@ -48,5 +51,5 @@ it("rechecks the session and passes a validated cursor", async () => {
   });
   mocks.user.mockResolvedValue({ data: { user: null } });
   await expect(getFeed("en")).rejects.toThrow("Authentication required");
-  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  expect(mocks.rpc).toHaveBeenCalledTimes(2);
 });
