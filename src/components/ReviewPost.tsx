@@ -224,7 +224,8 @@ export function ReviewPost(props: ReviewPostProps) {
   useLayoutEffect(() => {
     if (!interactionContainer) return;
     const host = open ? modalHost.current : inlineHost.current;
-    host?.appendChild(interactionContainer);
+    if (host && interactionContainer.parentNode !== host)
+      host.appendChild(interactionContainer);
   }, [open, interactionContainer]);
   useEffect(() => {
     const node = copyRef.current;
@@ -399,7 +400,12 @@ export function ReviewPost(props: ReviewPostProps) {
         <div
           ref={(node) => {
             inlineHost.current = node;
-            if (node && !open && interactionContainer)
+            if (
+              node &&
+              !open &&
+              interactionContainer &&
+              interactionContainer.parentNode !== node
+            )
               node.appendChild(interactionContainer);
           }}
         />
@@ -577,7 +583,11 @@ export function ReviewPost(props: ReviewPostProps) {
                     <div
                       ref={(node) => {
                         modalHost.current = node;
-                        if (node && interactionContainer)
+                        if (
+                          node &&
+                          interactionContainer &&
+                          interactionContainer.parentNode !== node
+                        )
                           node.appendChild(interactionContainer);
                       }}
                     />

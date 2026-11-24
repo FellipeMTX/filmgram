@@ -472,6 +472,12 @@ test("localizes the reply composer and cancel state", async ({
         .click();
       const input = dialog.getByRole("textbox", { name: l.textbox });
       await expect(input).toBeFocused();
+      await expect(
+        dialog.getByText(
+          /^(Loading reviews…|Carregando resenhas…|Cargando reseñas…)$/,
+        ),
+      ).toHaveCount(0);
+      await expect(input).toBeFocused();
       const widths = await input.evaluate((node) => ({
         input: node.getBoundingClientRect().width,
         column: node.parentElement!.getBoundingClientRect().width,
