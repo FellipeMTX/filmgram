@@ -204,7 +204,10 @@ test.describe("signed-in account", () => {
       await expect(
         visitorPage.getByRole("heading", { name: publicList.name }),
       ).toBeVisible();
-      await visitorPage.goto(`${baseURL}/en/playlists/${privateList.id}`);
+      const response = await visitorPage.goto(
+        `${baseURL}/en/playlists/${privateList.id}`,
+      );
+      expect(response?.status()).toBe(404);
       await expect(
         visitorPage.getByRole("heading", { name: "Page not found" }),
       ).toBeVisible();

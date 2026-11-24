@@ -57,6 +57,15 @@ for (const isPublic of [false, true]) {
     await expect(
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByText("This playlist has no titles yet."),
+    ).toBeVisible();
+    for (const width of [320, 390, 768, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+    }
     const saved = await db
       .from("playlists")
       .select("is_public")

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { imageUrl } from "@/integrations/tmdb-display";
 import { messages } from "@/i18n/messages";
 import { loadFollowing } from "./feed-actions";
 import type { FeedPage } from "./feed";
+import { SocialEmpty } from "./SocialEmpty";
 
 const labels = {
   en: {
@@ -18,6 +19,7 @@ const labels = {
     tv: "Series",
     unknown: "Title unavailable",
     rating: "Rating",
+    loaded: (count: number) => `${count} reviews shown`,
   },
   "pt-BR": {
     more: "Ver mais",
@@ -27,6 +29,7 @@ const labels = {
     tv: "Série",
     unknown: "Título indisponível",
     rating: "Avaliação",
+    loaded: (count: number) => `${count} avaliações exibidas`,
   },
   es: {
     more: "Ver más",
@@ -36,6 +39,7 @@ const labels = {
     tv: "Serie",
     unknown: "Título no disponible",
     rating: "Valoración",
+    loaded: (count: number) => `${count} reseñas visibles`,
   },
 };
 export function FollowingFeed({
@@ -50,6 +54,18 @@ export function FollowingFeed({
   const [next, setNext] = useState(initial.next);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  const focusPost = useRef<string | null>(null);
+  const feed = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focusPost.current) return;
+    const post = feed.current?.querySelector<HTMLElement>(
+      `[data-review-id="${CSS.escape(focusPost.current)}"]`,
+    );
+    if (post) {
+      post.focus();
+      focusPost.current = null;
+    }
+  }, [items]);
   if (source !== initial) {
     setSource(initial);
     setItems(initial.items);
@@ -59,12 +75,19 @@ export function FollowingFeed({
   const t = messages(locale),
     l = labels[locale as keyof typeof labels] || labels.en;
   if (!items.length)
-    return <p className="text-muted-foreground">{t.followingEmpty}</p>;
+    return (
+      <SocialEmpty
+        message={t.followingEmpty}
+        action={{ href: `/${locale}/discover`, label: t.discover }}
+      />
+    );
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={feed}>
       {items.map((r) => (
         <article
           key={r.id}
+          data-review-id={r.id}
+          tabIndex={-1}
           className="rounded-lg border border-border bg-card p-5 sm:p-6"
         >
           <div className="flex items-center gap-3">
@@ -146,6 +169,13 @@ export function FollowingFeed({
           )}
         </article>
       ))}
+      <p role="status" className="sr-only">
+        {pending
+          ? l.loading
+          : items.length > initial.items.length
+            ? l.loaded(items.length)
+            : ""}
+      </p>
       {failed && (
         <p role="alert" className="text-muted-foreground">
           {l.failed}
@@ -156,11 +186,15 @@ export function FollowingFeed({
           <Button
             variant="outline"
             disabled={pending}
-            onClick={() => {
+            onClick={(event) => {
+              const byKeyboard = event.detail === 0;
               setFailed(false);
               startTransition(async () => {
                 try {
                   const page = await loadFollowing(locale, next);
+                  if (byKeyboard || !page.next) {
+                    focusPost.current = page.items[0]?.id ?? null;
+                  }
                   setItems((previous) => [
                     ...previous,
                     ...page.items.filter(

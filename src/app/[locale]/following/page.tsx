@@ -1,7 +1,7 @@
 import { narrow, pageTitle, eyebrow } from "@/lib/layout";
 import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
-import { currentUser } from "@/integrations/supabase";
+import { getSocialViewer } from "@/features/social/social-viewer";
 import { signIn } from "@/features/auth/actions";
 import { getFeed } from "@/features/social/feed";
 import { FollowingFeed } from "@/features/social/FollowingFeed";
@@ -13,7 +13,7 @@ export default async function Following({
 }) {
   const { locale } = await params;
   const t = messages(locale);
-  const user = await currentUser();
+  const { user } = await getSocialViewer();
   const feed = user ? await getFeed(locale) : null;
   return (
     <main className={`${narrow} max-w-[680px]`}>

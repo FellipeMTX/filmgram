@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlaylistCover } from "@/components/playlist-cover";
 import { PlaylistItems } from "@/features/social/PlaylistItemControls";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { getPlaylist } from "@/features/social/queries";
 import { messages } from "@/i18n/messages";
-import { currentUser, supabase } from "@/integrations/supabase";
+import { getSocialViewer } from "@/features/social/social-viewer";
 import { narrow, pageTitle } from "@/lib/layout";
 
 export default async function PlaylistDetail({
@@ -18,8 +19,8 @@ export default async function PlaylistDetail({
   )
     notFound();
   const t = messages(locale);
-  const [user, db] = await Promise.all([currentUser(), supabase()]);
-  if (!db) notFound();
+  const { user, db } = await getSocialViewer();
+  if (!db) throw new Error("Playlists database unavailable");
   const list = await getPlaylist(db, id);
   if (!list) notFound();
   const items = list.playlist_items;
@@ -83,7 +84,16 @@ export default async function PlaylistDetail({
           owner={user?.id === list.user_id}
         />
       ) : (
-        <p className="mt-6 text-muted-foreground">{empty}</p>
+        <div className="mt-6">
+          <SocialEmpty
+            message={empty}
+            action={
+              user?.id === list.user_id
+                ? { href: `/${locale}/discover`, label: t.discover }
+                : undefined
+            }
+          />
+        </div>
       )}
     </main>
   );
