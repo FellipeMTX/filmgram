@@ -194,17 +194,22 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await expect(
       dialog.getByText(/Line seven closes the review/),
     ).toBeVisible();
-    await expect(dialog.locator("iframe")).toHaveCount(0);
+    const player = dialog
+      .getByRole("article")
+      .filter({ hasText: lastLine })
+      .first()
+      .locator('iframe[title="YouTube video player"][src$="/dQw4w9WgXcQ"]');
+    await expect(player).toBeVisible();
+    await expect(player).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    );
+    await expect(
+      dialog.getByRole("button", { name: /play youtube video/i }),
+    ).toHaveCount(0);
     await expect(
       dialog.getByRole("link", { name: /watch on youtube/i }),
-    ).toHaveAttribute("href", "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-    await dialog.getByRole("button", { name: /play youtube video/i }).click();
-    await expect(dialog.locator("iframe")).toBeFocused();
-    await expect(dialog.locator("iframe")).toHaveAttribute(
-      "src",
-      /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ/,
-    );
-    await dialog.getByRole("link", { name: /watch on youtube/i }).focus();
+    ).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(more).toBeFocused();
@@ -231,6 +236,9 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await dialog.getByRole("link", { name: /^view title:/i }).click();
     await expect(page).toHaveURL(/\/en\/title\/movie\/1726/);
     const linkedReview = page.locator(`#review-${longId}`);
+    await expect(
+      linkedReview.locator('iframe[title="YouTube video player"]'),
+    ).toBeVisible();
     await expect(linkedReview.getByText(note)).toBeVisible();
     await expect(
       linkedReview.getByRole("button", { name: /unlike review/i }),

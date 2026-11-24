@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, X, Play } from "lucide-react";
+import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TitleReviewContext } from "@/features/social/TitleReviewContext";
@@ -329,15 +329,8 @@ export function ReviewPost(props: ReviewPostProps) {
             </Dialog.Trigger>
           )}
         </div>
-        {trailerUrl && (
-          <a
-            href={trailerUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-subtle hover:text-primary"
-          >
-            <Play size={17} /> YouTube <ArrowUpRight size={14} />
-          </a>
+        {props.placement === "title" && trailerUrl && (
+          <ReviewVideo url={trailerUrl} locale={props.locale} />
         )}
         {props.placement === "title" && (
           <CommunityEditControl reviewId={props.reviewId} />
