@@ -49,7 +49,7 @@ export default async function Detail({
       avatar_url: string | null;
     } | null;
   }[] = [];
-  let playlists: { id: string; name: string }[] = [];
+  let playlists: { id: string; name: string; contains: boolean }[] = [];
   let followedAuthors: string[] = [];
   const states: Record<string, boolean> = {};
   let likes = 0;
@@ -138,12 +138,25 @@ export default async function Detail({
           .eq("media_type", mediaType)
           .eq("tmdb_id", Number(id))
           .maybeSingle(),
-        db.from("playlists").select("id,name").eq("user_id", user.id),
+        db
+          .from("playlists")
+          .select("id,name,playlist_items(id)")
+          .eq("user_id", user.id)
+          .eq("playlist_items.media_type", mediaType)
+          .eq("playlist_items.tmdb_id", Number(id))
+          .order("name")
+          .order("id"),
       ]);
       states.favorites = !!f.data;
       states.watched = !!w.data;
       states.title_likes = !!l.data;
-      playlists = (p.data || []) as unknown as typeof playlists;
+      if (f.error) throw f.error;
+      if (p.error) throw p.error;
+      playlists = p.data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        contains: row.playlist_items.length > 0,
+      }));
     }
   }
   const poster = imageUrl(item.poster_path);
@@ -322,14 +335,6 @@ export default async function Detail({
                         initialCommentCount={reviewLikes[r.id]?.commentCount}
                         initialLiked={reviewLikes[r.id]?.liked}
                       />
-                      {user?.id === r.user_id && (
-                        <form action={deleteReview} className="mt-3">
-                          <input type="hidden" name="id" value={r.id} />
-                          <Button type="submit" variant="outline">
-                            {t.deleteReview}
-                          </Button>
-                        </form>
-                      )}
                     </>
                   }
                 />

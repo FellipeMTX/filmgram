@@ -60,28 +60,39 @@ test.describe("signed-in account", () => {
     try {
       await signUp(stranger, baseURL);
       await page.goto("/en/title/movie/1726");
-      const save = page.getByRole("button", { name: "Save", exact: true });
-      await expect(save).toBeVisible();
+      const save = page.getByRole("button", { name: "Save to playlist" });
       await save.click();
-
-      const saved = page.getByRole("button", {
-        name: /saved|remove (?:from )?favorites/i,
-      });
-      await expect(saved).toBeVisible();
+      const saved = page
+        .getByRole("dialog")
+        .getByRole("button", { name: /Saved/ });
+      await expect(saved).toHaveAttribute("aria-pressed", "false");
+      await saved.click();
+      await expect(saved).toHaveAttribute("aria-pressed", "true");
       await page.reload();
-      await expect(saved).toBeVisible();
-      await page.goto("/en/profile/me");
-      await page.getByRole("link", { name: "View favorites" }).click();
+      await save.click();
+      await expect(saved).toHaveAttribute("aria-pressed", "true");
+      await page.goto("/en/playlists");
+      await page.getByRole("link", { name: "Saved Private" }).click();
       await expect(page).toHaveURL(/\/en\/favorites$/);
       await expect(page.getByRole("link", { name: "Iron Man" })).toBeVisible();
 
       const strangerPage = await stranger.newPage();
       await strangerPage.goto(`${baseURL}/en/title/movie/1726`);
+      await strangerPage
+        .getByRole("button", { name: "Save to playlist" })
+        .click();
       await expect(
-        strangerPage.getByRole("button", { name: "Save", exact: true }),
-      ).toBeVisible();
+        strangerPage.getByRole("dialog").getByRole("button", { name: /Saved/ }),
+      ).toHaveAttribute("aria-pressed", "false");
       await strangerPage.goto(`${baseURL}/en/favorites`);
       await expect(strangerPage.getByText("No favorites yet.")).toBeVisible();
+
+      await page.goto("/en/title/movie/1726");
+      await save.click();
+      await saved.click();
+      await expect(saved).toHaveAttribute("aria-pressed", "false");
+      await page.goto("/en/favorites");
+      await expect(page.getByRole("link", { name: "Iron Man" })).toHaveCount(0);
     } finally {
       await stranger.close();
     }
@@ -116,6 +127,9 @@ test.describe("signed-in account", () => {
 
       const review = `Quiet thriller with a vivid sense of place. ${randomUUID()}`;
       await page.goto("/en/title/movie/1726");
+      await page
+        .getByRole("button", { name: "Write review", exact: true })
+        .click();
       const rating = page.locator('select[name="rating"]');
       await rating.selectOption("4");
       await page.getByRole("textbox", { name: "Write a review" }).fill(review);
@@ -298,18 +312,13 @@ test.describe("signed-in account", () => {
 
     for (const title of ["movie/1726", "tv/1434"]) {
       await page.goto(`/en/title/${title}`);
-      await page
-        .getByRole("combobox", { name: "Choose a playlist" })
-        .selectOption({ label: name });
-      const [response] = await Promise.all([
-        page.waitForResponse(
-          (candidate) =>
-            candidate.request().method() === "POST" &&
-            candidate.url() === page.url(),
-        ),
-        page.getByRole("button", { name: "Add", exact: true }).click(),
-      ]);
-      expect(response.ok()).toBeTruthy();
+      await page.getByRole("button", { name: "Save to playlist" }).click();
+      const destination = page
+        .getByRole("dialog")
+        .getByRole("button", { name, exact: true });
+      await expect(destination).toHaveAttribute("aria-pressed", "false");
+      await destination.click();
+      await expect(destination).toHaveAttribute("aria-pressed", "true");
     }
 
     await page.goto("/en/playlists");

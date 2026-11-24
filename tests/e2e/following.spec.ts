@@ -251,7 +251,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await original.getByRole("button", { name: "Reply", exact: true }).click();
     await original
       .getByRole("textbox", { name: /comment|reply/i })
-      .fill("Reply from the author");
+      .pressSequentially("Reply from the author");
     await original
       .getByRole("button", { name: "Post comment", exact: true })
       .click();
@@ -358,7 +358,7 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
     ).toBeVisible();
     await post
       .getByRole("textbox", { name: "Write a comment" })
-      .fill("Draft survives cancellation");
+      .pressSequentially("Draft survives cancellation");
     await post.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(
       post.getByRole("status").filter({ hasText: "Replying to @" }),
@@ -367,9 +367,10 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
       post.getByRole("textbox", { name: "Write a comment" }),
     ).toHaveValue("Draft survives cancellation");
     await parent.getByRole("button", { name: "Reply", exact: true }).click();
-    await post
-      .getByRole("textbox", { name: "Write a comment" })
-      .fill("A mention reply");
+    const replyInput = post.getByRole("textbox", { name: "Write a comment" });
+    const prefix = (await replyInput.inputValue()).match(/^@\S+ /)?.[0];
+    expect(prefix).toBeTruthy();
+    await replyInput.fill(`${prefix}A mention reply`);
     await post.getByRole("button", { name: "Post comment" }).click();
     await expect(post.getByText(/@.*A mention reply/)).toBeVisible();
     await parent
@@ -461,7 +462,12 @@ test("localizes the reply composer and cancel state", async ({
         .getByRole("button", { name: new RegExp(l.open) })
         .click();
       const dialog = page.getByRole("dialog");
-      await dialog.getByRole("button", { name: l.reply, exact: true }).click();
+      const original = dialog
+        .locator("[data-comment-id]")
+        .filter({ hasText: "Original comment" });
+      await original
+        .getByRole("button", { name: l.reply, exact: true })
+        .click();
       const input = dialog.getByRole("textbox", { name: l.textbox });
       await expect(input).toBeFocused();
       const widths = await input.evaluate((node) => ({
@@ -479,12 +485,32 @@ test("localizes the reply composer and cancel state", async ({
       await expect(
         dialog.getByRole("button", { name: l.submit }),
       ).toBeDisabled();
-      await input.fill("Draft");
+      const prefix = await input.inputValue();
+      expect(prefix).toMatch(/^@\S+ $/);
+      expect(
+        await input.evaluate(
+          (node) => (node as HTMLTextAreaElement).selectionStart,
+        ),
+      ).toBe(prefix.length);
+      await input.pressSequentially("Draft");
       await dialog.getByRole("button", { name: l.cancel, exact: true }).click();
       await expect(
         dialog.getByRole("status").filter({ hasText: l.state }),
       ).toHaveCount(0);
       await expect(input).toHaveValue("Draft");
+      await original
+        .getByRole("button", { name: l.reply, exact: true })
+        .click();
+      await input.fill(`Edited prefix becomes ordinary ${l.locale}`);
+      await expect(
+        dialog.getByRole("status").filter({ hasText: l.state }),
+      ).toHaveCount(0);
+      await dialog.getByRole("button", { name: l.submit }).click();
+      await expect(
+        dialog.getByText(`Edited prefix becomes ordinary ${l.locale}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
     }
   } finally {
     await author.db.from("reviews").delete().eq("user_id", author.id);

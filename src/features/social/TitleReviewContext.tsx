@@ -5,12 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
-import { CommunityEditor, CommunityEditorContext } from "./CommunityEditor";
+import {
+  CommunityEditor,
+  CommunityEditorContext,
+  CommunityEditControl,
+  CommunityCardEditor,
+} from "./CommunityEditor";
 import { loadTitleReviewContext } from "./title-review-context";
 import { ReviewDiscussion } from "./ReviewDiscussion";
 import { FollowReviewAuthor } from "./FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ReviewCard } from "@/components/ReviewCard";
 
 type Context = Awaited<ReturnType<typeof loadTitleReviewContext>>;
 const labels = {
@@ -80,6 +86,7 @@ export function TitleReviewContext({
   const [attempt, setAttempt] = useState(0);
   const [editing, setEditing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [deletedSelected, setDeletedSelected] = useState(false);
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   useEffect(() => {
@@ -124,6 +131,47 @@ export function TitleReviewContext({
           ? `${titleHref}?review=${reviewId}#review-${reviewId}`
           : titleHref,
         refresh,
+        onDeleted: async (id) => {
+          if (id === reviewId) setDeletedSelected(true);
+          setEditing(false);
+          setData((previous) =>
+            previous
+              ? {
+                  ...previous,
+                  own: null,
+                  reviews: previous.reviews.filter((r) => r.id !== id),
+                  count: Math.max(0, previous.count - 1),
+                  average:
+                    previous.count > 1
+                      ? (previous.average * previous.count -
+                          (previous.own?.rating || 0)) /
+                        (previous.count - 1)
+                      : 0,
+                }
+              : previous,
+          );
+          if (onTitlePage) router.refresh();
+          try {
+            const updated = await loadTitleReviewContext(
+              locale,
+              mediaType,
+              tmdbId,
+              reviewId,
+            );
+            setData((previous) =>
+              previous
+                ? {
+                    ...previous,
+                    own: updated.own,
+                    count: updated.count,
+                    average: updated.average,
+                  }
+                : updated,
+            );
+          } catch {
+            setError(true);
+          }
+        },
       }}
     >
       {!onTitlePage && (
@@ -162,10 +210,8 @@ export function TitleReviewContext({
           )}
         </div>
         {!own && <CommunityEditor />}
-        {selected && (
-          <article className="rounded-xl border border-border bg-card p-4">
-            {selected(own || null, data)}
-          </article>
+        {selected && !deletedSelected && (
+          <ReviewCard>{selected(own || null, data)}</ReviewCard>
         )}
         {onTitlePage ? (
           children
@@ -187,7 +233,7 @@ export function TitleReviewContext({
               <p className="text-sm text-subtle">{l.empty}</p>
             )}
             {others.map((r) => (
-              <article
+              <ReviewCard
                 key={r.id}
                 className="rounded-xl border border-border bg-card p-4"
               >
@@ -237,6 +283,7 @@ export function TitleReviewContext({
                     {"☆".repeat(5 - r.rating)}{" "}
                     <span className="text-foreground">{r.rating}/5</span>
                   </span>
+                  <CommunityEditControl reviewId={r.id} />
                 </div>
                 {r.body && (
                   <p className="mt-3 whitespace-pre-line text-sm">{r.body}</p>
@@ -247,19 +294,7 @@ export function TitleReviewContext({
                     locale={locale}
                   />
                 )}
-                {own?.id === r.id && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing(true)}
-                    >
-                      {l.edit}
-                    </Button>
-                    <CommunityEditor />
-                  </>
-                )}
+                <CommunityCardEditor reviewId={r.id} />
                 <ReviewDiscussion
                   reviewId={r.id}
                   locale={locale}
@@ -268,7 +303,7 @@ export function TitleReviewContext({
                   initialCommentCount={data?.summaries[r.id]?.commentCount}
                   initialLiked={data?.summaries[r.id]?.liked}
                 />
-              </article>
+              </ReviewCard>
             ))}
             {data?.next && (
               <Button

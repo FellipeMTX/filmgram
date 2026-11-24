@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { savedCollectionLabels } from "@/features/catalog/saved-collection-labels";
 import { PlaylistCover } from "@/components/playlist-cover";
 import { Button } from "@/components/ui/button";
 import { SocialEmpty } from "@/features/social/SocialEmpty";
@@ -177,7 +178,18 @@ export default async function Playlists({
             <h2 className="mb-5 font-display text-2xl font-semibold">
               {group.title}
             </h2>
-            {group.count === 0 ? (
+            {group.key === "ownPage" && group.page === 1 && (
+              <Link
+                href={`/${locale}/favorites`}
+                className="mb-5 flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 font-semibold hover:border-primary"
+              >
+                {savedCollectionLabels(locale).saved}
+                <span className="text-sm font-normal text-muted-foreground">
+                  {t.private}
+                </span>
+              </Link>
+            )}
+            {group.count === 0 && group.key !== "ownPage" ? (
               <SocialEmpty message={t.noPlaylists} />
             ) : (
               <div className="grid grid-cols-2 gap-5 min-[700px]:grid-cols-3 min-[900px]:grid-cols-4 min-[1200px]:grid-cols-5">

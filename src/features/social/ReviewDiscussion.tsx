@@ -175,6 +175,13 @@ export function ReviewDiscussion({
     [next, setNext] = useState<Cursor>(null);
   const [draft, setDraft] = useState(""),
     [replyTo, setReplyTo] = useState<ReviewComment | null>(null);
+  const mentionPrefix = replyTo?.profile?.handle
+    ? `@${replyTo.profile.handle} `
+    : "";
+  const commentBody =
+    mentionPrefix && draft.startsWith(mentionPrefix)
+      ? draft.slice(mentionPrefix.length)
+      : draft;
   const [editing, setEditing] = useState<string | null>(null),
     [editBody, setEditBody] = useState("");
   const [error, setError] = useState(false),
@@ -254,7 +261,10 @@ export function ReviewDiscussion({
           : item,
       ),
     );
-    if (row.deletedAt && replyTo?.id === row.id) setReplyTo(null);
+    if (row.deletedAt && replyTo?.id === row.id) {
+      setDraft(commentBody);
+      setReplyTo(null);
+    }
   }
   function actionForm(extra: Record<string, string>) {
     const f = new FormData();
@@ -361,8 +371,23 @@ export function ReviewDiscussion({
                     type="button"
                     className="text-xs text-muted-foreground hover:text-primary"
                     onClick={() => {
+                      const priorPrefix = replyTo?.profile?.handle
+                        ? `@${replyTo.profile.handle} `
+                        : "";
+                      const existing =
+                        priorPrefix && draft.startsWith(priorPrefix)
+                          ? draft.slice(priorPrefix.length)
+                          : draft;
+                      const prefix = `@${c.profile!.handle} `;
+                      setDraft(prefix + existing);
                       setReplyTo(c);
-                      composer.current?.focus();
+                      requestAnimationFrame(() => {
+                        composer.current?.focus();
+                        composer.current?.setSelectionRange(
+                          prefix.length,
+                          prefix.length,
+                        );
+                      });
                     }}
                   >
                     {l.reply}
@@ -537,7 +562,12 @@ export function ReviewDiscussion({
                 }
                 placeholder={l.placeholder}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDraft(value);
+                  if (replyTo && !value.startsWith(mentionPrefix))
+                    setReplyTo(null);
+                }}
               />
               <div className="flex flex-wrap justify-end gap-2">
                 <Button
@@ -546,8 +576,10 @@ export function ReviewDiscussion({
                   variant="ghost"
                   disabled={pending || (!replyTo && !draft)}
                   onClick={() => {
-                    if (replyTo) setReplyTo(null);
-                    else setDraft("");
+                    if (replyTo) {
+                      setDraft(commentBody);
+                      setReplyTo(null);
+                    } else setDraft("");
                     composer.current?.focus();
                   }}
                 >
@@ -556,13 +588,13 @@ export function ReviewDiscussion({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={pending || !draft.trim()}
+                  disabled={pending || !commentBody.trim()}
                   onClick={() =>
                     run(async () => {
                       mergeComment(
                         await createReviewComment(
                           actionForm({
-                            body: draft,
+                            body: commentBody,
                             ...(replyTo
                               ? { target_comment_id: replyTo.id }
                               : {}),

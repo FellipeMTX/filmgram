@@ -16,7 +16,10 @@ import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TitleReviewContext } from "@/features/social/TitleReviewContext";
-import { CommunityEditControl } from "@/features/social/CommunityEditor";
+import {
+  CommunityEditControl,
+  CommunityCardEditor,
+} from "@/features/social/CommunityEditor";
 import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
 
@@ -279,6 +282,9 @@ export function ReviewPost(props: ReviewPostProps) {
               locale={props.locale}
             />
           )}
+          {props.placement === "title" && (
+            <CommunityEditControl reviewId={props.reviewId} />
+          )}
         </div>
         <Heading {...props} />
         {artwork && props.placement !== "title" && (
@@ -333,7 +339,7 @@ export function ReviewPost(props: ReviewPostProps) {
           <ReviewVideo url={trailerUrl} locale={props.locale} />
         )}
         {props.placement === "title" && (
-          <CommunityEditControl reviewId={props.reviewId} />
+          <CommunityCardEditor reviewId={props.reviewId} />
         )}
         <div
           ref={(node) => {
@@ -474,6 +480,7 @@ export function ReviewPost(props: ReviewPostProps) {
                           </span>
                         </p>
                       )}
+                      <CommunityEditControl reviewId={props.reviewId} />
                     </div>
                     <p className="mt-3 whitespace-pre-line text-sm leading-[1.55]">
                       {own?.id === props.reviewId ? own.body : text}
@@ -490,7 +497,7 @@ export function ReviewPost(props: ReviewPostProps) {
                         locale={props.locale}
                       />
                     )}
-                    <CommunityEditControl reviewId={props.reviewId} />
+                    <CommunityCardEditor reviewId={props.reviewId} />
                     <div
                       ref={(node) => {
                         modalHost.current = node;

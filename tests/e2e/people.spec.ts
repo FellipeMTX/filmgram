@@ -34,7 +34,7 @@ test("movie direction appears before ratings and links to a shared professional 
   await expect(direction).toBeVisible();
   const directionBounds = await direction.boundingBox();
   const ratingBounds = await page
-    .getByRole("heading", { name: "Your rating", exact: true })
+    .getByRole("heading", { name: "Community reviews", exact: true })
     .boundingBox();
   expect(directionBounds!.y).toBeLessThan(ratingBounds!.y);
   await page
@@ -216,7 +216,7 @@ test("collapsed filmography presents two responsive rows and a bounded DOM", asy
   );
 });
 
-test("direction and cast appear before the review form", async ({ page }) => {
+test("direction and cast appear before community reviews", async ({ page }) => {
   await page.goto("/en/title/movie/1726");
   const direction = await page
     .getByRole("heading", { name: "Direction", exact: true })
@@ -225,7 +225,7 @@ test("direction and cast appear before the review form", async ({ page }) => {
     .getByRole("heading", { name: "Cast", exact: true })
     .boundingBox();
   const rating = await page
-    .getByRole("heading", { name: "Your rating", exact: true })
+    .getByRole("heading", { name: "Community reviews", exact: true })
     .boundingBox();
   expect(direction!.y).toBeLessThan(cast!.y);
   expect(cast!.y).toBeLessThan(rating!.y);
@@ -234,7 +234,7 @@ test("direction and cast appear before the review form", async ({ page }) => {
     .getByRole("heading", { name: "Cast", exact: true })
     .boundingBox();
   const tvRating = await page
-    .getByRole("heading", { name: "Your rating", exact: true })
+    .getByRole("heading", { name: "Community reviews", exact: true })
     .boundingBox();
   expect(tvCast!.y).toBeLessThan(tvRating!.y);
 });

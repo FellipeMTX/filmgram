@@ -1,8 +1,8 @@
 import { actionGroup } from "@/lib/layout";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/native-select";
-import { toggleTitle, addToPlaylist } from "@/features/social/actions";
+import { toggleTitle } from "@/features/social/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
+import { TitleCollectionControl } from "./TitleCollectionControl";
 import { messages } from "@/i18n/messages";
 export function TitleFields({ item }: { item: Title }) {
   return (
@@ -32,15 +32,21 @@ export function TitleActions({
   locale: string;
   user: boolean;
   states: Record<string, boolean>;
-  playlists: { id: string; name: string }[];
+  playlists: { id: string; name: string; contains: boolean }[];
 }) {
   const t = messages(locale);
   if (!user) return null;
   return (
     <div className={actionGroup}>
+      <TitleCollectionControl
+        locale={locale}
+        saved={!!states.favorites}
+        playlists={playlists}
+      >
+        <TitleFields item={item} />
+      </TitleCollectionControl>
       {(
         [
-          ["favorites", states.favorites ? t.saved : t.save],
           ["watched", states.watched ? t.watch : t.watched],
           ["title_likes", states.title_likes ? t.liked : t.like],
         ] as [string, string][]
@@ -50,41 +56,14 @@ export function TitleActions({
           <input type="hidden" name="table" value={table} />
           <Button
             type="submit"
-            variant={table === "favorites" ? "default" : "outline"}
+            variant="outline"
             aria-label={label}
             aria-pressed={!!states[table]}
           >
-            {table === "favorites" ? "☆" : table === "watched" ? "✓" : "♡"}{" "}
-            {label}
+            {table === "watched" ? "✓" : "♡"} {label}
           </Button>
         </form>
       ))}
-      {playlists.length > 0 && (
-        <form
-          action={addToPlaylist}
-          className="flex gap-2 [&_select]:max-w-[180px]"
-        >
-          <TitleFields item={item} />
-          <NativeSelect
-            name="playlist_id"
-            aria-label={t.selectPlaylist}
-            required
-            defaultValue=""
-          >
-            <option value="" disabled>
-              {t.selectPlaylist}
-            </option>
-            {playlists.map((p) => (
-              <option value={p.id} key={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <Button type="submit" variant="outline">
-            {t.add}
-          </Button>
-        </form>
-      )}
     </div>
   );
 }

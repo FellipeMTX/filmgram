@@ -27,7 +27,7 @@ export function ReviewVideo({ url, locale }: { url: string; locale: string }) {
   return (
     <iframe
       key={id}
-      className="mt-3 block aspect-video min-h-[200px] w-full rounded-md bg-black"
+      className="mt-3 block aspect-video min-h-[200px] w-full max-w-[480px] rounded-md bg-black"
       src={`https://www.youtube-nocookie.com/embed/${id}`}
       title={
         playerTitles[locale as keyof typeof playerTitles] ?? playerTitles.en
