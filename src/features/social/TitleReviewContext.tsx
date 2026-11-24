@@ -17,6 +17,7 @@ import { FollowReviewAuthor } from "./FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ReviewRichText } from "@/components/ReviewRichText";
+import { FilmgramRating } from "@/components/FilmgramRating";
 import { reviewYoutubeId } from "@/features/social/review-content";
 
 type Context = Awaited<ReturnType<typeof loadTitleReviewContext>>;
@@ -31,6 +32,7 @@ const labels = {
     write: "Write review",
     edit: "Edit my review",
     average: "community ratings",
+    noRatings: "No Filmgram ratings yet",
     empty: "No other reviews yet.",
     more: "Load more reviews",
   },
@@ -44,6 +46,7 @@ const labels = {
     write: "Escrever resenha",
     edit: "Editar minha resenha",
     average: "avaliações da comunidade",
+    noRatings: "Ainda não há avaliações Filmgram",
     empty: "Ainda não há outras resenhas.",
     more: "Carregar mais resenhas",
   },
@@ -57,6 +60,7 @@ const labels = {
     write: "Escribir reseña",
     edit: "Editar mi reseña",
     average: "valoraciones de la comunidad",
+    noRatings: "Todavía no hay valoraciones Filmgram",
     empty: "Todavía no hay otras reseñas.",
     more: "Cargar más reseñas",
   },
@@ -180,12 +184,14 @@ export function TitleReviewContext({
           {data?.overview && <p className="text-sm">{data.overview}</p>}
           {data && (
             <p className="text-sm">
-              <span className="text-primary">★</span>{" "}
-              {new Intl.NumberFormat(locale, {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              }).format(data.average)}
-              /5 Filmgram · {data.count} {l.average}
+              {data.count ? (
+                <>
+                  <FilmgramRating value={data.average} locale={locale} />{" "}
+                  Filmgram · {data.count} {l.average}
+                </>
+              ) : (
+                l.noRatings
+              )}
             </p>
           )}
         </div>
@@ -212,17 +218,21 @@ export function TitleReviewContext({
         </div>
         {onTitlePage && data && (
           <p className="text-sm">
-            <span className="text-primary">★</span>{" "}
-            {new Intl.NumberFormat(locale, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            }).format(data.average)}
-            /5 Filmgram · {data.count} {l.average}
+            {data.count ? (
+              <>
+                <FilmgramRating value={data.average} locale={locale} /> Filmgram
+                · {data.count} {l.average}
+              </>
+            ) : (
+              l.noRatings
+            )}
           </p>
         )}
         {!own && <CommunityEditor />}
         {selected && !deletedSelected && (
-          <article className="rounded-xl border border-border bg-card p-4">{selected(own || null, data)}</article>
+          <article className="rounded-xl border border-border bg-card p-4">
+            {selected(own || null, data)}
+          </article>
         )}
         {onTitlePage ? (
           children
@@ -294,11 +304,7 @@ export function TitleReviewContext({
                   </time>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-primary">
-                    {"★".repeat(r.rating)}
-                    {"☆".repeat(5 - r.rating)}{" "}
-                    <span className="text-foreground">{r.rating}/5</span>
-                  </span>
+                  <FilmgramRating value={r.rating} locale={locale} />
                   <CommunityEditControl reviewId={r.id} />
                 </div>
                 <ReviewRichText

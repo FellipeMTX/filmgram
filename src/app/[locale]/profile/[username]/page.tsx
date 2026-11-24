@@ -3,6 +3,7 @@ import { narrow, pageTitle } from "@/lib/layout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { FilmgramRating } from "@/components/FilmgramRating";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
 import { signIn, signOut } from "@/features/auth/actions";
@@ -183,10 +184,8 @@ export default async function Profile({
             reviews.map((r) => (
               <p key={r.id}>
                 <Link href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}>
-                  <span className="text-[22px] text-primary">
-                    {"★".repeat(r.rating)}
-                  </span>{" "}
-                  &nbsp; {r.body || t.viewDetails} ↗
+                  <FilmgramRating value={r.rating} locale={locale} /> &nbsp;{" "}
+                  {r.body || t.viewDetails} ↗
                 </Link>
               </p>
             ))

@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RichReviewEditor } from "./RichReviewEditor";
 import { parseReviewContent } from "./review-content";
-import { NativeSelect } from "@/components/ui/native-select";
+import { FilmgramRatingPicker } from "@/components/FilmgramRating";
 import { messages } from "@/i18n/messages";
 import { submitReviewFromModal } from "./actions";
 import { signIn } from "@/features/auth/actions";
@@ -183,19 +183,12 @@ export function CommunityEditor() {
     >
       <input type="hidden" name="media_type" value={mediaType} />
       <input type="hidden" name="tmdb_id" value={tmdbId} />
-      <label className="block text-sm font-bold">
-        {t.yourRating}
-        <NativeSelect name="rating" required defaultValue={own?.rating || ""}>
-          <option value="" disabled>
-            ☆ ☆ ☆ ☆ ☆
-          </option>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <option key={n} value={n}>
-              {"★".repeat(n)} ({n}/5)
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      <fieldset className="space-y-2 text-sm font-bold">
+        <legend>{t.yourRating}</legend>
+        <FilmgramRatingPicker
+          defaultValue={own?.rating == null ? "" : String(own.rating)}
+        />
+      </fieldset>
       <div className="space-y-1">
         <p className="text-sm font-bold">{t.writeReview}</p>
         <RichReviewEditor
