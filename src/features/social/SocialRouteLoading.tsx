@@ -23,7 +23,6 @@ export function SocialRouteLoading({ route }: { route: SocialRoute }) {
           : narrow,
         route === "following" && "max-w-[680px]",
       )}
-      aria-busy="true"
     >
       <p role="status" className="sr-only">
         {t.loading}
