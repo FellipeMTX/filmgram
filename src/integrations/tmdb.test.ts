@@ -93,6 +93,6 @@ it("caches localized feed metadata without requesting credits", async () => {
     expect.stringContaining("/movie/23?language=pt-BR"),
     expect.objectContaining({ next: { revalidate: 3600 } }),
   );
-  expect(upstream.mock.calls[0][0]).not.toContain("credits");
+  expect(upstream.mock.calls[0]?.[0]).not.toContain("credits");
   vi.unstubAllGlobals();
 });

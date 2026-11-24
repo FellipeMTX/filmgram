@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const cursorSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
-  id: z.uuid(),
+  id: z.guid(),
 });
 export type Cursor = z.infer<typeof cursorSchema>;
 export type FeedItem = {
@@ -31,7 +31,7 @@ export async function getFeed(
   cursor?: Cursor,
 ): Promise<FeedPage> {
   if (!isLocale(locale)) throw new Error("Invalid locale");
-  if (cursor) cursorSchema.parse(cursor);
+  if (cursor !== undefined) cursorSchema.parse(cursor);
   const db = await supabase();
   if (!db) throw new Error("Database unavailable");
   const {
@@ -49,28 +49,36 @@ export async function getFeed(
   );
   if (error) throw error;
   const rows = data.slice(0, 12);
-  const metadata = new Map<string, ReturnType<typeof getFeedTitle>>();
-  const items = await Promise.all(
-    rows.map(async (row) => {
-      const key = `${row.media_type}:${row.tmdb_id}`;
-      if (!metadata.has(key))
-        metadata.set(
-          key,
-          getFeedTitle(locale, row.media_type as MediaType, row.tmdb_id).catch(
-            () => null,
-          ),
-        );
-      const title = await metadata.get(key);
-      return {
-        ...row,
-        title: title?.title || title?.name || null,
-        poster: title?.poster_path || null,
-        year:
-          (title?.release_date || title?.first_air_date || "").slice(0, 4) ||
-          null,
-      };
-    }),
-  );
+  const keyOf = (row: (typeof rows)[number]) =>
+    `${row.media_type}:${row.tmdb_id}`;
+  const uniqueTitles = [
+    ...new Map(rows.map((row) => [keyOf(row), row])).values(),
+  ];
+  const metadata = new Map<string, Awaited<ReturnType<typeof getFeedTitle>>>();
+  const concurrency = 4;
+  for (let start = 0; start < uniqueTitles.length; start += concurrency) {
+    await Promise.all(
+      uniqueTitles.slice(start, start + concurrency).map(async (row) => {
+        const title = await getFeedTitle(
+          locale,
+          row.media_type as MediaType,
+          row.tmdb_id,
+        ).catch(() => null);
+        metadata.set(keyOf(row), title);
+      }),
+    );
+  }
+  const items = rows.map((row) => {
+    const title = metadata.get(keyOf(row));
+    return {
+      ...row,
+      title: title?.title || title?.name || null,
+      poster: title?.poster_path || null,
+      year:
+        (title?.release_date || title?.first_air_date || "").slice(0, 4) ||
+        null,
+    };
+  });
   const last = rows.at(-1);
   return {
     items,

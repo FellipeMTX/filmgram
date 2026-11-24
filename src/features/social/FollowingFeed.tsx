@@ -45,10 +45,17 @@ export function FollowingFeed({
   initial: FeedPage;
   locale: string;
 }) {
+  const [source, setSource] = useState(initial);
   const [items, setItems] = useState(initial.items);
   const [next, setNext] = useState(initial.next);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  if (source !== initial) {
+    setSource(initial);
+    setItems(initial.items);
+    setNext(initial.next);
+    setFailed(false);
+  }
   const t = messages(locale),
     l = labels[locale as keyof typeof labels] || labels.en;
   if (!items.length)
@@ -80,12 +87,12 @@ export function FollowingFeed({
             </Link>
             <div className="min-w-0">
               <Link
-                className="font-bold hover:text-primary"
+                className="break-words font-bold hover:text-primary"
                 href={`/${locale}/profile/${r.handle}`}
               >
                 {r.display_name}
               </Link>
-              <p className="text-sm text-muted-foreground">
+              <p className="break-words text-sm text-muted-foreground">
                 @{r.handle} ·{" "}
                 <time dateTime={r.created_at}>
                   {new Date(r.created_at).toLocaleDateString(locale)}
@@ -98,13 +105,14 @@ export function FollowingFeed({
               {r.body}
             </p>
           )}
-          <div
-            className="mt-4 text-xl text-primary"
-            aria-label={`${l.rating}: ${r.rating}/5`}
-          >
+          <div className="mt-4 flex items-center gap-2 text-xl text-primary">
             <span aria-hidden="true">
               {"★".repeat(r.rating)}
               {"☆".repeat(5 - r.rating)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              <span className="sr-only">{l.rating}: </span>
+              {r.rating}/5
             </span>
           </div>
           <Link
