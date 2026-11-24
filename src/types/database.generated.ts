@@ -281,7 +281,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
-          parent_id: string | null
+          mentioned_profile_id: string | null; parent_id: string | null
           review_id: string
           updated_at: string
           user_id: string | null
@@ -291,7 +291,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
-          parent_id?: string | null
+          mentioned_profile_id?: string | null; parent_id?: string | null
           review_id: string
           updated_at?: string
           user_id?: string | null
@@ -301,7 +301,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
-          parent_id?: string | null
+          mentioned_profile_id?: string | null; parent_id?: string | null
           review_id?: string
           updated_at?: string
           user_id?: string | null
@@ -476,9 +476,11 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      flat_review_comments: { Row: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }; Relationships: [] }
     }
     Functions: {
+      create_review_comment_with_mention: { Args: { p_review_id: string; p_target_comment_id: string | null; p_body: string }; Returns: string }
+      flat_review_comments_page: { Args: { p_review_id: string; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }[] }
       set_review_like: { Args: { p_review_id: string; p_liked: boolean }; Returns: undefined }
       review_like_summaries: { Args: { p_review_ids: string[] }; Returns: { review_id: string; like_count: number; liked: boolean; comment_count: number }[] }
       create_review_comment: { Args: { p_review_id: string; p_parent_id: string | null; p_body: string }; Returns: string }
@@ -548,6 +550,10 @@ export type Database = {
           p_works: Json
         }
         Returns: string
+      }
+      title_review_stats: {
+        Args: { p_media_type: string; p_tmdb_id: number }
+        Returns: { review_count: number; average_rating: number }[]
       }
       title_like_count: {
         Args: { p_media_type: string; p_tmdb_id: number }

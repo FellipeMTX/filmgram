@@ -46,13 +46,14 @@ export async function setReviewLike(form: FormData) {
 }
 export async function createReviewComment(form: FormData) {
   const reviewId = id(form, "review_id");
-  const rawParent = form.get("parent_id");
-  const parentId = rawParent ? id(form, "parent_id") : null;
+  const targetId = form.has("target_comment_id")
+    ? id(form, "target_comment_id")
+    : null;
   const text = body(form);
   const db = await client();
-  const { data, error } = await db.rpc("create_review_comment", {
+  const { data, error } = await db.rpc("create_review_comment_with_mention", {
     p_review_id: reviewId,
-    p_parent_id: parentId,
+    p_target_comment_id: targetId,
     p_body: text,
   });
   if (error) throw error;

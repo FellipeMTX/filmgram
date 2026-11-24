@@ -184,25 +184,20 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await expect(
       longPost.getByRole("button", { name: /unlike review/i }),
     ).toBeVisible();
-    await longPost.getByRole("button", { name: /comments/i }).click();
-    await longPost.getByRole("textbox", { name: /comment/i }).fill(note);
-    await longPost
-      .getByRole("button", { name: "Post comment", exact: true })
-      .click();
-    await expect(longPost.getByText(note)).toBeVisible();
+    const discuss = longPost.getByRole("button", { name: /open discussion/i });
+    await discuss.click();
+    await dialog.getByRole("textbox", { name: /comment/i }).fill(note);
+    await dialog.getByRole("button", { name: "Post comment" }).click();
+    await expect(dialog.getByText(note)).toBeVisible();
     const draft = "This draft stays on the review";
-    await longPost.getByRole("textbox", { name: /comment/i }).fill(draft);
-    await more.click();
+    await dialog.getByRole("textbox", { name: /comment/i }).fill(draft);
+    await page.keyboard.press("Escape");
+    await expect(discuss).toBeFocused();
+    await discuss.click();
     await expect(dialog.getByRole("textbox", { name: /comment/i })).toHaveValue(
       draft,
     );
-    await expect(dialog.getByText(note)).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(
-      longPost.getByRole("textbox", { name: /comment/i }),
-    ).toHaveValue(draft);
-
-    await longPost
+    await dialog
       .getByRole("link", { name: /view this review on the title page/i })
       .click();
     await expect(page).toHaveURL(/\/en\/title\/movie\/1726/);
@@ -238,6 +233,103 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
   } finally {
     await guest.close();
     await authorContext.close();
+    await author.db.from("reviews").delete().eq("user_id", author.id);
+    await reader.db.from("follows").delete().eq("follower_id", reader.id);
+  }
+});
+
+test("keeps loaded comments when posting, editing and removing a parent with a reply", async ({
+  page,
+  baseURL,
+}) => {
+  test.skip(process.env.FILMGRAM_E2E_AUTH !== "1", "Requires local Supabase");
+  const reader = await account(page.context(), baseURL);
+  const author = await account();
+  const reviewId = randomUUID();
+  try {
+    const follow = await reader.db.from("follows").insert({
+      follower_id: reader.id,
+      following_id: author.id,
+    });
+    if (follow.error) throw follow.error;
+    const review = await author.db.from("reviews").insert({
+      id: reviewId,
+      user_id: author.id,
+      media_type: "movie",
+      tmdb_id: 1726,
+      rating: 4,
+      body: "Discussion pagination review",
+    });
+    if (review.error) throw review.error;
+    for (let index = 1; index <= 21; index++) {
+      const result = await reader.db.rpc("create_review_comment", {
+        p_review_id: reviewId,
+        p_parent_id: null,
+        p_body: `Seed comment ${index}`,
+      });
+      if (result.error) throw result.error;
+    }
+    await page.goto("/en/following");
+    await page
+      .locator(`#review-${reviewId}`)
+      .getByRole("button", { name: /open discussion/i })
+      .click();
+    const post = page.getByRole("dialog");
+    await expect(
+      post.getByText("Seed comment 1", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      post.getByText("Seed comment 21", { exact: true }),
+    ).toHaveCount(0);
+    await post.getByRole("button", { name: "Load more comments" }).click();
+    await expect(
+      post.getByText("Seed comment 21", { exact: true }),
+    ).toBeVisible();
+    await post
+      .getByRole("textbox", { name: "Write a comment" })
+      .fill("A new parent");
+    await post.getByRole("button", { name: "Post comment" }).click();
+    await expect(post.getByText("A new parent", { exact: true })).toBeVisible();
+    await expect(
+      post.getByText("Seed comment 21", { exact: true }),
+    ).toBeVisible();
+
+    const parentId = await post
+      .locator("[data-comment-id]")
+      .filter({ hasText: "A new parent" })
+      .getAttribute("data-comment-id");
+    expect(parentId).toBeTruthy();
+    const parent = post.locator(`[data-comment-id="${parentId}"]`);
+    await parent.getByRole("button", { name: "Reply", exact: true }).click();
+    await expect(
+      post.getByRole("textbox", { name: "Write a comment" }),
+    ).toBeFocused();
+    await post
+      .getByRole("textbox", { name: "Write a comment" })
+      .fill("A mention reply");
+    await post.getByRole("button", { name: "Post comment" }).click();
+    await expect(post.getByText(/@.*A mention reply/)).toBeVisible();
+    await parent
+      .getByRole("button", { name: "Edit", exact: true })
+      .first()
+      .click();
+    await parent.getByRole("textbox", { name: "Edit" }).fill("Edited parent");
+    await parent.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(
+      parent.getByText("Edited parent", { exact: true }),
+    ).toBeVisible();
+    await parent
+      .getByRole("button", { name: "Delete", exact: true })
+      .first()
+      .click();
+    await expect(
+      parent.getByText("Comment removed", { exact: true }),
+    ).toBeVisible();
+    await expect(post.getByText(/@.*A mention reply/)).toBeVisible();
+    await expect(
+      post.getByText("Seed comment 21", { exact: true }),
+    ).toBeVisible();
+  } finally {
     await author.db.from("reviews").delete().eq("user_id", author.id);
     await reader.db.from("follows").delete().eq("follower_id", reader.id);
   }

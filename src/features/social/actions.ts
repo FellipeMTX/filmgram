@@ -49,7 +49,7 @@ export async function toggleTitle(form: FormData) {
   }
   revalidatePath("/", "layout");
 }
-export async function submitReview(form: FormData) {
+async function saveReview(form: FormData, revalidate: boolean) {
   const { db, user } = await auth();
   const rating = Number(text(form, "rating"));
   const media_type = text(form, "media_type"),
@@ -90,7 +90,13 @@ export async function submitReview(form: FormData) {
     { onConflict: "user_id,media_type,tmdb_id" },
   );
   if (error) throw error;
-  revalidatePath("/", "layout");
+  if (revalidate) revalidatePath("/", "layout");
+}
+export async function submitReview(form: FormData) {
+  await saveReview(form, true);
+}
+export async function submitReviewFromModal(form: FormData) {
+  await saveReview(form, false);
 }
 export async function createPlaylist(form: FormData) {
   const { db, user } = await auth();

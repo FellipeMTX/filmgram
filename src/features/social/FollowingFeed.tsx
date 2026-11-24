@@ -79,6 +79,7 @@ export function FollowingFeed({
         <div key={r.id}>
           <ReviewPost
             reviewId={r.id}
+            tmdbId={r.tmdb_id}
             locale={locale}
             mediaType={r.media_type === "movie" ? "movie" : "tv"}
             author={{

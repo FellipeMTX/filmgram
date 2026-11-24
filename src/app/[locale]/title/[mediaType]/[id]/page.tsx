@@ -314,6 +314,7 @@ export default async function Detail({
               <div className="mb-6" key={r.id}>
                 <ReviewPost
                   reviewId={r.id}
+                  tmdbId={Number(id)}
                   locale={locale}
                   placement="title"
                   mediaType={mediaType as MediaType}
