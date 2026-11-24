@@ -1,12 +1,13 @@
-import { Card } from "@/components/ui/card";
-import { narrow, pageTitle, actionGroup } from "@/lib/layout";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PlaylistCover } from "@/components/playlist-cover";
+import { MediaImage } from "@/features/catalog/MediaImage";
+import { PlaylistItemControls } from "@/features/social/PlaylistItemControls";
+import { getPlaylist } from "@/features/social/queries";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
-import { getPlaylist } from "@/features/social/queries";
-import { removePlaylistItem, reorderPlaylist } from "@/features/social/actions";
+import { imageUrl } from "@/integrations/tmdb-display";
+import { narrow, pageTitle } from "@/lib/layout";
 
 export default async function PlaylistDetail({
   params,
@@ -18,85 +19,98 @@ export default async function PlaylistDetail({
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   )
     notFound();
-  const t = messages(locale),
-    user = await currentUser(),
-    db = await supabase();
+  const t = messages(locale);
+  const [user, db] = await Promise.all([currentUser(), supabase()]);
   if (!db) notFound();
   const list = await getPlaylist(db, id);
   if (!list) notFound();
-  const items = [...list.playlist_items].sort(
-    (a, b) => a.position - b.position,
-  );
+  const items = list.playlist_items;
+  const ids = items.map((item) => item.id);
+  const countLabel =
+    locale === "pt-BR"
+      ? items.length === 1
+        ? "título"
+        : "títulos"
+      : locale === "es"
+        ? items.length === 1
+          ? "título"
+          : "títulos"
+        : items.length === 1
+          ? "title"
+          : "titles";
+  const empty =
+    locale === "pt-BR"
+      ? "Esta playlist ainda não tem títulos."
+      : locale === "es"
+        ? "Esta lista aún no tiene títulos."
+        : "This playlist has no titles yet.";
   return (
     <main className={narrow}>
-      <Card asChild>
-        <section className="[&_h2]:mt-0 [&_h2]:mb-[14px] [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold">
-          <h1 className={pageTitle}>{list.name}</h1>
-          <p className="text-muted-foreground">
-            {list.is_public ? t.publicLabel : t.private}{" "}
-            {list.description && `· ${list.description}`}
+      <section className="flex flex-wrap items-center gap-6 border-b border-border pb-8">
+        <PlaylistCover
+          posterPaths={items.map((item) => item.poster_path)}
+          className="w-44 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-muted-foreground">
+            {list.is_public ? t.publicLabel : t.private} · {items.length}{" "}
+            {countLabel}
           </p>
-          {items.map((item, index) => (
-            <div
-              className="flex items-center justify-between border-t border-border py-3"
-              key={item.id}
+          <h1 className={pageTitle}>{list.name}</h1>
+          {list.profiles && (
+            <Link
+              className="text-primary hover:underline"
+              href={`/${locale}/profile/${list.profiles.handle}`}
             >
+              {list.profiles.display_name}
+            </Link>
+          )}
+          {list.description && (
+            <p className="mt-4 whitespace-pre-wrap text-muted-foreground">
+              {list.description}
+            </p>
+          )}
+        </div>
+      </section>
+      {items.length ? (
+        <ol className="mt-4">
+          {items.map((item, index) => (
+            <li
+              key={item.id}
+              className="flex flex-wrap items-center gap-4 border-b border-border py-3"
+            >
+              <span className="w-7 text-center text-muted-foreground">
+                {index + 1}
+              </span>
               <Link
                 href={`/${locale}/title/${item.media_type}/${item.tmdb_id}`}
+                className="flex min-w-0 flex-1 items-center gap-4 font-semibold hover:text-primary"
               >
-                {index + 1}. {item.media_title}
+                <span className="flex h-20 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-center text-xs text-muted-foreground [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
+                  <MediaImage
+                    src={imageUrl(item.poster_path, "w185")}
+                    alt=""
+                    fallback={t.noPoster}
+                  />
+                </span>
+                <span>{item.media_title}</span>
               </Link>
               {user?.id === list.user_id && (
-                <div className={actionGroup}>
-                  {[-1, 1].map((delta) => {
-                    const ids = items.map((i) => i.id);
-                    const other = index + delta;
-                    if (other < 0 || other >= ids.length) return null;
-                    [ids[index], ids[other]] = [ids[other]!, ids[index]!];
-                    return (
-                      <form action={reorderPlaylist} key={delta}>
-                        <input
-                          type="hidden"
-                          name="expected_ids"
-                          value={items.map((i) => i.id).join(",")}
-                        />
-                        <input
-                          type="hidden"
-                          name="playlist_id"
-                          value={list.id}
-                        />
-                        <input type="hidden" name="ids" value={ids.join(",")} />
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          className="h-auto w-auto rounded-none border-0 px-[6px] py-[2px] text-xl font-normal hover:bg-transparent"
-                          aria-label={delta < 0 ? t.moveUp : t.moveDown}
-                        >
-                          {delta < 0 ? "↑" : "↓"}
-                        </Button>
-                      </form>
-                    );
-                  })}
-                  <form action={removePlaylistItem}>
-                    <input type="hidden" name="playlist_id" value={list.id} />
-                    <input type="hidden" name="id" value={item.id} />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="icon"
-                      className="h-auto w-auto rounded-none border-0 px-[6px] py-[2px] text-xl font-normal hover:bg-transparent"
-                      aria-label={t.remove}
-                    >
-                      ×
-                    </Button>
-                  </form>
-                </div>
+                <PlaylistItemControls
+                  locale={locale}
+                  playlistId={list.id}
+                  itemId={item.id}
+                  title={item.media_title}
+                  ids={ids}
+                  index={index}
+                />
               )}
-            </div>
+            </li>
           ))}
-        </section>
-      </Card>
+        </ol>
+      ) : (
+        <p className="mt-6 text-muted-foreground">{empty}</p>
+      )}
     </main>
   );
 }
