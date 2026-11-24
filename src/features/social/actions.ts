@@ -1,5 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import {
+  parseReviewContent,
+  reviewPlainText,
+  reviewVideoId,
+} from "./review-content";
 import { supabase } from "@/integrations/supabase";
 const text = (f: FormData, k: string) => String(f.get(k) || "").trim();
 async function auth() {
@@ -49,7 +54,7 @@ export async function toggleTitle(form: FormData) {
   }
   revalidatePath("/", "layout");
 }
-export async function submitReview(form: FormData) {
+async function saveReview(form: FormData, revalidate: boolean) {
   const { db, user } = await auth();
   const rating = Number(text(form, "rating"));
   const media_type = text(form, "media_type"),
@@ -63,34 +68,41 @@ export async function submitReview(form: FormData) {
     tmdb_id <= 0
   )
     throw new Error("Invalid review");
-  const url = text(form, "youtube");
-  let video: string | null = null;
-  if (url) {
+  const payload = text(form, "body_document");
+  let document = null;
+  if (payload) {
+    if (payload.length > 90000) throw new Error("Invalid review content");
     try {
-      const u = new URL(url);
-      if (u.hostname === "youtu.be") video = u.pathname.slice(1);
-      else if (
-        ["youtube.com", "www.youtube.com", "m.youtube.com"].includes(u.hostname)
-      )
-        video = u.searchParams.get("v");
-      if (!video || !/^[\w-]{11}$/.test(video)) throw new Error();
+      document = parseReviewContent(JSON.parse(payload));
     } catch {
-      throw new Error("Enter a valid YouTube video URL");
+      throw new Error("Invalid review content");
     }
+    if (!document) throw new Error("Invalid review content");
   }
+  const url = text(form, "youtube");
+  const videoBlock = document?.blocks.find((block) => block.type === "youtube");
+  const video = reviewVideoId(videoBlock?.url ?? url);
+  if (url && !video) throw new Error("Enter a valid YouTube video URL");
   const { error } = await db.from("reviews").upsert(
     {
       user_id: user.id,
       media_type,
       tmdb_id,
       rating,
-      body: text(form, "body") || null,
+      body: (document ? reviewPlainText(document) : text(form, "body")) || null,
+      body_document: document,
       youtube_video_id: video,
     },
     { onConflict: "user_id,media_type,tmdb_id" },
   );
   if (error) throw error;
-  revalidatePath("/", "layout");
+  if (revalidate) revalidatePath("/", "layout");
+}
+export async function submitReview(form: FormData) {
+  await saveReview(form, true);
+}
+export async function submitReviewFromModal(form: FormData) {
+  await saveReview(form, false);
 }
 export async function createPlaylist(form: FormData) {
   const { db, user } = await auth();
@@ -116,6 +128,78 @@ export async function addToPlaylist(form: FormData) {
   });
   if (error) throw error;
   revalidatePath("/", "layout");
+}
+export async function setTitleCollection(form: FormData) {
+  const { db, user } = await auth();
+  const media_type = text(form, "media_type");
+  const tmdb_id = Number(text(form, "tmdb_id"));
+  const destination = text(form, "destination");
+  const desired = text(form, "desired");
+  if (
+    !["movie", "tv"].includes(media_type) ||
+    !Number.isSafeInteger(tmdb_id) ||
+    tmdb_id <= 0 ||
+    !["true", "false"].includes(desired)
+  )
+    throw new Error("Invalid collection request");
+  const saved = desired === "true";
+  if (destination === "saved") {
+    const key = { user_id: user.id, media_type, tmdb_id };
+    const result = saved
+      ? await db.from("favorites").upsert(
+          {
+            ...key,
+            media_title: text(form, "media_title"),
+            poster_path: text(form, "poster_path") || null,
+            genre_ids: text(form, "genre_ids")
+              .split(",")
+              .filter(Boolean)
+              .map(Number),
+          },
+          { onConflict: "user_id,media_type,tmdb_id", ignoreDuplicates: true },
+        )
+      : await db.from("favorites").delete().match(key);
+    if (result.error) throw result.error;
+  } else {
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(destination))
+      throw new Error("Invalid playlist");
+    const owner = await db
+      .from("playlists")
+      .select("id")
+      .eq("id", destination)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (owner.error) throw owner.error;
+    if (!owner.data) throw new Error("Playlist not accessible");
+    if (saved) {
+      const result = await db.rpc("append_playlist_item", {
+        p_playlist_id: destination,
+        p_media_type: media_type,
+        p_tmdb_id: tmdb_id,
+        p_media_title: text(form, "media_title"),
+        p_poster_path: text(form, "poster_path") || undefined,
+      });
+      if (result.error) throw result.error;
+    } else {
+      const item = await db
+        .from("playlist_items")
+        .select("id")
+        .eq("playlist_id", destination)
+        .eq("media_type", media_type)
+        .eq("tmdb_id", tmdb_id)
+        .maybeSingle();
+      if (item.error) throw item.error;
+      if (item.data) {
+        const result = await db.rpc("remove_playlist_item", {
+          p_playlist_id: destination,
+          p_item_id: item.data.id,
+        });
+        if (result.error) throw result.error;
+      }
+    }
+  }
+  revalidatePath("/", "layout");
+  return saved;
 }
 export async function removePlaylistItem(form: FormData) {
   const { db } = await auth();

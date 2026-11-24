@@ -1,8 +1,10 @@
 import "server-only";
+import type { Json } from "@/types/database.generated";
 import { supabase } from "@/integrations/supabase";
 import { getFeedTitle, type MediaType } from "@/integrations/tmdb";
 import { isLocale } from "@/i18n/messages";
 import { z } from "zod";
+import { getReviewLikeSummaries } from "./review-discussion-queries";
 
 const cursorSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
@@ -15,6 +17,7 @@ export type FeedItem = {
   tmdb_id: number;
   rating: number;
   body: string | null;
+  body_document: Json | null;
   youtube_video_id: string | null;
   created_at: string;
   display_name: string;
@@ -22,6 +25,10 @@ export type FeedItem = {
   avatar_url: string | null;
   title: string | null;
   poster: string | null;
+  backdrop: string | null;
+  likeCount: number;
+  commentCount: number;
+  liked: boolean;
   year: string | null;
 };
 export type FeedPage = { items: FeedItem[]; next: Cursor | null };
@@ -68,12 +75,20 @@ export async function getFeed(
       }),
     );
   }
+  const summaries = await getReviewLikeSummaries(
+    db,
+    rows.map((row) => row.id),
+  );
   const items = rows.map((row) => {
     const title = metadata.get(keyOf(row));
     return {
       ...row,
       title: title?.title || title?.name || null,
       poster: title?.poster_path || null,
+      backdrop: title?.backdrop_path || null,
+      likeCount: summaries[row.id]?.count || 0,
+      commentCount: summaries[row.id]?.commentCount || 0,
+      liked: summaries[row.id]?.liked || false,
       year:
         (title?.release_date || title?.first_air_date || "").slice(0, 4) ||
         null,

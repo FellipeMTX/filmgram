@@ -1,10 +1,5 @@
 import { container, eyebrow } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/ui/native-select";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getDetail,
@@ -15,19 +10,26 @@ import {
 } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
-import { submitReview, deleteReview } from "@/features/social/actions";
+import { TitleReviewContext } from "@/features/social/TitleReviewContext";
 import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
 import { MediaImage } from "@/features/catalog/MediaImage";
 import { PersonCard } from "@/features/people/PersonCard";
+import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
+import { ReviewPost } from "@/components/ReviewPost";
+import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
+import type { Json } from "@/types/database.generated";
 
 export default async function Detail({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; mediaType: string; id: string }>;
+  searchParams: Promise<{ review?: string }>;
 }) {
   const { locale, mediaType, id } = await params;
   if (!["movie", "tv"].includes(mediaType) || !/^\d+$/.test(id)) notFound();
+  const { review } = await searchParams;
   const item = await getDetail(locale, mediaType as MediaType, Number(id));
   if (!item) notFound();
   const t = messages(locale),
@@ -37,31 +39,83 @@ export default async function Detail({
     id: string;
     rating: number;
     body: string | null;
+    body_document: Json | null;
     youtube_video_id: string | null;
     user_id: string;
-    profiles: { display_name: string; handle: string } | null;
+    created_at: string;
+    profiles: {
+      display_name: string;
+      handle: string;
+      avatar_url: string | null;
+    } | null;
   }[] = [];
-  let playlists: { id: string; name: string }[] = [];
+  let playlists: { id: string; name: string; contains: boolean }[] = [];
+  let followedAuthors: string[] = [];
   const states: Record<string, boolean> = {};
   let likes = 0;
+  let reviewLikes: Record<
+    string,
+    { count: number; liked: boolean; commentCount: number }
+  > = {};
   if (db) {
+    const highlightedReview =
+      typeof review === "string" &&
+      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review)
+        ? review
+        : null;
     const [reviewsResult, countResult] = await Promise.all([
-      db
-        .from("reviews")
-        .select(
-          "id,rating,body,youtube_video_id,user_id,profiles(display_name,handle)",
-        )
-        .eq("media_type", mediaType)
-        .eq("tmdb_id", Number(id))
-        .order("created_at", { ascending: false }),
+      db.rpc("title_reviews_followed_first", {
+        p_media_type: mediaType,
+        p_tmdb_id: Number(id),
+        p_highlighted_review_id: highlightedReview,
+        p_limit: 1000,
+      }),
       db.rpc("title_like_count", {
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
       }),
     ]);
-    reviews = (reviewsResult.data || []) as unknown as typeof reviews;
+    if (reviewsResult.error) throw reviewsResult.error;
+    reviews = reviewsResult.data.map((row) => ({
+      ...row,
+      profiles:
+        row.handle && row.display_name
+          ? {
+              display_name: row.display_name,
+              handle: row.handle,
+              avatar_url: row.avatar_url,
+            }
+          : null,
+    }));
+    // PostgREST can truncate the extra deep-link row after the usual 1,000.
+    if (
+      highlightedReview &&
+      !reviews.some((row) => row.id === highlightedReview)
+    ) {
+      const target = await db
+        .from("reviews")
+        .select(
+          "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
+        )
+        .eq("media_type", mediaType)
+        .eq("tmdb_id", Number(id))
+        .eq("id", highlightedReview)
+        .maybeSingle();
+      if (target.error) throw target.error;
+      if (target.data) reviews.push(target.data);
+    }
+    reviewLikes = await getReviewLikeSummaries(
+      db,
+      reviews.map((review) => review.id),
+    );
     likes = Number(countResult.data || 0);
     if (user) {
+      const followedResult = await db
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+      if (followedResult.error) throw followedResult.error;
+      followedAuthors = followedResult.data.map((row) => row.following_id);
       const [f, w, l, p] = await Promise.all([
         db
           .from("favorites")
@@ -84,15 +138,27 @@ export default async function Detail({
           .eq("media_type", mediaType)
           .eq("tmdb_id", Number(id))
           .maybeSingle(),
-        db.from("playlists").select("id,name").eq("user_id", user.id),
+        db
+          .from("playlists")
+          .select("id,name,playlist_items(id)")
+          .eq("user_id", user.id)
+          .eq("playlist_items.media_type", mediaType)
+          .eq("playlist_items.tmdb_id", Number(id))
+          .order("name")
+          .order("id"),
       ]);
       states.favorites = !!f.data;
       states.watched = !!w.data;
       states.title_likes = !!l.data;
-      playlists = (p.data || []) as unknown as typeof playlists;
+      if (f.error) throw f.error;
+      if (p.error) throw p.error;
+      playlists = p.data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        contains: row.playlist_items.length > 0,
+      }));
     }
   }
-  const myReview = reviews.find((r) => r.user_id === user?.id);
   const poster = imageUrl(item.poster_path);
   const directors =
     mediaType === "movie"
@@ -143,7 +209,7 @@ export default async function Detail({
                 : ""}
             </p>
             <p className="text-xl font-bold [&_span]:text-primary [&_small]:text-xs [&_small]:font-medium [&_small]:text-cast-foreground">
-              <span>★</span> {item.vote_average?.toFixed(1) || "—"}{" "}
+              <span>★</span> {item.vote_average?.toFixed(1) || "—"}/10{" "}
               <small>TMDB</small>{" "}
               <small>
                 {" "}
@@ -218,110 +284,67 @@ export default async function Detail({
           <p className="text-muted-foreground">{t.noCast}</p>
         )}
       </section>
-      <div
-        className={cn(
-          container,
-          "grid grid-cols-2 gap-[60px] pt-[35px] pb-20 mobile:grid-cols-1 mobile:gap-[35px] mobile:pt-[30px] [&_section]:min-w-0 [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-semibold",
-        )}
-      >
-        <section>
-          <h2>{t.yourRating}</h2>
-          {user ? (
-            <form
-              action={submitReview}
-              className="flex flex-col gap-4 [&_[data-slot=native-select-wrapper]]:w-full [&_label]:flex [&_label]:flex-col [&_label]:gap-[9px] [&_label]:font-bold [&_button]:self-start"
-            >
-              <input type="hidden" name="media_type" value={mediaType} />
-              <input type="hidden" name="tmdb_id" value={id} />
-              <label>
-                {t.yourRating}
-                <NativeSelect
-                  name="rating"
-                  required
-                  defaultValue={myReview?.rating || ""}
-                >
-                  <option value="" disabled>
-                    ☆ ☆ ☆ ☆ ☆
-                  </option>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {"★".repeat(n)} ({n}/5)
-                    </option>
-                  ))}
-                </NativeSelect>
-              </label>
-              <label>
-                {t.writeReview}
-                <Textarea
-                  name="body"
-                  rows={4}
-                  defaultValue={myReview?.body || ""}
-                  placeholder={t.writeReview}
-                />
-              </label>
-              <label>
-                {t.addVideo}
-                <Input
-                  name="youtube"
-                  type="url"
-                  defaultValue={
-                    myReview?.youtube_video_id
-                      ? `https://www.youtube.com/watch?v=${myReview.youtube_video_id}`
-                      : ""
-                  }
-                  placeholder="https://youtube.com/watch?v=…"
-                />
-              </label>
-              <Button type="submit">{t.publish}</Button>
-            </form>
-          ) : (
-            <p className="text-muted-foreground">{t.signInPrompt}</p>
-          )}
-        </section>
-        <section>
-          <h2>{t.communityReviews}</h2>
+      <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
+        <TitleReviewContext
+          locale={locale}
+          mediaType={mediaType as MediaType}
+          tmdbId={Number(id)}
+          reviewId={null}
+          titleHref={`/${locale}/title/${mediaType}/${id}`}
+          onTitlePage
+        >
           {reviews.length ? (
             reviews.map((r) => (
-              <article
-                className="mb-6 border-b border-muted pb-6 [&_p]:leading-normal"
-                key={r.id}
-              >
-                {r.profiles?.handle ? (
-                  <Link href={`/${locale}/profile/${r.profiles.handle}`}>
-                    <strong>{r.profiles.display_name || t.member}</strong>
-                  </Link>
-                ) : (
-                  <strong>{t.member}</strong>
-                )}
-                <div className="mt-1.5 text-[22px] text-primary">
-                  {"★".repeat(r.rating)}
-                  {"☆".repeat(5 - r.rating)}
-                </div>
-                {r.body && <p>{r.body}</p>}
-                {user?.id === r.user_id && (
-                  <form action={deleteReview}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <Button type="submit" variant="outline">
-                      {t.deleteReview}
-                    </Button>
-                  </form>
-                )}
-                {r.youtube_video_id && (
-                  <a
-                    className={buttonVariants({ variant: "outline" })}
-                    href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    ▶ YouTube
-                  </a>
-                )}
-              </article>
+              <div className="mb-6" key={r.id}>
+                <ReviewPost
+                  reviewId={r.id}
+                  tmdbId={Number(id)}
+                  locale={locale}
+                  authorId={r.user_id}
+                  viewerId={user?.id || null}
+                  followed={followedAuthors.includes(r.user_id)}
+                  placement="title"
+                  mediaType={mediaType as MediaType}
+                  author={{
+                    name: r.profiles?.display_name || t.member,
+                    href: r.profiles?.handle
+                      ? `/${locale}/profile/${r.profiles.handle}`
+                      : undefined,
+                    avatarUrl: r.profiles?.avatar_url,
+                  }}
+                  date={new Date(r.created_at).toLocaleDateString(locale)}
+                  title={titleName(item)}
+                  year={year(item)}
+                  rating={r.rating}
+                  text={r.body || ""}
+                  content={r.body_document}
+                  titleHref={`/${locale}/title/${mediaType}/${id}`}
+                  backdropUrl={imageUrl(item.backdrop_path, "w780")}
+                  posterUrl={poster}
+                  trailerUrl={
+                    r.youtube_video_id
+                      ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
+                      : null
+                  }
+                  interaction={
+                    <>
+                      <ReviewDiscussion
+                        reviewId={r.id}
+                        locale={locale}
+                        userId={user?.id || null}
+                        initialCount={reviewLikes[r.id]?.count}
+                        initialCommentCount={reviewLikes[r.id]?.commentCount}
+                        initialLiked={reviewLikes[r.id]?.liked}
+                      />
+                    </>
+                  }
+                />
+              </div>
             ))
           ) : (
             <p className="text-muted-foreground">{t.noReviews}</p>
           )}
-        </section>
+        </TitleReviewContext>
       </div>
     </main>
   );

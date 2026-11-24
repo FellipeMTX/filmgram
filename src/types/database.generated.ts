@@ -34,6 +34,15 @@ export type Database = {
   }
   public: {
     Tables: {
+      review_comment_likes: {
+        Row: { comment_id: string; user_id: string; created_at: string }
+        Insert: { comment_id: string; user_id: string; created_at?: string }
+        Update: { comment_id?: string; user_id?: string; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "review_comment_likes_comment_id_fkey"; columns: ["comment_id"]; isOneToOne: false; referencedRelation: "review_comments"; referencedColumns: ["id"] },
+          { foreignKeyName: "review_comment_likes_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -275,9 +284,98 @@ export type Database = {
         }
         Relationships: []
       }
+      review_comments: {
+        Row: {
+          body: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          mentioned_profile_id: string | null; parent_id: string | null
+          review_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          mentioned_profile_id?: string | null; parent_id?: string | null
+          review_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          mentioned_profile_id?: string | null; parent_id?: string | null
+          review_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "review_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_likes: {
+        Row: {
+          created_at: string
+          review_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          review_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          review_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_likes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           body: string | null
+          body_document: Json | null
           created_at: string
           id: string
           media_type: string
@@ -289,6 +387,7 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          body_document?: Json | null
           created_at?: string
           id?: string
           media_type: string
@@ -300,6 +399,7 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          body_document?: Json | null
           created_at?: string
           id?: string
           media_type?: string
@@ -388,12 +488,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      flat_review_comments: { Row: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }; Relationships: [] }
     }
     Functions: {
+      review_comment_like_summaries: { Args: { p_comment_ids: string[] }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
+      set_review_comment_like: { Args: { p_comment_id: string; p_liked: boolean }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
+      title_reviews_followed_first: { Args: { p_media_type: string; p_tmdb_id: number; p_highlighted_review_id: string | null; p_limit: number }; Returns: { id: string; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null }[] }
+      create_review_comment_with_mention: { Args: { p_review_id: string; p_target_comment_id: string | null; p_body: string }; Returns: string }
+      flat_review_comments_page: { Args: { p_review_id: string; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }[] }
+      set_review_like: { Args: { p_review_id: string; p_liked: boolean }; Returns: undefined }
+      review_like_summaries: { Args: { p_review_ids: string[] }; Returns: { review_id: string; like_count: number; liked: boolean; comment_count: number }[] }
+      create_review_comment: { Args: { p_review_id: string; p_parent_id: string | null; p_body: string }; Returns: string }
+      update_review_comment: { Args: { p_comment_id: string; p_body: string }; Returns: undefined }
+      delete_review_comment: { Args: { p_comment_id: string }; Returns: undefined }
+      review_comments_page: { Args: { p_review_id: string; p_parent_id: string | null; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null }[] }
+
       following_feed: {
         Args: { p_before_created_at?: string; p_before_id?: string }
-        Returns: { id: string; media_type: string; tmdb_id: number; rating: number; body: string | null; youtube_video_id: string | null; created_at: string; display_name: string; handle: string; avatar_url: string | null }[]
+        Returns: { id: string; media_type: string; tmdb_id: number; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; created_at: string; display_name: string; handle: string; avatar_url: string | null }[]
       }
       append_playlist_item: {
         Args: {
@@ -453,6 +565,10 @@ export type Database = {
           p_works: Json
         }
         Returns: string
+      }
+      title_review_stats: {
+        Args: { p_media_type: string; p_tmdb_id: number }
+        Returns: { review_count: number; average_rating: number }[]
       }
       title_like_count: {
         Args: { p_media_type: string; p_tmdb_id: number }

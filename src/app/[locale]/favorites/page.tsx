@@ -4,6 +4,7 @@ import Link from "next/link";
 import { currentUser, supabase } from "@/integrations/supabase";
 import { signIn } from "@/features/auth/actions";
 import { getFavorites } from "@/features/social/queries";
+import { savedCollectionLabels } from "@/features/catalog/saved-collection-labels";
 import { messages } from "@/i18n/messages";
 
 export default async function Favorites({
@@ -19,7 +20,8 @@ export default async function Favorites({
   return (
     <main className={narrow}>
       <p className={eyebrow}>{t.collection}</p>
-      <h1 className={pageTitle}>{t.favorites}</h1>
+      <h1 className={pageTitle}>{savedCollectionLabels(locale).saved}</h1>
+      {user && <p className="text-muted-foreground">{t.private}</p>}
       {!user ? (
         <>
           <p className="text-muted-foreground">{t.signInPrompt}</p>

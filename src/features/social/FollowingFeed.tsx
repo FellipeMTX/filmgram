@@ -1,61 +1,53 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { MediaImage } from "@/features/catalog/MediaImage";
+import { Button } from "@/components/ui/button";
+import { ReviewPost } from "@/components/ReviewPost";
 import { imageUrl } from "@/integrations/tmdb-display";
 import { messages } from "@/i18n/messages";
 import { loadFollowing } from "./feed-actions";
 import type { FeedPage } from "./feed";
 import { SocialEmpty } from "./SocialEmpty";
+import { ReviewDiscussion } from "./ReviewDiscussion";
 
 const labels = {
   en: {
-    more: "Load more",
+    more: "Load more reviews",
     loading: "Loading…",
     failed: "Could not load more reviews. Please try again.",
-    movie: "Film",
-    tv: "Series",
     unknown: "Title unavailable",
-    rating: "Rating",
-    loaded: (count: number) => `${count} reviews shown`,
+    loaded: (n: number) => `${n} reviews shown`,
   },
   "pt-BR": {
-    more: "Ver mais",
+    more: "Carregar mais resenhas",
     loading: "Carregando…",
-    failed: "Não foi possível carregar mais avaliações. Tente novamente.",
-    movie: "Filme",
-    tv: "Série",
+    failed: "Não foi possível carregar mais resenhas. Tente novamente.",
     unknown: "Título indisponível",
-    rating: "Avaliação",
-    loaded: (count: number) => `${count} avaliações exibidas`,
+    loaded: (n: number) => `${n} resenhas exibidas`,
   },
   es: {
-    more: "Ver más",
+    more: "Cargar más reseñas",
     loading: "Cargando…",
     failed: "No se pudieron cargar más reseñas. Inténtalo de nuevo.",
-    movie: "Película",
-    tv: "Serie",
     unknown: "Título no disponible",
-    rating: "Valoración",
-    loaded: (count: number) => `${count} reseñas visibles`,
+    loaded: (n: number) => `${n} reseñas visibles`,
   },
 };
 export function FollowingFeed({
   initial,
   locale,
+  userId,
 }: {
   initial: FeedPage;
   locale: string;
+  userId: string;
 }) {
-  const [source, setSource] = useState(initial);
-  const [items, setItems] = useState(initial.items);
-  const [next, setNext] = useState(initial.next);
-  const [failed, setFailed] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const focusPost = useRef<string | null>(null);
-  const feed = useRef<HTMLDivElement>(null);
+  const [source, setSource] = useState(initial),
+    [items, setItems] = useState(initial.items),
+    [next, setNext] = useState(initial.next);
+  const [failed, setFailed] = useState(false),
+    [pending, startTransition] = useTransition();
+  const focusPost = useRef<string | null>(null),
+    feed = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!focusPost.current) return;
     const post = feed.current?.querySelector<HTMLElement>(
@@ -84,90 +76,43 @@ export function FollowingFeed({
   return (
     <div className="space-y-4" ref={feed}>
       {items.map((r) => (
-        <article
-          key={r.id}
-          data-review-id={r.id}
-          tabIndex={-1}
-          className="rounded-lg border border-border bg-card p-5 sm:p-6"
-        >
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/${locale}/profile/${r.handle}`}
-              aria-label={r.display_name}
-            >
-              <Avatar size="lg">
-                <AvatarImage src={r.avatar_url || undefined} alt="" />
-                <AvatarFallback>
-                  {r.display_name
-                    .trim()
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((x) => x[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-            <div className="min-w-0">
-              <Link
-                className="break-words font-bold hover:text-primary"
-                href={`/${locale}/profile/${r.handle}`}
-              >
-                {r.display_name}
-              </Link>
-              <p className="break-words text-sm text-muted-foreground">
-                @{r.handle} ·{" "}
-                <time dateTime={r.created_at}>
-                  {new Date(r.created_at).toLocaleDateString(locale)}
-                </time>
-              </p>
-            </div>
-          </div>
-          {r.body && (
-            <p className="mt-5 whitespace-pre-wrap break-words leading-relaxed">
-              {r.body}
-            </p>
-          )}
-          <div className="mt-4 flex items-center gap-2 text-xl text-primary">
-            <span aria-hidden="true">
-              {"★".repeat(r.rating)}
-              {"☆".repeat(5 - r.rating)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              <span className="sr-only">{l.rating}: </span>
-              {r.rating}/5
-            </span>
-          </div>
-          <Link
-            className="mt-4 flex overflow-hidden rounded-md border border-border bg-background transition-colors hover:border-primary"
-            href={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}
-          >
-            <div className="flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden bg-muted text-center text-xs text-muted-foreground [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
-              <MediaImage
-                src={imageUrl(r.poster, "w185")}
-                alt=""
-                fallback={t.noPoster}
+        <div key={r.id}>
+          <ReviewPost
+            reviewId={r.id}
+            tmdbId={r.tmdb_id}
+            locale={locale}
+            mediaType={r.media_type === "movie" ? "movie" : "tv"}
+            author={{
+              name: r.display_name,
+              href: `/${locale}/profile/${r.handle}`,
+              avatarUrl: r.avatar_url,
+            }}
+            date={new Date(r.created_at).toLocaleDateString(locale)}
+            title={r.title || l.unknown}
+            year={r.year || undefined}
+            rating={r.rating}
+            text={r.body || ""}
+            content={r.body_document}
+            titleHref={`/${locale}/title/${r.media_type}/${r.tmdb_id}`}
+            backdropUrl={imageUrl(r.backdrop, "w780")}
+            posterUrl={imageUrl(r.poster, "w185")}
+            trailerUrl={
+              r.youtube_video_id
+                ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
+                : null
+            }
+            interaction={
+              <ReviewDiscussion
+                reviewId={r.id}
+                locale={locale}
+                userId={userId}
+                initialCount={r.likeCount}
+                initialCommentCount={r.commentCount}
+                initialLiked={r.liked}
               />
-            </div>
-            <div className="flex min-w-0 flex-col justify-center gap-1 px-4">
-              <strong className="break-words">{r.title || l.unknown}</strong>
-              <span className="text-sm text-muted-foreground">
-                {r.media_type === "movie" ? l.movie : l.tv}
-                {r.year ? ` · ${r.year}` : ""}
-              </span>
-            </div>
-          </Link>
-          {r.youtube_video_id && (
-            <a
-              className={`${buttonVariants({ variant: "outline", size: "sm" })} mt-4`}
-              href={`https://www.youtube.com/watch?v=${r.youtube_video_id}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              ▶ YouTube
-            </a>
-          )}
-        </article>
+            }
+          />
+        </div>
       ))}
       <p role="status" className="sr-only">
         {pending
@@ -192,9 +137,8 @@ export function FollowingFeed({
               startTransition(async () => {
                 try {
                   const page = await loadFollowing(locale, next);
-                  if (byKeyboard || !page.next) {
+                  if (byKeyboard || !page.next)
                     focusPost.current = page.items[0]?.id ?? null;
-                  }
                   setItems((previous) => [
                     ...previous,
                     ...page.items.filter(
