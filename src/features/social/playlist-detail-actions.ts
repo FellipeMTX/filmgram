@@ -15,19 +15,22 @@ export async function updatePlaylistDetail(
   } = await db.auth.getUser();
   if (!user) return { error: "failed" };
   const playlistId = String(form.get("playlist_id") || "");
-  const operation = String(form.get("operation") || "");
+  const [operation, itemId, extra] = String(form.get("operation") || "").split(
+    ":",
+  );
+  if (!itemId || extra) return { error: "failed" };
   let result;
   if (operation === "remove") {
     result = await db.rpc("remove_playlist_item", {
       p_playlist_id: playlistId,
-      p_item_id: String(form.get("item_id") || ""),
+      p_item_id: itemId,
     });
   } else if (operation === "up" || operation === "down") {
     const expected = String(form.get("expected_ids") || "")
       .split(",")
       .filter(Boolean);
     const ids = [...expected];
-    const index = ids.indexOf(String(form.get("item_id") || ""));
+    const index = ids.indexOf(itemId);
     const other = index + (operation === "up" ? -1 : 1);
     if (index < 0 || other < 0 || other >= ids.length)
       return { error: "failed" };

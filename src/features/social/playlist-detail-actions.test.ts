@@ -14,7 +14,7 @@ function form(operation: string) {
   data.set("playlist_id", "list");
   data.set("item_id", "b");
   data.set("expected_ids", "a,b,c");
-  data.set("operation", operation);
+  data.set("operation", `${operation}:b`);
   return data;
 }
 describe("playlist detail actions", () => {

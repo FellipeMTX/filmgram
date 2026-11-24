@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlaylistCover } from "@/components/playlist-cover";
-import { MediaImage } from "@/features/catalog/MediaImage";
-import { PlaylistItemControls } from "@/features/social/PlaylistItemControls";
+import { PlaylistItems } from "@/features/social/PlaylistItemControls";
 import { getPlaylist } from "@/features/social/queries";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
-import { imageUrl } from "@/integrations/tmdb-display";
 import { narrow, pageTitle } from "@/lib/layout";
 
 export default async function PlaylistDetail({
@@ -25,7 +23,6 @@ export default async function PlaylistDetail({
   const list = await getPlaylist(db, id);
   if (!list) notFound();
   const items = list.playlist_items;
-  const ids = items.map((item) => item.id);
   const countLabel =
     locale === "pt-BR"
       ? items.length === 1
@@ -46,6 +43,12 @@ export default async function PlaylistDetail({
         : "This playlist has no titles yet.";
   return (
     <main className={narrow}>
+      <Link
+        href={`/${locale}/playlists`}
+        className="mb-5 inline-block text-sm text-primary hover:underline"
+      >
+        ← {t.playlists}
+      </Link>
       <section className="flex flex-wrap items-center gap-6 border-b border-border pb-8">
         <PlaylistCover
           posterPaths={items.map((item) => item.poster_path)}
@@ -56,7 +59,7 @@ export default async function PlaylistDetail({
             {list.is_public ? t.publicLabel : t.private} · {items.length}{" "}
             {countLabel}
           </p>
-          <h1 className={pageTitle}>{list.name}</h1>
+          <h1 className={`${pageTitle} break-words`}>{list.name}</h1>
           {list.profiles && (
             <Link
               className="text-primary hover:underline"
@@ -66,48 +69,19 @@ export default async function PlaylistDetail({
             </Link>
           )}
           {list.description && (
-            <p className="mt-4 whitespace-pre-wrap text-muted-foreground">
+            <p className="mt-4 whitespace-pre-wrap break-words text-muted-foreground">
               {list.description}
             </p>
           )}
         </div>
       </section>
       {items.length ? (
-        <ol className="mt-4">
-          {items.map((item, index) => (
-            <li
-              key={item.id}
-              className="flex flex-wrap items-center gap-4 border-b border-border py-3"
-            >
-              <span className="w-7 text-center text-muted-foreground">
-                {index + 1}
-              </span>
-              <Link
-                href={`/${locale}/title/${item.media_type}/${item.tmdb_id}`}
-                className="flex min-w-0 flex-1 items-center gap-4 font-semibold hover:text-primary"
-              >
-                <span className="flex h-20 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-center text-xs text-muted-foreground [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
-                  <MediaImage
-                    src={imageUrl(item.poster_path, "w185")}
-                    alt=""
-                    fallback={t.noPoster}
-                  />
-                </span>
-                <span>{item.media_title}</span>
-              </Link>
-              {user?.id === list.user_id && (
-                <PlaylistItemControls
-                  locale={locale}
-                  playlistId={list.id}
-                  itemId={item.id}
-                  title={item.media_title}
-                  ids={ids}
-                  index={index}
-                />
-              )}
-            </li>
-          ))}
-        </ol>
+        <PlaylistItems
+          locale={locale}
+          playlistId={list.id}
+          items={items}
+          owner={user?.id === list.user_id}
+        />
       ) : (
         <p className="mt-6 text-muted-foreground">{empty}</p>
       )}
