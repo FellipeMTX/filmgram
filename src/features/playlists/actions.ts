@@ -12,7 +12,13 @@ export async function createPlaylistFromLibrary(
       data: { user },
     } = await db.auth.getUser();
     const name = String(form.get("name") || "").trim();
-    if (!user || !name || name.length > 100) return { error: "invalid" };
+    if (
+      !user ||
+      !name ||
+      name.length > 100 ||
+      String(form.get("description") || "").trim().length > 2000
+    )
+      return { error: "invalid" };
     const { data, error } = await db
       .from("playlists")
       .insert({

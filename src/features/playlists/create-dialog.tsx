@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "radix-ui";
 import { Plus, X } from "lucide-react";
@@ -15,6 +15,7 @@ type Labels = {
   create: string;
   close: string;
   failure: string;
+  saving: string;
 };
 export function CreatePlaylistDialog({
   locale,
@@ -30,14 +31,26 @@ export function CreatePlaylistDialog({
   const [isPublic, setIsPublic] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const submitting = useRef(false);
   function submit(form: FormData) {
+    if (submitting.current) return;
+    submitting.current = true;
     setError(false);
     startTransition(async () => {
-      const result = await createPlaylistFromLibrary(form);
-      if (result.id) {
-        setOpen(false);
-        router.push(`/${locale}/playlists/${result.id}`);
-      } else setError(true);
+      try {
+        const result = await createPlaylistFromLibrary(form);
+        if (result.id) {
+          setName("");
+          setDescription("");
+          setIsPublic(false);
+          setOpen(false);
+          router.push(`/${locale}/playlists/${result.id}`);
+        } else setError(true);
+      } catch {
+        setError(true);
+      } finally {
+        submitting.current = false;
+      }
     });
   }
   return (
@@ -50,7 +63,7 @@ export function CreatePlaylistDialog({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 w-[min(92vw,480px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl focus:outline-none">
+        <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[90dvh] w-[min(92vw,480px)] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl focus:outline-none">
           <div className="mb-5 flex items-start justify-between gap-4">
             <Dialog.Title className="font-display text-2xl font-semibold">
               {labels.createPlaylist}
@@ -84,6 +97,7 @@ export function CreatePlaylistDialog({
               {labels.description}
               <Input
                 name="description"
+                maxLength={2000}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
@@ -104,7 +118,7 @@ export function CreatePlaylistDialog({
               </p>
             )}
             <Button type="submit" disabled={pending}>
-              {labels.create}
+              {pending ? labels.saving : labels.create}
             </Button>
           </form>
         </Dialog.Content>

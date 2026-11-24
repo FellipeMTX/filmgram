@@ -214,6 +214,61 @@ test.describe("signed-in account", () => {
     }
   });
 
+  test("playlist sections paginate independently and show public authors", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Expected the Playwright app origin");
+    const owner = await signUp(page.context(), baseURL);
+    const visitor = await browser.newContext();
+    try {
+      const other = await signUp(visitor, baseURL);
+      expect(
+        (
+          await other.client
+            .from("profiles")
+            .update({ display_name: "Public Author" })
+            .eq("id", other.userId)
+        ).error,
+      ).toBeNull();
+      const suffix = randomUUID();
+      const ownRows = Array.from({ length: 25 }, (_, index) => ({
+        user_id: owner.userId,
+        name: `Own ${suffix} ${index}`,
+        is_public: false,
+      }));
+      const publicRows = Array.from({ length: 25 }, (_, index) => ({
+        user_id: other.userId,
+        name: `Public ${suffix} ${index}`,
+        is_public: true,
+      }));
+      expect(
+        (await owner.client.from("playlists").insert(ownRows)).error,
+      ).toBeNull();
+      expect(
+        (await other.client.from("playlists").insert(publicRows)).error,
+      ).toBeNull();
+      await page.goto("/en/playlists");
+      const ownNav = page.getByRole("navigation", {
+        name: "Pagination: Your playlists",
+      });
+      const publicNav = page.getByRole("navigation", {
+        name: "Pagination: Public playlists",
+      });
+      await expect(page.getByText("by Public Author").first()).toBeVisible();
+      await ownNav.getByRole("link", { name: "Next" }).click();
+      await expect(page).toHaveURL(/ownPage=2/);
+      await publicNav.getByRole("link", { name: "Next" }).click();
+      await expect(page).toHaveURL(/ownPage=2.*publicPage=2/);
+      await expect(
+        page.getByRole("heading", { name: "Your playlists" }),
+      ).toBeVisible();
+    } finally {
+      await visitor.close();
+    }
+  });
+
   test("playlist owner can reorder two titles", async ({ page, baseURL }) => {
     if (!baseURL) throw new Error("Expected the Playwright app origin");
     await signUp(page.context(), baseURL);
