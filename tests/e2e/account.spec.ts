@@ -264,6 +264,20 @@ test.describe("signed-in account", () => {
       await expect(
         page.getByRole("heading", { name: "Your playlists" }),
       ).toBeVisible();
+      await page.goto("/en/playlists?ownPage=999&publicPage=999");
+      await expect(
+        page.getByRole("heading", { name: "Your playlists" }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("navigation", { name: "Pagination: Your playlists" })
+          .getByRole("link", { name: "Previous" }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("navigation", { name: "Pagination: Public playlists" })
+          .getByRole("link", { name: "Previous" }),
+      ).toBeVisible();
     } finally {
       await visitor.close();
     }

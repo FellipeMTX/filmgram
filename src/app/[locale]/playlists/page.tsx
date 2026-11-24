@@ -46,18 +46,30 @@ async function getGroup(
       .order("position", { referencedTable: "covers", ascending: true })
       .limit(4, { referencedTable: "covers" })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-    if (result.error) throw result.error;
+    if (result.error) {
+      if (result.status === 416 && page > 1) return null;
+      throw result.error;
+    }
     return {
       lists: (result.data || []) as unknown as Summary[],
       count: result.count || 0,
     };
   }
-  const first = await fetchPage(requested);
+  const requestedResult = await fetchPage(requested);
+  const first = requestedResult ?? (await fetchPage(1));
+  if (!first) throw new Error("Unable to load playlists");
   const page = Math.min(
     requested,
     Math.max(1, Math.ceil(first.count / PAGE_SIZE)),
   );
-  return { ...(page === requested ? first : await fetchPage(page)), page };
+  const result =
+    page === requested
+      ? first
+      : page === 1 && !requestedResult
+        ? first
+        : await fetchPage(page);
+  if (!result) throw new Error("Unable to load playlists");
+  return { ...result, page };
 }
 
 export default async function Playlists({
