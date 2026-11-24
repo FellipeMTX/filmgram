@@ -158,6 +158,7 @@ test("public title shows the cast without a Google sign-in button", async ({
   await expect(
     page.getByRole("button", { name: "Sign in with Google", exact: true }),
   ).toHaveCount(0);
+  await page.getByRole("link", { name: "Cast and crew", exact: true }).click();
   const cast = shelf(page, "Cast");
   await expect(
     cast.getByText("Robert Downey Jr.", { exact: true }),

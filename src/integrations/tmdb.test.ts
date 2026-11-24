@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { getDetail, getFeedTitle, getTrending } from "./tmdb";
+import {
+  getDetail,
+  getFeedTitle,
+  getTrending,
+  getMovieReleases,
+  getMovieVideos,
+  getMovieWatchProviders,
+  getMovieReleaseCountries,
+  getMovieProviderCountries,
+} from "./tmdb";
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -95,4 +104,125 @@ it("caches localized feed metadata without requesting credits", async () => {
   );
   expect(upstream.mock.calls[0]?.[0]).not.toContain("credits");
   vi.unstubAllGlobals();
+});
+
+describe("TMDB movie supplements", () => {
+  function mock(response: unknown) {
+    vi.stubEnv("FILMGRAM_FIXTURES", "0");
+    vi.stubEnv("TMDB_READ_TOKEN", "test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => response,
+      }),
+    );
+  }
+
+  it("retains useful production metadata when another optional entry is malformed", async () => {
+    mock({
+      id: 1726,
+      title: "Iron Man",
+      budget: null,
+      production_companies: [
+        { id: 420, name: "Marvel Studios", logo_path: null },
+        { id: "not-a-number", name: "Not a company" },
+      ],
+    });
+    expect(await getDetail("en", "movie", 1726)).toMatchObject({
+      budget: undefined,
+      production_companies: [{ id: 420, name: "Marvel Studios" }],
+    });
+  });
+
+  it("normalizes valid releases for the requested country independently of locale", async () => {
+    const good = {
+      release_date: "2008-05-02T00:00:00.000Z",
+      type: 3,
+      certification: "PG-13",
+    };
+    mock({
+      results: [
+        {
+          iso_3166_1: "BR",
+          release_dates: [
+            { release_date: "2008-04-30", type: 3, certification: "12" },
+          ],
+        },
+        {
+          iso_3166_1: "US",
+          release_dates: [good, good, { release_date: "invalid", type: 3 }],
+        },
+      ],
+    });
+    expect(await getMovieReleases("pt-BR", 1726, "us")).toEqual([
+      { date: "2008-05-02", type: 3, certification: "PG-13" },
+    ]);
+    expect(await getMovieReleases("pt-BR", 1726, "PT")).toEqual([]);
+  });
+
+  it("uses the highest-ranked valid YouTube entry for duplicated video keys", async () => {
+    const common = {
+      name: "Clip",
+      type: "Trailer",
+      key: "8ugaeA-nMTc",
+      site: "YouTube",
+    };
+    mock({
+      results: [
+        { ...common, id: "older", official: false },
+        { ...common, id: "official", official: true },
+        { ...common, id: "invalid", key: "invalid" },
+        { ...common, id: "other-site", site: "Vimeo", key: "01234567890" },
+      ],
+    });
+    expect((await getMovieVideos("en", 1726)).map((item) => item.id)).toEqual([
+      "official",
+    ]);
+  });
+
+  it("lists only valid countries with release rows or provider offers", async () => {
+    const validRelease = { release_date: "2008-05-02", type: 3 };
+    mock({
+      results: [
+        { iso_3166_1: "AU", release_dates: [validRelease] },
+        { iso_3166_1: "US", release_dates: [validRelease] },
+        { iso_3166_1: "US", release_dates: [validRelease] },
+        { iso_3166_1: "BR", release_dates: [{ ...validRelease, type: 7 }] },
+        { iso_3166_1: "xyz", release_dates: [validRelease] },
+      ],
+    });
+    expect(await getMovieReleaseCountries("en", 1726)).toEqual(["AU", "US"]);
+    const validProvider = { provider_id: 7, provider_name: "Example Provider" };
+    mock({
+      results: {
+        PT: { free: [validProvider] },
+        BR: { rent: [validProvider] },
+        GB: { rent: [{ ...validProvider, provider_name: "" }] },
+        XYZ: { free: [validProvider] },
+      },
+    });
+    expect(await getMovieProviderCountries("en", 1726)).toEqual(["BR", "PT"]);
+  });
+
+  it("groups only the requested region and omits untrusted provider links", async () => {
+    mock({
+      results: {
+        US: {
+          link: "https://www.themoviedb.org.fake.example/watch",
+          rent: [
+            { provider_id: 2, provider_name: "Apple TV" },
+            { provider_id: 3, provider_name: "" },
+          ],
+        },
+      },
+    });
+    expect(await getMovieWatchProviders("pt-BR", 1726, "US")).toMatchObject({
+      region: "US",
+      link: null,
+      rent: [{ provider_id: 2, provider_name: "Apple TV" }],
+      flatrate: [],
+    });
+    expect(await getMovieWatchProviders("pt-BR", 1726)).toBeNull();
+  });
 });
