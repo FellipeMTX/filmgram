@@ -24,3 +24,19 @@ Connect the repository to Vercel and use the Next.js preset. Configure `TMDB_REA
 Before sharing the release, check the public catalog and detail route with a live TMDB key in a private browser window. When accounts are enabled, verify Google sign-in from a detail page returns to that title.
 
 See [the implementation plan](docs/PLANEJAMENTO.md) for product stages and the architecture.
+
+## People profiles
+
+Open a cast member or a movie's director to view their public profile. For example,
+`/en/person/15277` shows Jon Favreau's acting and directing credits on one page.
+Profiles include available biography and personal metadata, recent released works, and a
+filmography searchable by title and original title without regard to accents or case. Movie/TV
+and acting/directing filters combine with search. The initial view shows two rows at the current
+screen size; expand it to see more and navigate through pages. Links and filters preserve the
+selected locale.
+
+Signed-in users can rate a professional from 1 to 5 and optionally add a review and up to ten
+related works. Each account has one editable rating per professional. The profile displays the
+average and count across all ratings; no average is shown when there are none. Professional
+reviews currently appear on the professional profile only, not in the following feed or account
+profile.

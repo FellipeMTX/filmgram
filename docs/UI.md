@@ -57,3 +57,40 @@ reduced motion or a controlled clock, and matching viewports to compare the base
 server binds to `0.0.0.0` for WSL access, while the app is opened through loopback.
 Without this exact allowlist entry, Next may block dev assets requested by the integrated
 browser and leave server-rendered controls unhydrated. No wildcard origin is permitted.
+
+## Professional profiles
+
+Public profiles live at `/{locale}/person/{id}` and use the same dark visual system as title pages.
+Cast links and the movie-only Direction section reuse PersonCard. Directors are identified by
+`credits.crew[].job === "Director"`, including co-directors, without additional person requests
+while rendering a title. A person who acts and directs has one shared profile.
+
+Person details and combined credits are requested server-side and cached for one hour. HTTP 404
+maps to the not-found page; other upstream errors reach the existing error boundary. Optional
+metadata, unavailable portraits, biography gaps and invalid dates have explicit fallbacks.
+
+Filmography combines cast and crew by `(media_type, id)`, preserving complete character strings
+and distinct jobs. Acting and directing are derived from the actual credits, not the person's
+primary department. Films use release date and series use first-air date for sorting; unknown
+dates are last and ties are stable. Future dates are labeled below cards without overlapping badges.
+
+The `type`, `activity`, and title search filters are applied before pagination (24 works).
+Search matches localized and original titles with accent- and case-insensitive comparison.
+Changing a filter or search resets the page; invalid values fall back and out-of-range page
+numbers are clamped. The initial filmography shows two rows at each viewport, with a control to
+expand the current page and reach pagination. The count represents distinct matching works
+reported by TMDB, not a guarantee of complete career coverage.
+
+Recent works show up to six released credits independently of the filmography filters and
+activity, excluding future and undated credits. Future works can still appear in the full
+filmography with an upcoming label. The mobile layout keeps the portrait visible and places
+the biography at full content width.
+
+Professional ratings and reviews are public on the professional profile. A signed-in account
+can save one rating from 1 to 5 per professional, with optional text and up to ten related works;
+the profile shows the average and total across all ratings, independently of the review page.
+Editing and deleting require ownership. Professional reviews do not appear in the following
+feed or account profile in this release.
+
+Tests include real sample people and movie credits, plus a clearly named synthetic pagination
+profile (90000001) available only when `FILMGRAM_FIXTURES=1`.
