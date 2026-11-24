@@ -391,6 +391,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      following_feed: {
+        Args: { p_before_created_at?: string; p_before_id?: string }
+        Returns: { id: string; media_type: string; tmdb_id: number; rating: number; body: string | null; youtube_video_id: string | null; created_at: string; display_name: string; handle: string; avatar_url: string | null }[]
+      }
       append_playlist_item: {
         Args: {
           p_media_title: string

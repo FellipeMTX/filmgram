@@ -111,6 +111,18 @@ export async function getDetail(
   }
 }
 
+/** Small, public catalog metadata for social cards; never includes credits. */
+export async function getFeedTitle(
+  locale: string,
+  type: MediaType,
+  id: number,
+): Promise<Title | null> {
+  if (process.env.FILMGRAM_FIXTURES === "1")
+    return fixtures.find((x) => x.media_type === type && x.id === id) || null;
+  const data = itemSchema.parse(await request(`/${type}/${id}`, locale, 3600));
+  return { ...data, media_type: type };
+}
+
 export async function getTopRated(
   locale: string,
   type: "all" | MediaType = "all",

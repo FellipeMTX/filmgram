@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { getDetail, getTrending } from "./tmdb";
+import { getDetail, getFeedTitle, getTrending } from "./tmdb";
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -78,4 +78,21 @@ it("revalidates public trends and requests individual details on demand", async 
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("caches localized feed metadata without requesting credits", async () => {
+  vi.stubEnv("FILMGRAM_FIXTURES", "0");
+  vi.stubEnv("TMDB_READ_TOKEN", "test");
+  const upstream = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ id: 23, title: "Filme" }),
+  });
+  vi.stubGlobal("fetch", upstream);
+  await getFeedTitle("pt-BR", "movie", 23);
+  expect(upstream).toHaveBeenCalledWith(
+    expect.stringContaining("/movie/23?language=pt-BR"),
+    expect.objectContaining({ next: { revalidate: 3600 } }),
+  );
+  expect(upstream.mock.calls[0][0]).not.toContain("credits");
+  vi.unstubAllGlobals();
 });
