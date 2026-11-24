@@ -34,6 +34,13 @@ for (const isPublic of [false, true]) {
       Array.from(cookies, ([name, value]) => ({ name, value, url: baseURL! })),
     );
     await page.goto("/en/playlists");
+    const trigger = page.getByRole("button", { name: "Create playlist" });
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await trigger.click();
     const name = `Migration ${randomUUID()}`;
     await page
       .getByRole("textbox", { name: "Playlist name", exact: true })
@@ -47,7 +54,9 @@ for (const isPublic of [false, true]) {
       ),
     ).toBe(isPublic);
     await form.getByRole("button", { name: "Create", exact: true }).click();
-    await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
     const saved = await db
       .from("playlists")
       .select("is_public")
