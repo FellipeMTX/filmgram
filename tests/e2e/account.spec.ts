@@ -219,6 +219,7 @@ test.describe("signed-in account", () => {
     await signUp(page.context(), baseURL);
     const name = `E2E playlist ${randomUUID()}`;
     await page.goto("/en/playlists");
+    await page.getByRole("button", { name: "Create playlist" }).click();
     await page.getByRole("textbox", { name: "Playlist name" }).fill(name);
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("heading", { name })).toBeVisible();
@@ -240,7 +241,7 @@ test.describe("signed-in account", () => {
     }
 
     await page.goto("/en/playlists");
-    await page.getByRole("link", { name, exact: true }).click();
+    await page.getByRole("link", { name }).click();
     await expect(page).toHaveURL(/\/en\/playlists\/[0-9a-f-]+$/);
     await expect(
       page.getByRole("link", { name: /1\. Iron Man/ }),
