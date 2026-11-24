@@ -167,9 +167,28 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     await expect(
       shortPost.getByRole("button", { name: "Read more" }),
     ).toHaveCount(0);
+    const originUrl = page.url();
+    const artwork = shortPost.getByRole("button", { name: /^open review:/i });
+    const dialog = page.getByRole("dialog");
+    await artwork.click();
+    await expect(dialog).toContainText("Line six");
+    await expect(
+      dialog.getByText(/featured review|other reviews/i),
+    ).toHaveCount(0);
+    await expect(page).toHaveURL(originUrl);
+    await page.keyboard.press("Escape");
+    await expect(artwork).toBeFocused();
+    await shortPost.getByText("Line six", { exact: false }).last().click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    const titleLink = shortPost.locator('a[href*="/title/tv/42009"]').first();
+    await expect(titleLink).toHaveCount(1);
+    await titleLink.click();
+    await expect(page).toHaveURL(/\/en\/title\/tv\/42009/);
+    await page.goto(originUrl);
+
     const more = longPost.getByRole("button", { name: "Read more" });
     await more.click();
-    const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(
       dialog.getByText(/Line seven closes the review/),
@@ -304,6 +323,20 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
     await expect(
       post.getByRole("textbox", { name: "Write a comment" }),
     ).toBeFocused();
+    await expect(
+      post.getByRole("status").filter({ hasText: "Replying to @" }),
+    ).toBeVisible();
+    await post
+      .getByRole("textbox", { name: "Write a comment" })
+      .fill("Draft survives cancellation");
+    await post.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(
+      post.getByRole("status").filter({ hasText: "Replying to @" }),
+    ).toHaveCount(0);
+    await expect(
+      post.getByRole("textbox", { name: "Write a comment" }),
+    ).toHaveValue("Draft survives cancellation");
+    await parent.getByRole("button", { name: "Reply", exact: true }).click();
     await post
       .getByRole("textbox", { name: "Write a comment" })
       .fill("A mention reply");
@@ -329,6 +362,100 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
     await expect(
       post.getByText("Seed comment 21", { exact: true }),
     ).toBeVisible();
+  } finally {
+    await author.db.from("reviews").delete().eq("user_id", author.id);
+    await reader.db.from("follows").delete().eq("follower_id", reader.id);
+  }
+});
+
+test("localizes the reply composer and cancel state", async ({
+  page,
+  baseURL,
+}) => {
+  test.skip(process.env.FILMGRAM_E2E_AUTH !== "1", "Requires local Supabase");
+  const reader = await account(page.context(), baseURL);
+  const author = await account();
+  const reviewId = randomUUID();
+  try {
+    const follow = await reader.db
+      .from("follows")
+      .insert({ follower_id: reader.id, following_id: author.id });
+    if (follow.error) throw follow.error;
+    const review = await author.db.from("reviews").insert({
+      id: reviewId,
+      user_id: author.id,
+      media_type: "movie",
+      tmdb_id: 1726,
+      rating: 4,
+      body: "Localized discussion",
+    });
+    if (review.error) throw review.error;
+    const comment = await author.db.rpc("create_review_comment", {
+      p_review_id: reviewId,
+      p_parent_id: null,
+      p_body: "Original comment",
+    });
+    if (comment.error) throw comment.error;
+    for (const l of [
+      {
+        locale: "en",
+        open: "Open discussion",
+        reply: "Reply",
+        state: "Replying to",
+        textbox: "Write a comment",
+        cancel: "Cancel",
+        submit: "Post comment",
+      },
+      {
+        locale: "pt-BR",
+        open: "Abrir discussão",
+        reply: "Responder",
+        state: "Respondendo a",
+        textbox: "Escreva um comentário",
+        cancel: "Cancelar",
+        submit: "Publicar comentário",
+      },
+      {
+        locale: "es",
+        open: "Abrir discusión",
+        reply: "Responder",
+        state: "Respondiendo a",
+        textbox: "Escribe un comentario",
+        cancel: "Cancelar",
+        submit: "Publicar comentario",
+      },
+    ]) {
+      await page.goto(`/${l.locale}/following`);
+      await page
+        .locator(`#review-${reviewId}`)
+        .getByRole("button", { name: new RegExp(l.open) })
+        .click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByRole("button", { name: l.reply, exact: true }).click();
+      const input = dialog.getByRole("textbox", { name: l.textbox });
+      await expect(input).toBeFocused();
+      const widths = await input.evaluate((node) => ({
+        input: node.getBoundingClientRect().width,
+        column: node.parentElement!.getBoundingClientRect().width,
+      }));
+      expect(Math.abs(widths.input - widths.column)).toBeLessThan(2);
+      await expect(input).toHaveAttribute(
+        "aria-describedby",
+        `reply-target-${reviewId}`,
+      );
+      await expect(
+        dialog.getByRole("status").filter({ hasText: l.state }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", { name: l.submit }),
+      ).toBeDisabled();
+      await input.fill("Draft");
+      await dialog.getByRole("button", { name: l.cancel, exact: true }).click();
+      await expect(
+        dialog.getByRole("status").filter({ hasText: l.state }),
+      ).toHaveCount(0);
+      await expect(input).toHaveValue("Draft");
+    }
   } finally {
     await author.db.from("reviews").delete().eq("user_id", author.id);
     await reader.db.from("follows").delete().eq("follower_id", reader.id);

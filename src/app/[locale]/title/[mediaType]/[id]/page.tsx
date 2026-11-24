@@ -51,6 +51,10 @@ export default async function Detail({
       avatar_url: string | null;
     } | null;
   }[] = [];
+  let myReview: Pick<
+    (typeof reviews)[number],
+    "id" | "rating" | "body" | "youtube_video_id"
+  > | null = null;
   let playlists: { id: string; name: string }[] = [];
   const states: Record<string, boolean> = {};
   let likes = 0;
@@ -59,31 +63,62 @@ export default async function Detail({
     { count: number; liked: boolean; commentCount: number }
   > = {};
   if (db) {
-    const titleReviews = () =>
-      db
+    const highlightedReview =
+      typeof review === "string" &&
+      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review)
+        ? review
+        : null;
+    const [reviewsResult, countResult, ownReviewResult] = await Promise.all([
+      db.rpc("title_reviews_followed_first", {
+        p_media_type: mediaType,
+        p_tmdb_id: Number(id),
+        p_highlighted_review_id: highlightedReview,
+        p_limit: 1000,
+      }),
+      db.rpc("title_like_count", {
+        p_media_type: mediaType,
+        p_tmdb_id: Number(id),
+      }),
+      user
+        ? db
+            .from("reviews")
+            .select("id,rating,body,youtube_video_id")
+            .eq("media_type", mediaType)
+            .eq("tmdb_id", Number(id))
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (reviewsResult.error) throw reviewsResult.error;
+    if (ownReviewResult.error) throw ownReviewResult.error;
+    myReview = ownReviewResult.data;
+    reviews = reviewsResult.data.map((row) => ({
+      ...row,
+      profiles:
+        row.handle && row.display_name
+          ? {
+              display_name: row.display_name,
+              handle: row.handle,
+              avatar_url: row.avatar_url,
+            }
+          : null,
+    }));
+    // PostgREST can truncate the extra deep-link row after the usual 1,000.
+    if (
+      highlightedReview &&
+      !reviews.some((row) => row.id === highlightedReview)
+    ) {
+      const target = await db
         .from("reviews")
         .select(
           "id,rating,body,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
         )
         .eq("media_type", mediaType)
-        .eq("tmdb_id", Number(id));
-    const [reviewsResult, countResult] = await Promise.all([
-      titleReviews().order("created_at", { ascending: false }),
-      db.rpc("title_like_count", {
-        p_media_type: mediaType,
-        p_tmdb_id: Number(id),
-      }),
-    ]);
-    if (reviewsResult.error) throw reviewsResult.error;
-    reviews = reviewsResult.data || [];
-    if (
-      typeof review === "string" &&
-      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review) &&
-      !reviews.some((r) => r.id === review)
-    ) {
-      const target = await titleReviews().eq("id", review).maybeSingle();
+        .eq("tmdb_id", Number(id))
+        .eq("id", highlightedReview)
+        .maybeSingle();
       if (target.error) throw target.error;
-      if (target.data) reviews = [target.data, ...reviews];
+      if (target.data) reviews.push(target.data);
     }
     reviewLikes = await getReviewLikeSummaries(
       db,
@@ -121,7 +156,6 @@ export default async function Detail({
       playlists = (p.data || []) as unknown as typeof playlists;
     }
   }
-  const myReview = reviews.find((r) => r.user_id === user?.id);
   const poster = imageUrl(item.poster_path);
   const directors =
     mediaType === "movie"

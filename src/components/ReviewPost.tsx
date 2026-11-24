@@ -30,18 +30,21 @@ const labels = {
     title: "View title",
     close: "Close full review",
     full: "Full review",
+    open: "Open review",
   },
   "pt-BR": {
     more: "Ver mais",
     title: "Ver ficha",
     close: "Fechar resenha completa",
     full: "Resenha completa",
+    open: "Abrir resenha",
   },
   es: {
     more: "Ver más",
     title: "Ver ficha",
     close: "Cerrar reseña completa",
     full: "Reseña completa",
+    open: "Abrir reseña",
   },
 };
 export type ReviewPostProps = {
@@ -182,7 +185,7 @@ export function ReviewPost(props: ReviewPostProps) {
   const copyRef = useRef<HTMLParagraphElement>(null);
   const inlineHost = useRef<HTMLDivElement>(null);
   const modalHost = useRef<HTMLDivElement>(null);
-  const opener = useRef<HTMLButtonElement | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const card = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"read" | "discussion">("read");
@@ -218,19 +221,52 @@ export function ReviewPost(props: ReviewPostProps) {
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
+      {/* The card accepts pointer clicks; the equivalent button below provides keyboard access. */}
       <article
         id={`review-${props.reviewId}`}
         data-review-id={props.reviewId}
         ref={card}
         tabIndex={-1}
-        className="min-w-0 rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
+        onClick={(event) => {
+          const target = event.target;
+          if (
+            !(target instanceof Element) ||
+            target.closest(
+              "a,button,input,textarea,select,label,[contenteditable=true]",
+            )
+          )
+            return;
+          if (window.getSelection()?.toString()) return;
+          opener.current = card.current;
+          setMode("read");
+          setOpen(true);
+        }}
+        className="min-w-0 cursor-pointer rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
       >
+        {(!artwork || props.placement === "title") && (
+          <button
+            type="button"
+            className="sr-only focus:not-sr-only focus:mb-3 focus:rounded focus:outline-2 focus:outline-primary"
+            onClick={(event) => {
+              opener.current = event.currentTarget;
+              setMode("read");
+              setOpen(true);
+            }}
+          >
+            {t.open}: {title}
+          </button>
+        )}
         <Byline author={author} date={date} />
         <Heading {...props} />
         {artwork && props.placement !== "title" && (
-          <Link
-            href={titleHref}
-            aria-label={`${t.title}: ${title}`}
+          <button
+            type="button"
+            aria-label={`${t.open}: ${title}`}
+            onClick={(event) => {
+              opener.current = event.currentTarget;
+              setMode("read");
+              setOpen(true);
+            }}
             className="relative block w-full aspect-[16/8.75] max-h-[390px] overflow-hidden rounded-lg bg-secondary"
           >
             <Image
@@ -246,10 +282,7 @@ export function ReviewPost(props: ReviewPostProps) {
                   : "object-contain"
               }
             />
-            <span className="absolute right-2 bottom-2 flex items-center gap-1 rounded-md bg-black/85 px-2 py-1 text-xs">
-              {t.title} <ArrowUpRight size={14} />
-            </span>
-          </Link>
+          </button>
         )}
         <div className="mt-3 mb-4 text-sm">
           <p

@@ -13,3 +13,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Use Tailwind utilities and the adapted shadcn components in `src/components/ui`.
 Read `docs/UI.md` before changing visual primitives or theme tokens. Preserve the existing
 Filmgram identity and Server Action form contracts. Keep route navigation as links.
+
+User-facing changes must include pt-BR, en and es translations in the same PR,
+including empty, loading and error states and accessible names.

@@ -27,6 +27,7 @@ const labels = {
     placeholder: "Write a comment",
     submit: "Post comment",
     reply: "Reply",
+    replyingTo: "Replying to",
     more: "Load more comments",
     removed: "Comment removed",
     edit: "Edit",
@@ -44,6 +45,7 @@ const labels = {
     placeholder: "Escreva um comentário",
     submit: "Publicar comentário",
     reply: "Responder",
+    replyingTo: "Respondendo a",
     more: "Carregar mais comentários",
     removed: "Comentário removido",
     edit: "Editar",
@@ -61,6 +63,7 @@ const labels = {
     placeholder: "Escribe un comentario",
     submit: "Publicar comentario",
     reply: "Responder",
+    replyingTo: "Respondiendo a",
     more: "Cargar más comentarios",
     removed: "Comentario eliminado",
     edit: "Editar",
@@ -439,45 +442,65 @@ export function ReviewDiscussion({
           {userId ? (
             <div className="space-y-2">
               {replyTo && (
-                <p className="text-xs text-muted-foreground">
-                  {l.reply}
-                  {replyTo.profile?.handle
-                    ? ` @${replyTo.profile.handle}`
-                    : ""}{" "}
-                  <button type="button" onClick={() => setReplyTo(null)}>
-                    {l.cancel}
-                  </button>
+                <p
+                  id={`reply-target-${reviewId}`}
+                  className="text-xs text-muted-foreground"
+                  role="status"
+                >
+                  {l.replyingTo} @{replyTo.profile?.handle}
                 </p>
               )}
               <Textarea
                 ref={composer}
+                className="w-full"
                 disabled={pending}
                 aria-label={l.placeholder}
+                aria-describedby={
+                  replyTo ? `reply-target-${reviewId}` : undefined
+                }
                 placeholder={l.placeholder}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
               />
-              <Button
-                size="sm"
-                disabled={pending || !draft.trim()}
-                onClick={() =>
-                  run(async () => {
-                    mergeComment(
-                      await createReviewComment(
-                        actionForm({
-                          body: draft,
-                          ...(replyTo ? { target_comment_id: replyTo.id } : {}),
-                        }),
-                      ),
-                    );
-                    publishChange({ commentDelta: 1 });
-                    setDraft("");
-                    setReplyTo(null);
-                  })
-                }
-              >
-                {pending ? l.sending : l.submit}
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending || (!replyTo && !draft)}
+                  onClick={() => {
+                    if (replyTo) setReplyTo(null);
+                    else setDraft("");
+                    composer.current?.focus();
+                  }}
+                >
+                  {l.cancel}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={pending || !draft.trim()}
+                  onClick={() =>
+                    run(async () => {
+                      mergeComment(
+                        await createReviewComment(
+                          actionForm({
+                            body: draft,
+                            ...(replyTo
+                              ? { target_comment_id: replyTo.id }
+                              : {}),
+                          }),
+                        ),
+                      );
+                      publishChange({ commentDelta: 1 });
+                      setDraft("");
+                      setReplyTo(null);
+                    })
+                  }
+                >
+                  {pending ? l.sending : l.submit}
+                </Button>
+              </div>
             </div>
           ) : (
             <form action={signIn}>

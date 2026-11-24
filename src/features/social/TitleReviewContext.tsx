@@ -219,13 +219,9 @@ export function TitleReviewContext({
       </div>
       <section className="space-y-4 p-[clamp(12px,3vw,24px)] [overflow-wrap:anywhere]">
         <h2 className="font-display text-2xl font-bold">{l.community}</h2>
-        <article className="rounded-xl border border-primary/50 bg-card p-4">
-          <p className="mb-2 text-xs font-bold text-primary">{l.featured}</p>
+        <article className="rounded-xl border border-border bg-card p-4">
           {selected(own || null)}
         </article>
-        <h3 className="border-t border-border pt-4 font-display text-xl font-bold">
-          {l.other}
-        </h3>
         {!data && !error && <p role="status">{l.loading}</p>}
         {error && (
           <p role="alert">
