@@ -285,7 +285,7 @@ test.describe("signed-in account", () => {
 
   test("playlist owner can reorder two titles", async ({ page, baseURL }) => {
     if (!baseURL) throw new Error("Expected the Playwright app origin");
-    await signUp(page.context(), baseURL);
+    const { client } = await signUp(page.context(), baseURL);
     const name = `E2E playlist ${randomUUID()}`;
     await page.goto("/en/playlists");
     await page.getByRole("button", { name: "Create playlist" }).click();
@@ -312,23 +312,40 @@ test.describe("signed-in account", () => {
     await page.goto("/en/playlists");
     await page.getByRole("link", { name }).click();
     await expect(page).toHaveURL(/\/en\/playlists\/[0-9a-f-]+$/);
-    await expect(
-      page.getByRole("link", { name: /1\. Iron Man/ }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /2\. Family Guy/ }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Move up", exact: true }).click();
-    await expect(
-      page.getByRole("link", { name: /1\. Family Guy/ }),
-    ).toBeVisible();
+    const rows = page.locator("main ol > li");
+    await expect(rows.nth(0)).toContainText("Iron Man");
+    await expect(rows.nth(1)).toContainText("Family Guy");
+    await expect(page.locator('input[name="expected_ids"]')).toHaveCount(1);
+
+    // Another session changes the order while this page is open.
+    const listId = page.url().split("/").pop()!;
+    const { data: items, error } = await client
+      .from("playlist_items")
+      .select("id")
+      .eq("playlist_id", listId)
+      .order("position");
+    if (error || !items || items.length !== 2)
+      throw new Error("Expected two playlist items");
+    const ids = items.map((item) => item.id);
+    const changed = await client.rpc("reorder_playlist_items", {
+      p_playlist_id: listId,
+      p_expected_ids: ids,
+      p_item_ids: [...ids].reverse(),
+    });
+    expect(changed.error).toBeNull();
+    await page.getByRole("button", { name: "Move up: Family Guy" }).click();
+    await expect(page.locator("main").getByRole("alert")).toContainText(
+      "order changed",
+    );
+    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
+    await expect(rows.nth(0)).toContainText("Family Guy");
+    await page.getByRole("button", { name: "Move up: Iron Man" }).click();
+    await expect(rows.nth(0)).toContainText("Iron Man");
     await page.reload();
-    await expect(
-      page.getByRole("link", { name: /2\. Iron Man/ }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Remove" }).first().click();
-    await expect(
-      page.getByRole("link", { name: /1\. Iron Man/ }),
-    ).toBeVisible();
+    await expect(rows.nth(0)).toContainText("Iron Man");
+    await page.getByRole("button", { name: "Remove: Iron Man" }).click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText("Family Guy");
   });
 });
