@@ -5,7 +5,8 @@ import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
 import { signIn } from "@/features/auth/actions";
 import { messages } from "@/i18n/messages";
-import { currentUser, supabase } from "@/integrations/supabase";
+import type { supabase } from "@/integrations/supabase";
+import { getSocialViewer } from "@/features/social/social-viewer";
 import { container, eyebrow, pageTitle } from "@/lib/layout";
 
 const PAGE_SIZE = 24;
@@ -125,7 +126,7 @@ export default async function Playlists({
             by: "by",
             pagination: "Pagination",
           };
-  const [user, db] = await Promise.all([currentUser(), supabase()]);
+  const { user, db } = await getSocialViewer();
   const [own, publicLists] = db
     ? await Promise.all([
         user
