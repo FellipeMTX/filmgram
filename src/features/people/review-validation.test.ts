@@ -35,10 +35,19 @@ describe("person review validation", () => {
       ),
     ).toBe("2026-01-01T00:00:00.123456+00:00");
   });
+  it.each(["0", "10"])(
+    "accepts the ends of the popcorn scale (%s)",
+    (rating) => {
+      expect(parsePersonReview(form({ rating }))?.rating).toBe(Number(rating));
+    },
+  );
+
   it("rejects missing and unsafe IDs, rating, oversized body, duplicates and forged shapes", () => {
     expect(parsePersonId(form({ person_id: "9007199254740992" }))).toBeNull();
     expect(parsePersonReview(form({ rating: "" }))).toBeNull();
     expect(parsePersonReview(form({ rating: "3.5" }))).toBeNull();
+    expect(parsePersonReview(form({ rating: "11" }))).toBeNull();
+    expect(parsePersonReview(form({ rating: "-1" }))).toBeNull();
     expect(parsePersonReview(form({ body: "a".repeat(10001) }))).toBeNull();
     expect(
       parsePersonReview(

@@ -23,6 +23,7 @@ import {
 import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
 import { ReviewRichText } from "@/components/ReviewRichText";
+import { FilmgramRating } from "@/components/FilmgramRating";
 import { reviewYoutubeId } from "@/features/social/review-content";
 
 const ReviewPostModal = createContext<{
@@ -138,7 +139,6 @@ function Heading({
   | "mediaType"
   | "locale"
 >) {
-  const stars = Math.max(0, Math.min(5, Math.round(rating ?? 0)));
   const meta =
     mediaType === "tv"
       ? locale === "en"
@@ -166,19 +166,7 @@ function Heading({
         </div>
       )}
       {rating != null && (
-        <span
-          className="whitespace-nowrap text-sm font-semibold"
-          aria-label={`${rating}/5`}
-        >
-          <span
-            aria-hidden="true"
-            className="text-lg tracking-wider text-primary"
-          >
-            {"★".repeat(stars)}
-            {"☆".repeat(5 - stars)}
-          </span>{" "}
-          {rating}/5
-        </span>
+        <FilmgramRating value={rating} locale={locale} className="text-sm" />
       )}
     </div>
   );
@@ -528,25 +516,14 @@ export function ReviewPost(props: ReviewPostProps) {
                       {(own?.id === props.reviewId
                         ? own.rating
                         : props.rating) != null && (
-                        <p className="text-primary">
-                          {"★".repeat(
+                        <FilmgramRating
+                          value={
                             (own?.id === props.reviewId
                               ? own.rating
-                              : props.rating) || 0,
-                          )}
-                          {"☆".repeat(
-                            5 -
-                              ((own?.id === props.reviewId
-                                ? own.rating
-                                : props.rating) || 0),
-                          )}{" "}
-                          <span className="text-foreground">
-                            {own?.id === props.reviewId
-                              ? own.rating
-                              : props.rating}
-                            /5
-                          </span>
-                        </p>
+                              : props.rating)!
+                          }
+                          locale={props.locale}
+                        />
                       )}
                       <CommunityEditControl reviewId={props.reviewId} />
                     </div>

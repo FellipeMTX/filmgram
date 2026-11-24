@@ -58,14 +58,19 @@ test.describe("professional reviews", () => {
     try {
       await page.goto(`/en/person/${personId}`);
       const section = page.locator("#person-reviews");
-      await section.locator('select[name="rating"]').selectOption("4");
+      await section
+        .getByRole("radio", { name: "8/10", exact: true })
+        .locator("..")
+        .click();
       await section
         .getByRole("textbox", { name: "Review (optional)" })
         .fill(body);
       await section
         .getByRole("searchbox", { name: "Search reference works" })
         .fill("Iron Man");
-      await section.getByRole("checkbox", { name: "Iron Man (Film)" }).check();
+      await section
+        .getByRole("checkbox", { name: "Iron Man (Film)", exact: true })
+        .check();
       await section
         .getByRole("button", { name: "Publish", exact: true })
         .click();
@@ -75,12 +80,15 @@ test.describe("professional reviews", () => {
       await expect(
         article.getByRole("link", { name: "Iron Man" }),
       ).toHaveAttribute("href", "/en/title/movie/1726");
-      await expect(section.locator('select[name="rating"]')).toHaveValue("4");
+      await expect(section.getByRole("radio", { name: "8/10" })).toBeChecked();
       await page.reload();
       await expect(
-        section.getByRole("checkbox", { name: "Iron Man (Film)" }),
-      ).toBeChecked();
-      await section.locator('select[name="rating"]').selectOption("5");
+        section.getByRole("button", { name: "Iron Man Remove" }),
+      ).toBeVisible();
+      await section
+        .getByRole("radio", { name: "7/10", exact: true })
+        .locator("..")
+        .click();
       await section
         .getByRole("textbox", { name: "Review (optional)" })
         .fill(edited);
@@ -90,7 +98,9 @@ test.describe("professional reviews", () => {
       await expect(
         section.getByRole("article").filter({ hasText: edited }),
       ).toBeVisible();
-      await expect(section.locator('select[name="rating"]')).toHaveValue("5");
+      await expect(section.getByRole("radio", { name: "7/10" })).toBeChecked();
+      await page.reload();
+      await expect(section.getByRole("radio", { name: "7/10" })).toBeChecked();
       await section
         .getByRole("button", { name: "Delete review", exact: true })
         .click();
@@ -101,7 +111,9 @@ test.describe("professional reviews", () => {
       await expect(
         section.getByRole("article").filter({ hasText: edited }),
       ).toHaveCount(0);
-      await expect(section.locator('select[name="rating"]')).toHaveValue("");
+      await expect(section.locator('input[name="rating"]:checked')).toHaveCount(
+        0,
+      );
       await expect(section.getByRole("status")).toBeVisible();
     } finally {
       const { error } = await client
@@ -123,11 +135,16 @@ test.describe("professional reviews", () => {
     try {
       await page.goto(`/en/person/${personId}`);
       const section = page.locator("#person-reviews");
-      await section.locator('select[name="rating"]').selectOption("3");
+      await section
+        .getByRole("radio", { name: "0/10", exact: true })
+        .locator("..")
+        .click();
       await section
         .getByRole("button", { name: "Publish", exact: true })
         .click();
-      await expect(section.locator('select[name="rating"]')).toHaveValue("3");
+      await expect(
+        section.getByRole("radio", { name: "0/10", exact: true }),
+      ).toBeChecked();
       await expect
         .poll(async () => {
           const { data } = await client
@@ -138,9 +155,11 @@ test.describe("professional reviews", () => {
             .maybeSingle();
           return data;
         })
-        .toMatchObject({ rating: 3, body: null, person_review_works: [] });
+        .toMatchObject({ rating: 0, body: null, person_review_works: [] });
       await page.reload();
-      await expect(section.locator('select[name="rating"]')).toHaveValue("3");
+      await expect(
+        section.getByRole("radio", { name: "0/10", exact: true }),
+      ).toBeChecked();
     } finally {
       const { error } = await client
         .from("person_reviews")

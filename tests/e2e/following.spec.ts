@@ -73,7 +73,7 @@ test("loads 12 followed reviews, then appends the rest in stable order", async (
         user_id: followed.id,
         media_type: "tv",
         tmdb_id: index === 0 ? 42009 : 91000000 + index,
-        rating: 4,
+        rating: 8,
         body: `Feed review ${index + 1}`,
         created_at: created,
       })),
@@ -83,7 +83,7 @@ test("loads 12 followed reviews, then appends the rest in stable order", async (
       user_id: other.id,
       media_type: "tv",
       tmdb_id: 42009,
-      rating: 5,
+      rating: 10,
       body: "Unfollowed review",
       created_at: "2026-01-01T00:00:00+00:00",
     });
@@ -146,7 +146,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
         user_id: author.id,
         media_type: "movie",
         tmdb_id: 1726,
-        rating: 4,
+        rating: 8,
         body: [...lines, lastLine].join("\n"),
         youtube_video_id: "dQw4w9WgXcQ",
       },
@@ -155,7 +155,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
         user_id: author.id,
         media_type: "tv",
         tmdb_id: 42009,
-        rating: 5,
+        rating: 10,
         body: lines.join("\n"),
       },
     ]);
@@ -296,7 +296,7 @@ test("keeps loaded comments when posting, editing and removing a parent with a r
       user_id: author.id,
       media_type: "movie",
       tmdb_id: 1726,
-      rating: 4,
+      rating: 8,
       body: "Discussion pagination review",
     });
     if (review.error) throw review.error;
@@ -419,7 +419,7 @@ test("localizes the reply composer and cancel state", async ({
       user_id: author.id,
       media_type: "movie",
       tmdb_id: 1726,
-      rating: 4,
+      rating: 8,
       body: "Localized discussion",
     });
     if (review.error) throw review.error;

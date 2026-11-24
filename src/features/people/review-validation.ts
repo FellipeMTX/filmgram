@@ -39,7 +39,7 @@ export function parsePersonReview(form: FormData): {
   if (
     !personId ||
     typeof ratingValue !== "string" ||
-    !/^[1-5]$/.test(ratingValue) ||
+    !/^(?:[0-9]|10)$/.test(ratingValue) ||
     (bodyValue !== null && typeof bodyValue !== "string") ||
     typeof worksValue !== "string" ||
     worksValue.length > 10000 ||

@@ -16,7 +16,7 @@ select throws_ok($$select public.save_person_review(3223,4,'bad','[{"media_type"
 select is((select count(*) from public.person_review_works),1::bigint,'invalid request preserves existing references');
 select throws_ok($$select public.save_person_review(3223,4,'bad',(select jsonb_agg(jsonb_build_object('media_type','movie','tmdb_id',n)) from generate_series(1,11) n),(select updated_at from public.person_reviews where person_tmdb_id=3223))$$,'22023',null,'more than ten references rejected');
 select throws_ok($$select public.save_person_review(3223,4,'bad','[{"media_type":"person","tmdb_id":1}]'::jsonb,(select updated_at from public.person_reviews where person_tmdb_id=3223))$$,'22023',null,'invalid type rejected');
-select throws_ok($$select public.save_person_review(3223,6,'bad','[]'::jsonb,(select updated_at from public.person_reviews where person_tmdb_id=3223))$$,'22023',null,'invalid rating rejected');
+select throws_ok($$select public.save_person_review(3223,11,'bad','[]'::jsonb,(select updated_at from public.person_reviews where person_tmdb_id=3223))$$,'22023',null,'invalid rating rejected');
 select lives_ok($$select public.save_person_review(3223,3,null,'[{"media_type":"tv","tmdb_id":1434}]'::jsonb,(select updated_at from public.person_reviews where person_tmdb_id=3223))$$,'owner updates atomically');
 select is((select rating from public.person_reviews where person_tmdb_id=3223),3,'updated rating visible');
 select is((select media_type from public.person_review_works limit 1),'tv','references replaced');

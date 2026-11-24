@@ -6,6 +6,7 @@ import type { PersonWork } from "@/features/people/filmography";
 import type { getPersonReviewData } from "@/features/people/review-queries";
 import { titleName } from "@/integrations/tmdb-display";
 import { messages } from "@/i18n/messages";
+import { FilmgramRating } from "@/components/FilmgramRating";
 
 type ReviewData = Awaited<ReturnType<typeof getPersonReviewData>>;
 export function PeopleRating({
@@ -27,9 +28,8 @@ export function PeopleRating({
         t.noPersonRatings
       ) : (
         <>
-          <span className="text-primary">★</span>{" "}
-          {data.stats.averageRating.toFixed(1)} / 5 · {data.stats.count}{" "}
-          {t.ratingCount}
+          <FilmgramRating value={data.stats.averageRating} locale={locale} /> ·{" "}
+          {data.stats.count} {t.ratingCount}
         </>
       )}
     </p>
@@ -125,12 +125,8 @@ export function PeopleReviews({
                       }).format(new Date(review.updatedAt))}
                     </time>
                   </p>
-                  <p
-                    className="mt-1 text-xl text-primary"
-                    aria-label={`${review.rating} / 5`}
-                  >
-                    {"★".repeat(review.rating)}
-                    {"☆".repeat(5 - review.rating)}
+                  <p className="mt-1">
+                    <FilmgramRating value={review.rating} locale={locale} />
                   </p>
                   {review.body && (
                     <p className="mt-2 whitespace-pre-line break-words">

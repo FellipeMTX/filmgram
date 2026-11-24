@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/native-select";
+import { FilmgramRatingPicker } from "@/components/FilmgramRating";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchField } from "@/components/SearchField";
 import {
@@ -56,7 +56,7 @@ export function PersonReviewForm({
   const version = review?.updatedAt || "";
   const [loadedVersion, setLoadedVersion] = useState(version);
   const [rating, setRating] = useState(review ? String(review.rating) : "");
-  const ratingField = useRef<HTMLSelectElement>(null);
+  const ratingField = useRef<HTMLInputElement>(null);
   const [body, setBody] = useState(review?.body || "");
   const [latestAction, setLatestAction] = useState<"save" | "delete">("save");
   const [selected, setSelected] = useState<Reference[]>(review?.works || []);
@@ -129,25 +129,14 @@ export function PersonReviewForm({
             })),
           )}
         />
-        <label className="flex flex-col gap-2 font-bold">
-          {t.yourRating}
-          <NativeSelect
+        <fieldset className="space-y-2 font-bold">
+          <legend>{t.yourRating}</legend>
+          <FilmgramRatingPicker
             ref={ratingField}
-            name="rating"
-            required
             value={rating}
             onChange={(event) => setRating(event.target.value)}
-          >
-            <option value="" disabled>
-              {t.selectRating}
-            </option>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>
-                {"★".repeat(n)} ({n}/5)
-              </option>
-            ))}
-          </NativeSelect>
-        </label>
+          />
+        </fieldset>
         <label className="flex flex-col gap-2 font-bold">
           {t.reviewBody}
           <Textarea

@@ -56,13 +56,14 @@ export async function toggleTitle(form: FormData) {
 }
 async function saveReview(form: FormData, revalidate: boolean) {
   const { db, user } = await auth();
-  const rating = Number(text(form, "rating"));
+  const ratingInput = form.get("rating");
+  const rating = Number(ratingInput);
   const media_type = text(form, "media_type"),
     tmdb_id = Number(text(form, "tmdb_id"));
   if (
+    typeof ratingInput !== "string" ||
+    !/^(?:[0-9]|10)$/.test(ratingInput) ||
     !Number.isInteger(rating) ||
-    rating < 1 ||
-    rating > 5 ||
     !["movie", "tv"].includes(media_type) ||
     !Number.isInteger(tmdb_id) ||
     tmdb_id <= 0

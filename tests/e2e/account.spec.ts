@@ -130,8 +130,10 @@ test.describe("signed-in account", () => {
       await page
         .getByRole("button", { name: "Write review", exact: true })
         .click();
-      const rating = page.locator('select[name="rating"]');
-      await rating.selectOption("4");
+      await page
+        .getByRole("radio", { name: "8/10", exact: true })
+        .locator("..")
+        .click();
       const editor = page.getByRole("textbox", { name: "Write a review" });
       await editor.fill(review);
       await editor.press("Control+A");
@@ -195,6 +197,78 @@ test.describe("signed-in account", () => {
       );
     } finally {
       await follower.close();
+    }
+  });
+
+  test("a title rating of zero persists and can be edited to seven", async ({
+    page,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Expected the Playwright app origin");
+    const { client, userId } = await signUp(page.context(), baseURL);
+    try {
+      await page.goto("/en/title/movie/1726");
+      await page
+        .getByRole("button", { name: "Write review", exact: true })
+        .click();
+      await page
+        .getByRole("radio", { name: "0/10", exact: true })
+        .locator("..")
+        .click();
+      await page.getByRole("button", { name: "Publish", exact: true }).click();
+      await expect
+        .poll(
+          async () =>
+            (
+              await client
+                .from("reviews")
+                .select("rating")
+                .eq("user_id", userId)
+                .eq("media_type", "movie")
+                .eq("tmdb_id", 1726)
+                .single()
+            ).data?.rating,
+        )
+        .toBe(0);
+      await page.reload();
+      await expect(
+        page.getByText("Filmgram rating: 0 out of 10", { exact: true }).first(),
+      ).toBeAttached();
+      await page.getByRole("button", { name: "Edit my review" }).click();
+      await expect(
+        page.getByRole("radio", { name: "0/10", exact: true }),
+      ).toBeChecked();
+      await page
+        .getByRole("radio", { name: "7/10", exact: true })
+        .locator("..")
+        .click();
+      await page.getByRole("button", { name: "Publish", exact: true }).click();
+      await expect
+        .poll(
+          async () =>
+            (
+              await client
+                .from("reviews")
+                .select("rating")
+                .eq("user_id", userId)
+                .eq("media_type", "movie")
+                .eq("tmdb_id", 1726)
+                .single()
+            ).data?.rating,
+        )
+        .toBe(7);
+      await page.reload();
+      await expect(
+        page.getByText("Filmgram rating: 7 out of 10", { exact: true }).first(),
+      ).toBeAttached();
+    } finally {
+      const { error } = await client
+        .from("reviews")
+        .delete()
+        .eq("user_id", userId)
+        .eq("media_type", "movie")
+        .eq("tmdb_id", 1726);
+      if (error) throw error;
     }
   });
 
