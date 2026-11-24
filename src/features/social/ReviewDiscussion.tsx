@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn } from "@/features/auth/actions";
 import { useReviewPostModal } from "@/components/ReviewPost";
+import { Heart, MessageCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { loadReviewComments } from "./discussion-loader";
@@ -233,7 +235,19 @@ export function ReviewDiscussion({
             : "border-t border-border pt-3"
         }
       >
-        <div className="text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Avatar size="sm">
+            <AvatarImage src={c.profile?.avatarUrl || undefined} alt="" />
+            <AvatarFallback aria-hidden="true">
+              {c.profile?.displayName
+                .trim()
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((name) => name[0])
+                .join("")
+                .toUpperCase() || "·"}
+            </AvatarFallback>
+          </Avatar>
           {c.profile?.handle ? (
             <Link
               className="font-bold hover:text-primary"
@@ -244,7 +258,6 @@ export function ReviewDiscussion({
           ) : (
             <strong>Filmgram</strong>
           )}
-          {" · "}
           <time className="text-muted-foreground" dateTime={c.createdAt}>
             {new Date(c.createdAt).toLocaleDateString(locale)}
           </time>
@@ -356,13 +369,15 @@ export function ReviewDiscussion({
   }
   return (
     <div className="mt-4 space-y-3">
-      <div className="flex items-center gap-4">
-        <button
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
           aria-label={liked ? l.unlike : l.like}
           aria-pressed={liked}
           disabled={!userId || pending}
-          className="text-sm text-primary disabled:opacity-60"
+          className="min-h-9 aria-pressed:border-primary/70 aria-pressed:bg-primary/15 aria-pressed:text-primary pointer-coarse:min-h-11"
           onClick={() =>
             run(async () => {
               const summary = await setReviewLike(
@@ -375,20 +390,23 @@ export function ReviewDiscussion({
             })
           }
         >
-          {liked ? "♥" : "♡"} {count}
-        </button>
-        <button
+          <Heart aria-hidden="true" className={liked ? "fill-current" : ""} />{" "}
+          {count}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
           aria-expanded={expanded}
-          className="text-sm text-muted-foreground hover:text-primary"
+          className="min-h-9 aria-expanded:border-primary/70 aria-expanded:bg-primary/15 aria-expanded:text-primary pointer-coarse:min-h-11"
           onClick={() => {
             if (modalOpen) setModalExpanded(!expanded);
             else setOpen(!expanded);
             if (!loaded) run(() => load(null));
           }}
         >
-          {l.comments} ({commentCount})
-        </button>
+          <MessageCircle aria-hidden="true" /> {l.comments} ({commentCount})
+        </Button>
       </div>
       {expanded && (
         <div className="space-y-3">

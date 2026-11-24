@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { narrow, pageTitle, eyebrow } from "@/lib/layout";
 import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
@@ -16,7 +17,7 @@ export default async function Following({
   const { user } = await getSocialViewer();
   const feed = user ? await getFeed(locale) : null;
   return (
-    <main className={`${narrow} max-w-[680px]`}>
+    <main className={cn(narrow, "max-w-[760px]")}>
       <p className={eyebrow}>{t.community}</p>
       <h1 className={pageTitle}>{t.following}</h1>
       {feed ? (

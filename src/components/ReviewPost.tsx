@@ -242,12 +242,13 @@ export function ReviewPost(props: ReviewPostProps) {
           <Link
             href={titleHref}
             aria-label={`${t.title}: ${title}`}
-            className="relative block aspect-[16/8.75] max-h-[390px] overflow-hidden rounded-lg bg-secondary"
+            className="relative block w-full aspect-[16/8.75] max-h-[390px] overflow-hidden rounded-lg bg-secondary"
           >
             <Image
               src={artwork}
               alt=""
               fill
+              unoptimized
               sizes="(max-width: 680px) 95vw, 680px"
               onError={() => setFailedArtwork((failed) => [...failed, artwork])}
               className={
@@ -325,6 +326,7 @@ export function ReviewPost(props: ReviewPostProps) {
                     src={artwork}
                     alt=""
                     fill
+                    unoptimized
                     sizes="(max-width: 620px) 95vw, 470px"
                     onError={() =>
                       setFailedArtwork((failed) => [...failed, artwork])
