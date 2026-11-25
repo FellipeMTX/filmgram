@@ -158,45 +158,44 @@ test("public title shows the cast without a Google sign-in button", async ({
   await expect(
     page.getByRole("button", { name: "Sign in with Google", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("link", { name: "Cast and crew", exact: true }).click();
+  await page.getByRole("link", { name: "Info", exact: true }).click();
   const cast = shelf(page, "Cast");
   await expect(
     cast.getByText("Robert Downey Jr.", { exact: true }),
   ).toBeVisible();
   await expect(cast.getByText(/Tony Stark/)).toBeVisible();
-  const portrait = cast.locator("img").first();
+  const portrait = cast.locator('a[href="/en/person/3223"] > span').first();
   await expect(portrait).toBeVisible();
   const frame = await portrait.evaluate((image) => {
     const { width, height } = image.getBoundingClientRect();
-    const radius =
-      image.parentElement &&
-      getComputedStyle(image.parentElement).borderTopLeftRadius;
+    const radius = getComputedStyle(image).borderTopLeftRadius;
     return { width, height, radius };
   });
   expect(frame.width).toBeCloseTo(frame.height, 0);
-  expect(frame.radius).toBe("50%");
+  expect(
+    frame.radius.endsWith("%")
+      ? parseFloat(frame.radius) >= 50
+      : parseFloat(frame.radius) >= frame.width / 2,
+  ).toBe(true);
 });
 
-test("the title poster fills the banner column on desktop", async ({
+test("the movie hero keeps its title and trailer column visible on desktop", async ({
   page,
 }, info) => {
   test.skip(info.project.name !== "desktop", "Mobile uses the title backdrop");
-  await page.goto("/en/title/movie/1368337");
-  const poster = page.getByAltText(/The Odyssey poster/);
-  await expect(poster).toBeVisible();
-  const edges = await poster.evaluate((image) => {
-    const frame = image.parentElement?.getBoundingClientRect();
-    const info =
-      image.parentElement?.nextElementSibling?.getBoundingClientRect();
-    if (!frame || !info)
-      throw new Error("Expected poster and title information columns");
-    return {
-      top: Math.abs(frame.top - info.top),
-      bottom: Math.abs(frame.bottom - info.bottom),
-    };
-  });
-  expect(edges.top).toBeLessThan(2);
-  expect(edges.bottom).toBeLessThan(2);
+  await page.goto("/en/title/movie/1726");
+  const title = page.getByRole("heading", { level: 1, name: "Iron Man" });
+  const trailers = page.locator("#videos");
+  await expect(title).toBeVisible();
+  await expect(
+    trailers.getByRole("button", { name: "Play: Official Trailer" }),
+  ).toBeVisible();
+  const titleBounds = await title.boundingBox();
+  const mediaBounds = await trailers.boundingBox();
+  expect(titleBounds!.x + titleBounds!.width).toBeLessThan(mediaBounds!.x);
+  await expect(
+    trailers.getByRole("link", { name: /view gallery/i }),
+  ).toBeVisible();
 });
 
 test("highlight content and controls stay separate with a long title", async ({

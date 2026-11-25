@@ -52,7 +52,11 @@ export function MovieCrew({
   cast,
   crew,
   locale,
+  preview = false,
+  infoHref,
 }: {
+  preview?: boolean;
+  infoHref?: string;
   cast: Person[];
   crew: Person[];
   locale: string;
@@ -97,7 +101,7 @@ export function MovieCrew({
           return person ? [person] : [];
         })
       : [];
-    const preview = [...new Set([...featured, ...people])];
+    const orderedPeople = [...new Set([...featured, ...people])];
     const groups = isCrew
       ? (["direction", "production", "technical"] as const).map((key) => ({
           name: t[key],
@@ -108,58 +112,67 @@ export function MovieCrew({
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-display text-lg font-semibold">{title}</h3>
-          {people.length > 6 && (
-            <Dialog.Root>
-              <Dialog.Trigger asChild>
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-primary hover:underline"
-                >
-                  {t.more}
-                  <span className="sr-only">: {title}</span>
-                </button>
-              </Dialog.Trigger>
-              <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xl">
-                  <div className="flex items-center justify-between gap-3">
-                    <Dialog.Title className="font-display text-xl font-bold">
+          {preview && infoHref ? (
+            <Link
+              href={infoHref}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              {t.more}
+            </Link>
+          ) : (
+            people.length > 6 && (
+              <Dialog.Root>
+                <Dialog.Trigger asChild>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-primary hover:underline"
+                  >
+                    {t.more}
+                    <span className="sr-only">: {title}</span>
+                  </button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75" />
+                  <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xl">
+                    <div className="flex items-center justify-between gap-3">
+                      <Dialog.Title className="font-display text-xl font-bold">
+                        {title}
+                      </Dialog.Title>
+                      <Dialog.Close className="text-sm font-semibold text-primary">
+                        {t.close}
+                      </Dialog.Close>
+                    </div>
+                    <Dialog.Description className="sr-only">
                       {title}
-                    </Dialog.Title>
-                    <Dialog.Close className="text-sm font-semibold text-primary">
-                      {t.close}
-                    </Dialog.Close>
-                  </div>
-                  <Dialog.Description className="sr-only">
-                    {title}
-                  </Dialog.Description>
-                  {groups
-                    .filter((g) => g.people.length > 0)
-                    .map((g) => (
-                      <section key={g.name} className="mt-4">
-                        <h4 className="font-semibold">{g.name}</h4>
-                        <ul className="divide-y divide-border">
-                          {g.people.map((p, i) => (
-                            <li key={`${p.id}-${p.job || p.character}-${i}`}>
-                              <Link
-                                className="block py-2 hover:text-primary"
-                                href={`/${locale}/person/${p.id}`}
-                              >
-                                <strong>{p.name}</strong>
-                                {role(p) && (
-                                  <span className="block text-sm text-subtle">
-                                    {role(p)}
-                                  </span>
-                                )}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    ))}
-                </Dialog.Content>
-              </Dialog.Portal>
-            </Dialog.Root>
+                    </Dialog.Description>
+                    {groups
+                      .filter((g) => g.people.length > 0)
+                      .map((g) => (
+                        <section key={g.name} className="mt-4">
+                          <h4 className="font-semibold">{g.name}</h4>
+                          <ul className="divide-y divide-border">
+                            {g.people.map((p, i) => (
+                              <li key={`${p.id}-${p.job || p.character}-${i}`}>
+                                <Link
+                                  className="block py-2 hover:text-primary"
+                                  href={`/${locale}/person/${p.id}`}
+                                >
+                                  <strong>{p.name}</strong>
+                                  {role(p) && (
+                                    <span className="block text-sm text-subtle">
+                                      {role(p)}
+                                    </span>
+                                  )}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      ))}
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            )
           )}
         </div>
         <Rail
@@ -168,7 +181,7 @@ export function MovieCrew({
           previous={common.previous}
           next={common.next}
         >
-          {preview.slice(0, 6).map((p, i) => (
+          {(preview ? orderedPeople.slice(0, 6) : orderedPeople).map((p, i) => (
             <PersonCard
               key={`${p.id}-${p.job || p.character}-${i}`}
               id={p.id}
@@ -189,7 +202,7 @@ export function MovieCrew({
         {t.title}
       </h2>
       {row(t.cast, cast, false)}
-      {row(t.crew, crew, true)}
+      {(!preview || !cast.length) && row(t.crew, crew, true)}
       {!cast.length && !crew.length && <p className="text-subtle">{t.empty}</p>}
     </section>
   );

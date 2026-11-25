@@ -5,6 +5,8 @@ import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
 import {
   getMovieVideos,
+  getMovieReleases,
+  movieRegion,
   imageUrl,
   titleName,
   year,
@@ -17,53 +19,54 @@ import { MovieExtraPanel } from "./MovieExtraPanel";
 import { MovieOverview } from "./MovieOverview";
 import { MovieSectionNavigation } from "./MovieSectionNavigation";
 import { movieReviewId } from "./movie-section-links";
-import { MovieVideos } from "./MovieVideos";
+import { MovieHeroTrailers } from "./MovieHeroTrailers";
+import { MovieGallery } from "./MovieGallery";
+import Link from "next/link";
 import { TitleActions } from "./TitleActions";
 import { getTitleActionsData } from "./title-actions-data";
 
 const labels = {
   en: {
     loading: "Loading…",
-    videoError: "The video list is temporarily unavailable.",
     reviews: "Community reviews",
+    watchDetails: "View information",
   },
   "pt-BR": {
     loading: "Carregando…",
-    videoError: "A lista de vídeos está temporariamente indisponível.",
     reviews: "Resenhas da comunidade",
+    watchDetails: "Ver informações",
   },
   es: {
     loading: "Cargando…",
-    videoError: "La lista de vídeos no está disponible temporalmente.",
     reviews: "Reseñas de la comunidad",
+    watchDetails: "Ver información",
   },
 };
 
-type MovieLabels = (typeof labels)[keyof typeof labels];
 type MovieStats = { average_rating: number; review_count: number } | null;
 
-async function HeroVideos({
+async function Certification({
   locale,
-  item,
-  text,
+  id,
+  country,
 }: {
   locale: string;
-  item: Title;
-  text: MovieLabels;
+  id: number;
+  country?: string;
 }) {
-  const result = await getMovieVideos(locale, item.id).then(
-    (videos) => ({ videos, failed: false }),
-    () => ({ videos: [], failed: true }),
-  );
-  return (
-    <MovieVideos
-      key={item.id}
-      videos={result.videos}
-      locale={locale}
-      backdropPath={item.backdrop_path}
-      unavailableMessage={result.failed ? text.videoError : undefined}
-    />
-  );
+  const releases = await getMovieReleases(
+    locale,
+    id,
+    movieRegion(locale, country),
+  ).catch(() => []);
+  const certification = releases.find(
+    (release) => release.certification,
+  )?.certification;
+  return certification ? (
+    <strong className="ml-2 inline-block rounded bg-primary/15 px-1.5 text-primary">
+      {certification}
+    </strong>
+  ) : null;
 }
 
 async function HeroRating({
@@ -78,7 +81,7 @@ async function HeroRating({
   return (
     <span className="inline-flex items-center gap-2 border-l border-border pl-3">
       <FilmgramRating value={Number(result.average_rating)} locale={locale} />
-      <small className="font-medium">Filmgram</small>
+      <span className="font-medium">Filmgram</span>
     </span>
   );
 }
@@ -128,9 +131,9 @@ async function TitleLikeCount({
     p_tmdb_id: id,
   });
   return (
-    <small className="font-medium text-cast-foreground">
+    <span className="font-medium text-cast-foreground">
       ♡ {Number(result?.data || 0)} {messages(locale).likes}
-    </small>
+    </span>
   );
 }
 
@@ -140,7 +143,11 @@ async function CommunityReviews({
   review,
   stats,
   user,
+  preview,
+  reviewsHref,
 }: {
+  preview?: boolean;
+  reviewsHref?: string;
   item: Title;
   locale: string;
   review: string | undefined;
@@ -151,6 +158,8 @@ async function CommunityReviews({
   return (
     <div data-movie-reviews-target={movieReviewId(review) || ""}>
       <MovieReviews
+        preview={preview}
+        reviewsHref={reviewsHref}
         locale={locale}
         tmdbId={item.id}
         reviewId={movieReviewId(review)}
@@ -173,7 +182,9 @@ export function MovieDetail({
   country,
   tab,
   review,
+  media,
 }: {
+  media?: string;
   item: Title;
   locale: string;
   country: string | undefined;
@@ -190,13 +201,48 @@ export function MovieDetail({
       .single();
     return response?.data ?? null;
   });
+  const videos = getMovieVideos(locale, item.id);
+  const base = "/" + locale + "/title/movie/" + item.id;
+  const href = (nextTab?: string, category?: string) => {
+    const query = new URLSearchParams();
+    if (country) query.set("country", country);
+    if (nextTab) query.set("tab", nextTab);
+    if (category) query.set("media", category);
+    const suffix = query.toString();
+    return base + (suffix ? "?" + suffix : "");
+  };
+  const active = review
+    ? "reviews"
+    : tab === "info" || tab === "reviews" || tab === "gallery"
+      ? tab
+      : ["overview", "crew", "releases", "watch"].includes(tab || "")
+        ? "info"
+        : "overview";
+  const category =
+    media === "posters" || media === "images" || media === "extras"
+      ? media
+      : undefined;
+  const tabs =
+    locale === "pt-BR"
+      ? ["Visão geral", "Informações", "Resenhas", "Galeria"]
+      : locale === "es"
+        ? ["Resumen", "Información", "Reseñas", "Galería"]
+        : ["Overview", "Info", "Reviews", "Gallery"];
   const backdrop = imageUrl(item.backdrop_path, "original");
-  const date = year(item);
+  const rawDate = item.release_date;
+  const parsedDate = rawDate ? new Date(rawDate + "T00:00:00Z") : null;
+  const date =
+    parsedDate && !Number.isNaN(parsedDate.valueOf())
+      ? new Intl.DateTimeFormat(locale, {
+          dateStyle: "medium",
+          timeZone: "UTC",
+        }).format(parsedDate)
+      : year(item);
   const genres = item.genres?.map((genre) => genre.name) || [];
   const runtime = item.runtime
     ? Math.floor(item.runtime / 60) + "h " + (item.runtime % 60) + "m"
     : "";
-  const metadata = [...genres, runtime].filter(Boolean).join(" · ");
+  const metadata = [date, runtime, ...genres].filter(Boolean).join(" · ");
 
   return (
     <main>
@@ -216,17 +262,36 @@ export function MovieDetail({
         <div
           className={cn(
             container,
-            "grid items-center gap-6 pt-8 pb-12 min-[801px]:grid-cols-2 min-[801px]:gap-8 min-[801px]:pt-12 min-[801px]:pb-16",
+            "grid gap-6 pt-8 pb-12 min-[801px]:min-h-[28rem] min-[801px]:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] min-[801px]:gap-8 min-[801px]:pt-10 min-[801px]:pb-10",
           )}
         >
-          <div className="min-w-0 space-y-3">
-            <p className={eyebrow}>
-              {[t.film, date].filter(Boolean).join(" · ")}
-            </p>
+          <div className="min-w-0 space-y-3 min-[801px]:self-end">
+            <p className={eyebrow}>{t.film}</p>
             <h1 className="font-display text-[clamp(2.6rem,6.3vw,5.25rem)] leading-none font-bold tracking-[-.025em] [overflow-wrap:anywhere]">
               {titleName(item)}
             </h1>
-            {metadata && <p className="text-sm text-detail-meta">{metadata}</p>}
+            {item.original_title && item.original_title !== titleName(item) && (
+              <p className="text-sm text-detail-meta">
+                {locale === "pt-BR"
+                  ? "Título original"
+                  : locale === "es"
+                    ? "Título original"
+                    : "Original title"}{" "}
+                · {item.original_title}
+              </p>
+            )}
+            {metadata && (
+              <p className="text-sm text-detail-meta">
+                {metadata}
+                <Suspense fallback={null}>
+                  <Certification
+                    locale={locale}
+                    id={item.id}
+                    country={country}
+                  />
+                </Suspense>
+              </p>
+            )}
             <p className="max-w-[52ch] leading-relaxed text-title-overview">
               {item.overview || t.noOverview}
             </p>
@@ -243,7 +308,7 @@ export function MovieDetail({
                       }).format(item.vote_average) + "/10"
                     : "—"}
                 </strong>
-                <small className="font-medium">TMDB</small>
+                <span className="font-medium">TMDB</span>
               </span>
               <Suspense fallback={null}>
                 <HeroRating stats={stats} locale={locale} />
@@ -256,7 +321,10 @@ export function MovieDetail({
               <MovieActions item={item} locale={locale} db={db} user={user} />
             </Suspense>
           </div>
-          <div id="videos" className="min-w-0 scroll-mt-4">
+          <div
+            id="videos"
+            className="w-full min-w-0 scroll-mt-4 min-[801px]:max-w-[28.75rem] min-[801px]:justify-self-end"
+          >
             <Suspense
               fallback={
                 <div
@@ -267,64 +335,125 @@ export function MovieDetail({
                 </div>
               }
             >
-              <HeroVideos item={item} locale={locale} text={text} />
+              <MovieHeroTrailers
+                item={item}
+                locale={locale}
+                videos={videos}
+                galleryHref={href("gallery") + "#gallery"}
+              />
             </Suspense>
           </div>
         </div>
       </div>
-      <div
+      <nav
+        aria-label={
+          locale === "pt-BR"
+            ? "Seções do filme"
+            : locale === "es"
+              ? "Secciones de la película"
+              : "Movie sections"
+        }
         className={cn(
           container,
-          "grid min-w-0 grid-cols-1 gap-y-8 pb-28 min-[801px]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]",
+          "grid grid-cols-4 gap-2 border-y border-border sm:gap-5",
         )}
       >
-        <div className="min-w-0 space-y-5 min-[801px]:pr-6 lg:pr-8">
-          <div id="cast-and-crew" className="scroll-mt-4">
-            <MovieCrew
-              cast={item.credits?.cast || []}
-              crew={item.credits?.crew || []}
-              locale={locale}
-            />
-          </div>
-          <MovieExtraPanel
-            id={item.id}
-            locale={locale}
-            country={country}
-            loading={text.loading}
-          />
-          <div
-            id="film-details"
-            className="scroll-mt-4 border-t border-border pt-4"
+        {["overview", "info", "reviews", "gallery"].map((section, index) => (
+          <Link
+            key={section}
+            href={href(section === "overview" ? undefined : section)}
+            aria-current={active === section ? "page" : undefined}
+            className={cn(
+              "w-fit min-w-0 border-b-2 py-4 font-display text-base leading-tight font-semibold sm:text-xl",
+              active === section
+                ? "border-primary text-foreground"
+                : "border-transparent text-subtle hover:text-foreground",
+            )}
           >
-            <MovieOverview item={item} locale={locale} />
-          </div>
-        </div>
-        <section
-          id="reviews"
-          aria-label={text.reviews}
-          className="min-w-0 scroll-mt-4 border-t border-border pt-5 min-[801px]:border-t-0 min-[801px]:border-l min-[801px]:pt-0 min-[801px]:pl-6 lg:pl-8"
-        >
-          <Suspense
-            fallback={
-              <>
-                <h2 className="font-display text-[clamp(1.65rem,3.2vw,2.5rem)] leading-tight font-bold">
-                  {text.reviews}
-                </h2>
-                <p role="status" className="mt-3 text-sm text-subtle">
+            {tabs[index]}
+          </Link>
+        ))}
+      </nav>
+      <div className={cn(container, "space-y-10 pt-8 pb-28")}>
+        {(active === "overview" || active === "info") && (
+          <>
+            <div className="grid gap-8 min-[801px]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <div id="cast-and-crew" className="min-w-0 scroll-mt-4">
+                <MovieCrew
+                  cast={item.credits?.cast || []}
+                  crew={item.credits?.crew || []}
+                  locale={locale}
+                  preview={active === "overview"}
+                  infoHref={href("info") + "#cast-and-crew"}
+                />
+              </div>
+              <div className="min-w-0 space-y-8 min-[801px]:border-l min-[801px]:border-border min-[801px]:pl-8">
+                <MovieExtraPanel
+                  id={item.id}
+                  locale={locale}
+                  country={country}
+                  loading={text.loading}
+                  watchOnly={active === "overview"}
+                />
+                {active === "overview" ? (
+                  <Link
+                    href={href("info") + "#where-to-watch"}
+                    className="inline-block text-sm font-semibold text-primary hover:underline"
+                  >
+                    {text.watchDetails} <span aria-hidden>→</span>
+                  </Link>
+                ) : (
+                  <div
+                    id="film-details"
+                    className="scroll-mt-4 border-t border-border pt-4"
+                  >
+                    <MovieOverview item={item} locale={locale} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        {(active === "overview" || active === "reviews") && (
+          <section
+            id="reviews"
+            aria-label={text.reviews}
+            className="scroll-mt-4 border-t border-border pt-5"
+          >
+            <Suspense
+              fallback={
+                <p role="status" className="text-sm text-subtle">
                   {text.loading}
                 </p>
-              </>
-            }
-          >
-            <CommunityReviews
-              item={item}
+              }
+            >
+              <CommunityReviews
+                item={item}
+                locale={locale}
+                review={review}
+                stats={stats}
+                user={user}
+                preview={active === "overview"}
+                reviewsHref={href("reviews") + "#reviews"}
+              />
+            </Suspense>
+          </section>
+        )}
+        {(active === "overview" || active === "gallery") && (
+          <div id="gallery" className="scroll-mt-4">
+            <MovieGallery
               locale={locale}
-              review={review}
-              stats={stats}
-              user={user}
+              item={item}
+              videos={videos}
+              category={category}
+              variant={active === "overview" ? "preview" : "full"}
+              galleryHref={href("gallery") + "#gallery"}
+              categoryHref={(value: "posters" | "images" | "extras") =>
+                href("gallery", value) + "#gallery"
+              }
             />
-          </Suspense>
-        </section>
+          </div>
+        )}
       </div>
     </main>
   );

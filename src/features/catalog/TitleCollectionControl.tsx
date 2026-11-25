@@ -10,11 +10,13 @@ import { savedCollectionLabels } from "./saved-collection-labels";
 
 export function TitleCollectionControl({
   locale,
+  mediaType,
   saved,
   playlists,
   children,
 }: {
   locale: string;
+  mediaType?: string;
   saved: boolean;
   playlists: { id: string; name: string; contains: boolean }[];
   children: ReactNode;
@@ -52,7 +54,14 @@ export function TitleCollectionControl({
     >
       <Dialog.Trigger asChild>
         <Button type="button" variant="default">
-          <BookmarkPlus aria-hidden="true" /> {t.action}
+          <BookmarkPlus aria-hidden="true" />{" "}
+          {mediaType === "movie"
+            ? locale === "pt-BR"
+              ? "Salvar"
+              : locale === "es"
+                ? "Guardar"
+                : "Save"
+            : t.action}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>

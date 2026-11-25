@@ -25,10 +25,33 @@ export function MovieSectionNavigation({
         query ?? (fragmentIsReview ? fragment.slice(7) : null),
       );
 
-      // The server can't read a fragment. Bring a fragment-only review into the
-      // query so the server can fetch it even when it's outside the first page.
-      if (query === null && id && fragmentIsReview) {
-        url.searchParams.set("review", id);
+      const targetTab =
+        id || query !== null || fragmentIsReview || fragment === "reviews"
+          ? "reviews"
+          : [
+                "cast-and-crew",
+                "film-details",
+                "releases",
+                "where-to-watch",
+              ].includes(fragment)
+            ? "info"
+            : ["overview", "crew", "releases", "watch"].includes(
+                  url.searchParams.get("tab") || "",
+                )
+              ? "info"
+              : null;
+      const currentTab = url.searchParams.get("tab");
+      if (
+        (query === null && id && fragmentIsReview) ||
+        (targetTab && currentTab !== targetTab)
+      ) {
+        if (query === null && id && fragmentIsReview)
+          url.searchParams.set("review", id);
+        if (targetTab) {
+          if (!fragment && currentTab && legacyMovieSection(currentTab))
+            url.hash = legacyMovieSection(currentTab)!;
+          url.searchParams.set("tab", targetTab);
+        }
         const href = url.pathname + url.search + url.hash;
         if (pendingQuery.current !== href) {
           pendingQuery.current = href;
@@ -42,7 +65,12 @@ export function MovieSectionNavigation({
         ? "review-" + id
         : query !== null || fragmentIsReview
           ? "reviews"
-          : fragment || legacyMovieSection(url.searchParams.get("tab"));
+          : fragment ||
+            (["overview", "crew", "releases", "watch", "videos"].includes(
+              url.searchParams.get("tab") || "",
+            )
+              ? legacyMovieSection(url.searchParams.get("tab"))
+              : null);
 
       if (!target) {
         lastTarget.current = null;

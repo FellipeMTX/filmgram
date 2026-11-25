@@ -39,6 +39,7 @@ export function TitleActions({
   return (
     <div className={actionGroup}>
       <TitleCollectionControl
+        mediaType={item.media_type}
         locale={locale}
         saved={!!states.favorites}
         playlists={playlists}

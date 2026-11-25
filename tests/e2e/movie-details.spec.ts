@@ -16,26 +16,35 @@ test("movie sections share a responsive layout and retain credits", async ({
     watch.getByRole("heading", { name: "Where to watch", exact: true }),
   ).toBeVisible();
   await expect(
+    page.getByRole("link", { name: /Robert Downey Jr/ }).first(),
+  ).toHaveAttribute("href", "/en/person/3223");
+  await expect(
+    page.getByRole("navigation", { name: "Movie sections" }),
+  ).toBeVisible();
+  expect(await reviews.locator("article").count()).toBeLessThanOrEqual(2);
+  await expect(
+    reviews.getByRole("button", { name: "Write review" }),
+  ).toHaveCount(0);
+  await reviews.getByRole("link", { name: "View all reviews" }).click();
+  await expect(page).toHaveURL(/\?tab=reviews/);
+  await expect(
+    page.getByRole("button", { name: "Write review" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Info", exact: true }).click();
+  await expect(
     page
       .locator("#releases")
       .getByRole("heading", { name: "Release dates", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Robert Downey Jr/ }).first(),
-  ).toHaveAttribute("href", "/en/person/3223");
-  await expect(
     page.getByRole("link", { name: /Jon Favreau/ }).first(),
   ).toHaveAttribute("href", "/en/person/15277");
-  await expect(
-    page.getByRole("navigation", { name: "Title sections" }),
-  ).toHaveCount(0);
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
   const watchBox = await watch.boundingBox();
   const reviewsBox = await reviews.boundingBox();
   expect(watchBox).not.toBeNull();
   expect(reviewsBox).not.toBeNull();
-  if (page.viewportSize()!.width >= 1024)
-    expect(reviewsBox!.x).toBeGreaterThan(watchBox!.x);
-  else expect(reviewsBox!.y).toBeGreaterThan(watchBox!.y);
+  expect(reviewsBox!.y).toBeGreaterThan(watchBox!.y);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
@@ -49,7 +58,7 @@ test("movie sections share a responsive layout and retain credits", async ({
 test("one country updates releases and providers together", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1726");
+  await page.goto("/en/title/movie/1726?tab=info");
   await expect(page.getByText("May 2, 2008")).toBeVisible();
   await expect(page.getByText("Apple TV", { exact: true })).toBeVisible();
   const country = page.getByRole("combobox", {
@@ -63,7 +72,7 @@ test("one country updates releases and providers together", async ({
   await expect(page.getByText(/provided by JustWatch/i)).toBeVisible();
   await expect(
     page.getByRole("link", { name: /See availability on TMDB/ }),
-  ).toHaveAttribute("href", /themoviedb\.org/);
+  ).toHaveCount(0);
   await expect(country).toBeFocused();
 });
 
@@ -73,7 +82,6 @@ for (const [tab, anchor] of Object.entries({
   releases: "releases",
   videos: "videos",
   watch: "where-to-watch",
-  reviews: "reviews",
 })) {
   test(`legacy ${tab} links resolve to their section after navigation and reload`, async ({
     page,
@@ -98,16 +106,23 @@ test("video embed is created only after play", async ({ page }) => {
   const section = page.locator("#videos");
   await expect(section.locator("iframe")).toHaveCount(0);
   await section.getByRole("button", { name: "Play: Official Trailer" }).click();
-  const player = section.locator("iframe");
+  const player = page.getByRole("dialog").locator("iframe");
   await expect(player).toHaveCount(1);
   await expect(player).toHaveAttribute(
     "src",
     /youtube-nocookie\.com\/embed\/8ugaeA-nMTc/,
   );
   await expect(player).toHaveAttribute("title", /Official Trailer/);
+  const close = page.getByRole("dialog").getByRole("button", { name: "Close" });
+  if (page.viewportSize()!.width >= 1024) {
+    await page.setViewportSize({ width: 1024, height: 500 });
+    await expect(close).toBeInViewport();
+  }
+  await close.click();
+  await expect(player).toHaveCount(0);
   await expect(
-    section.getByRole("link", { name: /Watch on YouTube/ }),
-  ).toHaveAttribute("href", /youtube\.com\/watch\?v=8ugaeA-nMTc/);
+    section.getByRole("button", { name: "Play: Official Trailer" }),
+  ).toBeFocused();
 });
 
 test("series retains its existing layout", async ({ page }) => {
@@ -125,7 +140,7 @@ test("series retains its existing layout", async ({ page }) => {
 test("country options unite releases and providers with independent empty states", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1726");
+  await page.goto("/en/title/movie/1726?tab=info");
   const country = page.getByRole("combobox", {
     name: "Availability and release country",
   });
@@ -149,18 +164,38 @@ test("country options unite releases and providers with independent empty states
   ).toBeVisible();
 });
 
-test("switching videos removes the old embed and keeps focus on the selector", async ({
+test("gallery categories open images and extras independently of hero trailers", async ({
   page,
 }) => {
   await page.goto("/en/title/movie/1726");
-  const section = page.locator("#videos");
-  const selector = section.getByRole("combobox", { name: "Choose a video" });
-  await section.getByRole("button", { name: "Play: Official Trailer" }).click();
-  await expect(section.locator("iframe")).toHaveAttribute("src", /8ugaeA-nMTc/);
-  await selector.focus();
-  await selector.selectOption("iron-man-teaser-pt");
-  await expect(selector).toBeFocused();
-  await expect(section.locator("iframe")).toHaveCount(0);
-  await section.getByRole("button", { name: "Play: Teaser" }).click();
-  await expect(section.locator("iframe")).toHaveAttribute("src", /Ke1Y3P9D0Bc/);
+  const gallery = page.getByRole("region", { name: "Gallery" });
+  await gallery.getByRole("link", { name: /View gallery/ }).click();
+  await expect(page).toHaveURL(/tab=gallery/);
+  await page
+    .getByRole("button", { name: /View image: Iron Man/ })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await page
+    .getByRole("navigation", { name: "Gallery" })
+    .getByRole("link", { name: "Extra videos" })
+    .click();
+  await expect(page).toHaveURL(/media=extras/);
+  await expect(
+    page.getByRole("button", { name: "Play: Teaser" }),
+  ).toBeVisible();
+  await expect(
+    page.locator("#videos").getByRole("button", { name: "Play: Teaser" }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("region", { name: "Gallery" })
+      .getByRole("button", { name: "Play: Official Trailer" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Play: Teaser" }).click();
+  await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute(
+    "src",
+    /Ke1Y3P9D0Bc/,
+  );
 });

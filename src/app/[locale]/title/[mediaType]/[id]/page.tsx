@@ -30,6 +30,7 @@ export default async function Detail({
     review?: string | string[];
     tab?: string | string[];
     country?: string | string[];
+    media?: string | string[];
   }>;
 }) {
   const { locale, mediaType, id } = await params;
@@ -47,6 +48,7 @@ export default async function Detail({
         review={Array.isArray(query.review) ? query.review[0] : reviewParam}
         country={typeof query.country === "string" ? query.country : undefined}
         tab={typeof query.tab === "string" ? query.tab : undefined}
+        media={typeof query.media === "string" ? query.media : undefined}
       />
     );
   }

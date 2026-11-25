@@ -180,16 +180,6 @@ async function WatchProviders({
       )}
       <p className="mt-2 text-xs leading-relaxed text-subtle">
         {text.attribution}{" "}
-        {data?.link && (
-          <a
-            href={data.link}
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary hover:underline"
-          >
-            {text.providerLink} ↗
-          </a>
-        )}
       </p>
     </>
   );
@@ -251,7 +241,9 @@ export function MovieExtraPanel({
   id,
   country,
   loading,
+  watchOnly = false,
 }: {
+  watchOnly?: boolean;
   locale: string;
   id: number;
   country?: string;
@@ -271,7 +263,7 @@ export function MovieExtraPanel({
       <section
         id="where-to-watch"
         aria-labelledby="movie-watch-heading"
-        className="scroll-mt-4 border-t border-border pt-4"
+        className="scroll-mt-4"
       >
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="movie-watch-heading" className={heading}>
@@ -290,18 +282,20 @@ export function MovieExtraPanel({
           <WatchProviders locale={locale} region={region} id={id} text={text} />
         </Suspense>
       </section>
-      <section
-        id="releases"
-        aria-labelledby="movie-release-heading"
-        className="scroll-mt-4 border-t border-border pt-4"
-      >
-        <h2 id="movie-release-heading" className={"mb-2 " + heading}>
-          {text.releases}
-        </h2>
-        <Suspense fallback={fallback}>
-          <ReleaseDates locale={locale} region={region} id={id} text={text} />
-        </Suspense>
-      </section>
+      {!watchOnly && (
+        <section
+          id="releases"
+          aria-labelledby="movie-release-heading"
+          className="scroll-mt-4 border-t border-border pt-4"
+        >
+          <h2 id="movie-release-heading" className={"mb-2 " + heading}>
+            {text.releases}
+          </h2>
+          <Suspense fallback={fallback}>
+            <ReleaseDates locale={locale} region={region} id={id} text={text} />
+          </Suspense>
+        </section>
+      )}
     </>
   );
 }

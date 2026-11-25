@@ -26,10 +26,10 @@ test("cast links to the actor profile and filmography links back to a title", as
   ).toBeVisible();
 });
 
-test("movie overview links its director to a shared professional profile", async ({
+test("movie information links its director to a shared professional profile", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1726");
+  await page.goto("/en/title/movie/1726?tab=info");
   await page
     .getByRole("link", { name: /Jon Favreau/ })
     .first()
@@ -53,7 +53,7 @@ test("movie overview links its director to a shared professional profile", async
 test("co-directors are listed independently without changing series credits", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1003596");
+  await page.goto("/en/title/movie/1003596?tab=info");
   await expect(page.getByRole("link", { name: /Joe Russo/ })).toHaveAttribute(
     "href",
     "/en/person/19272",
