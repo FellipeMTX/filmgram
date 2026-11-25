@@ -96,7 +96,9 @@ export function TitleReviewContext({
   const router = useRouter();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [editing, setEditing] = useState(false);
+  const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
+    null,
+  );
   const [loadingMore, setLoadingMore] = useState(false);
   const [deletedSelected, setDeletedSelected] = useState(false);
   const l = labels[locale as keyof typeof labels] || labels.en;
@@ -151,8 +153,8 @@ export function TitleReviewContext({
     <CommunityEditorContext.Provider
       value={{
         own: own || null,
-        editing,
-        setEditing,
+        editingTrigger,
+        setEditingTrigger,
         locale,
         mediaType,
         tmdbId,
@@ -161,7 +163,7 @@ export function TitleReviewContext({
         refresh,
         onDeleted: async (id) => {
           if (id === reviewId) setDeletedSelected(true);
-          setEditing(false);
+          setEditingTrigger(null);
           setData((previous) =>
             previous
               ? {
@@ -233,7 +235,7 @@ export function TitleReviewContext({
               type="button"
               disabled={!data}
               aria-label={l.write}
-              onClick={() => setEditing(true)}
+              onClick={(event) => setEditingTrigger(event.currentTarget)}
             >
               +
             </Button>

@@ -14,6 +14,7 @@ export async function loadMovieReviewPage(
   tmdbId: number,
   selectedId: string | null,
   cursor?: MovieReviewCursor,
+  preview = false,
 ) {
   if (!Number.isSafeInteger(tmdbId) || tmdbId < 1)
     throw new Error("Invalid title");
@@ -28,9 +29,9 @@ export async function loadMovieReviewPage(
       p_after_followed: cursor?.followed ?? null,
       p_after_created_at: cursor?.createdAt ?? null,
       p_after_id: cursor?.id ?? null,
-      p_limit: 21,
+      p_limit: preview ? 2 : 21,
     }),
-    selected && !cursor
+    selected && !cursor && !preview
       ? db
           .from("reviews")
           .select(
@@ -44,7 +45,7 @@ export async function loadMovieReviewPage(
   ]);
   if (page.error) throw page.error;
   if (target.error) throw target.error;
-  const rows = page.data.slice(0, 20);
+  const rows = page.data.slice(0, preview ? 2 : 20);
   let targetRow: (typeof rows)[number] | null = null;
   if (target.data) {
     const existing = rows.find((r) => r.id === target.data!.id);
@@ -85,6 +86,8 @@ export async function loadMovieReviewPage(
   );
   return {
     reviews,
+    selectedOutsidePage:
+      !!targetRow && !rows.some((row) => row.id === targetRow!.id),
     summaries,
     next:
       page.data.length > pageRows.length && last

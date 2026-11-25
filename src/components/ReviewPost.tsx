@@ -21,6 +21,7 @@ import { TitleReviewContext } from "@/features/social/TitleReviewContext";
 import {
   CommunityEditControl,
   CommunityCardEditor,
+  useCommunityEditor,
 } from "@/features/social/CommunityEditor";
 import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
@@ -208,9 +209,14 @@ export function ReviewPost(props: ReviewPostProps) {
   const copyRef = useRef<HTMLDivElement>(null);
   const inlineHost = useRef<HTMLDivElement>(null);
   const modalHost = useRef<HTMLDivElement>(null);
+  const modalContent = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const card = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
+  const communityEditor = useCommunityEditor();
+  const editingThisCard =
+    !!communityEditor?.editingTrigger &&
+    communityEditor.own?.id === props.reviewId;
   const [mode, setMode] = useState<"read" | "discussion">("read");
   const [overflow, setOverflow] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -246,10 +252,21 @@ export function ReviewPost(props: ReviewPostProps) {
     };
   }, [text]);
 
+  const requestClose = () => {
+    const editor = modalContent.current?.querySelector("[data-review-editor]");
+    return (
+      !editor ||
+      editor.dispatchEvent(
+        new Event("filmgram-review-close", { cancelable: true }),
+      )
+    );
+  };
+
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(nextOpen) => {
+        if (!nextOpen && !requestClose()) return;
         if (!nextOpen && interactionContainer && inlineHost.current)
           inlineHost.current.appendChild(interactionContainer);
         setOpen(nextOpen);
@@ -270,7 +287,7 @@ export function ReviewPost(props: ReviewPostProps) {
             )
           )
             return;
-          if (window.getSelection()?.toString()) return;
+          if (editingThisCard || window.getSelection()?.toString()) return;
           opener.current = card.current;
           setMode("read");
           setOpen(true);
@@ -284,6 +301,7 @@ export function ReviewPost(props: ReviewPostProps) {
         {(!artwork || props.placement === "title") && (
           <button
             type="button"
+            disabled={editingThisCard}
             className="sr-only focus:not-sr-only focus:mb-3 focus:rounded focus:outline-2 focus:outline-primary"
             onClick={(event) => {
               opener.current = event.currentTarget;
@@ -413,7 +431,7 @@ export function ReviewPost(props: ReviewPostProps) {
               locale={props.locale}
             />
           )}
-        {props.placement === "title" && (
+        {props.placement === "title" && !open && (
           <CommunityCardEditor reviewId={props.reviewId} />
         )}
         <div
@@ -437,6 +455,7 @@ export function ReviewPost(props: ReviewPostProps) {
               mode,
               feed: props.placement !== "title",
               openDiscussion: (button) => {
+                if (editingThisCard) return;
                 opener.current = button;
                 setMode("discussion");
                 setOpen(true);
@@ -450,6 +469,7 @@ export function ReviewPost(props: ReviewPostProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/85" />
         <Dialog.Content
+          ref={modalContent}
           aria-describedby={undefined}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -473,7 +493,11 @@ export function ReviewPost(props: ReviewPostProps) {
             <Link
               href={titleReviewHref(titleHref, props.reviewId)}
               aria-label={`${t.title}: ${title}`}
-              onNavigate={() => {
+              onNavigate={(event) => {
+                if (!requestClose()) {
+                  event.preventDefault();
+                  return;
+                }
                 if (props.placement === "title") {
                   if (interactionContainer && inlineHost.current)
                     inlineHost.current.appendChild(interactionContainer);
@@ -594,7 +618,7 @@ export function ReviewPost(props: ReviewPostProps) {
                           locale={props.locale}
                         />
                       )}
-                    <CommunityCardEditor reviewId={props.reviewId} />
+                    {open && <CommunityCardEditor reviewId={props.reviewId} />}
                     <div
                       ref={(node) => {
                         modalHost.current = node;

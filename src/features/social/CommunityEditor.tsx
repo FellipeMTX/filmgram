@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RichReviewEditor } from "./RichReviewEditor";
 import { parseReviewContent } from "./review-content";
@@ -16,8 +16,8 @@ import type { loadTitleReviewContext } from "./title-review-context";
 type Own = Awaited<ReturnType<typeof loadTitleReviewContext>>["own"];
 export type EditorContext = {
   own: Own;
-  editing: boolean;
-  setEditing: (open: boolean) => void;
+  editingTrigger: HTMLElement | null;
+  setEditingTrigger: (trigger: HTMLElement | null) => void;
   locale: string;
   mediaType: "movie" | "tv";
   tmdbId: number;
@@ -67,7 +67,7 @@ export function CommunityEditControl({ reviewId }: { reviewId: string }) {
         variant="ghost"
         size="icon-sm"
         aria-label={label}
-        onClick={() => ctx.setEditing(true)}
+        onClick={(event) => ctx.setEditingTrigger(event.currentTarget)}
       >
         <Pencil size={16} />
       </Button>
@@ -147,9 +147,58 @@ export function CommunityEditor() {
   const [saving, setSaving] = useState(false);
   const [document, setDocument] =
     useState<Parameters<typeof RichReviewEditor>[0]["document"]>(null);
-  if (!ctx || !ctx.editing) return null;
-  const { own, locale, mediaType, tmdbId, userId, next, refresh, setEditing } =
-    ctx;
+  const formRef = useRef<HTMLFormElement>(null);
+  const initialDocument = useRef<string | null>(null);
+  const documentRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ctx?.editingTrigger) {
+      initialDocument.current = null;
+      documentRef.current = null;
+      return;
+    }
+    const close = (event: Event) => {
+      if (saving) {
+        event.preventDefault();
+        return;
+      }
+      const form = formRef.current;
+      if (!form) return;
+      const rating = new FormData(form).get("rating")?.toString() ?? "";
+      const changed =
+        rating !== (ctx.own?.rating == null ? "" : String(ctx.own.rating)) ||
+        (initialDocument.current !== null &&
+          documentRef.current !== initialDocument.current);
+      const prompt =
+        ctx.locale === "pt-BR"
+          ? "Descartar alterações?"
+          : ctx.locale === "es"
+            ? "¿Descartar los cambios?"
+            : "Discard changes?";
+      if (changed && !window.confirm(prompt)) {
+        event.preventDefault();
+        return;
+      }
+      const trigger = ctx.editingTrigger;
+      ctx.setEditingTrigger(null);
+      requestAnimationFrame(() => {
+        if (trigger?.isConnected) trigger.focus();
+      });
+    };
+    const form = formRef.current;
+    form?.addEventListener("filmgram-review-close", close);
+    return () => form?.removeEventListener("filmgram-review-close", close);
+  }, [ctx, saving]);
+  if (!ctx || !ctx.editingTrigger) return null;
+  const {
+    own,
+    locale,
+    mediaType,
+    tmdbId,
+    userId,
+    next,
+    refresh,
+    setEditingTrigger,
+  } = ctx;
   const t = messages(locale);
   if (!userId)
     return (
@@ -175,6 +224,21 @@ export function CommunityEditor() {
     );
   return (
     <form
+      ref={formRef}
+      data-review-editor
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Escape" ||
+          event.currentTarget.closest('[role="dialog"]')
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        const form = event.currentTarget;
+        form.dispatchEvent(
+          new Event("filmgram-review-close", { cancelable: true }),
+        );
+      }}
       onSubmit={async (event) => {
         event.preventDefault();
         if (saving) return;
@@ -185,7 +249,7 @@ export function CommunityEditor() {
         try {
           await submitReviewFromModal(form);
           await refresh();
-          setEditing(false);
+          setEditingTrigger(null);
         } catch {
           setError(true);
         } finally {
@@ -209,14 +273,31 @@ export function CommunityEditor() {
           body={own?.body || ""}
           document={parseReviewContent(own?.body_document)}
           video={own?.youtube_video_id || null}
-          onChange={setDocument}
+          onChange={(value) => {
+            const serialized = JSON.stringify(value);
+            if (initialDocument.current === null) {
+              initialDocument.current = serialized;
+              requestAnimationFrame(() =>
+                formRef.current
+                  ?.querySelector<HTMLElement>('[role="textbox"]')
+                  ?.focus(),
+              );
+            }
+            documentRef.current = serialized;
+            setDocument(value);
+          }}
         />
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
           variant="ghost"
-          onClick={() => setEditing(false)}
+          onClick={(event) => {
+            const form = event.currentTarget.form;
+            form?.dispatchEvent(
+              new Event("filmgram-review-close", { cancelable: true }),
+            );
+          }}
           disabled={saving}
         >
           {locale === "en" ? "Cancel" : "Cancelar"}

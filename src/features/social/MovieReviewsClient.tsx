@@ -44,6 +44,7 @@ const labels = {
     loading: "Loading…",
     error: "Could not load reviews.",
     retry: "Try again",
+    yours: "Your review",
   },
   "pt-BR": {
     title: "Resenhas da comunidade",
@@ -57,6 +58,7 @@ const labels = {
     loading: "Carregando…",
     error: "Não foi possível carregar as resenhas.",
     retry: "Tentar novamente",
+    yours: "Sua resenha",
   },
   es: {
     title: "Reseñas de la comunidad",
@@ -70,6 +72,7 @@ const labels = {
     loading: "Cargando…",
     error: "No se pudieron cargar las reseñas.",
     retry: "Reintentar",
+    yours: "Tu reseña",
   },
 };
 
@@ -78,6 +81,7 @@ export function MovieReviewsClient(
     initialPage: Page;
     own: Own;
     initialError?: boolean;
+    ownSeparate?: boolean;
   },
 ) {
   const { locale, tmdbId, reviewId, userId } = props;
@@ -115,8 +119,17 @@ export function MovieReviewsClient(
         : row,
     );
   const summaries = { ...extra?.summaries, ...props.initialPage.summaries };
+  const ownRow =
+    props.ownSeparate && own
+      ? reviews.find((row) => row.id === own.id)
+      : undefined;
+  const communityReviews = ownRow
+    ? reviews.filter((row) => row.id !== ownRow.id)
+    : reviews;
   const next = extra ? extra.next : props.initialPage.next;
-  const [editing, setEditing] = useState(false);
+  const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
+    null,
+  );
   const [pending, setPending] = useState(false);
   const [pageError, setPageError] = useState(false);
   const error = props.initialError || pageError;
@@ -153,8 +166,8 @@ export function MovieReviewsClient(
     <CommunityEditorContext.Provider
       value={{
         own,
-        editing,
-        setEditing,
+        editingTrigger,
+        setEditingTrigger,
         locale,
         mediaType: "movie",
         tmdbId,
@@ -165,7 +178,7 @@ export function MovieReviewsClient(
         },
         onDeleted: async (id) => {
           setDeletedId(id);
-          setEditing(false);
+          setEditingTrigger(null);
           router.refresh();
         },
       }}
@@ -205,7 +218,10 @@ export function MovieReviewsClient(
               <p className="text-sm text-subtle">{l.noRatings}</p>
             )}
             {!props.preview && !own && (
-              <Button type="button" onClick={() => setEditing(true)}>
+              <Button
+                type="button"
+                onClick={(event) => setEditingTrigger(event.currentTarget)}
+              >
                 <Pencil aria-hidden className="size-4" />
                 {l.write}
               </Button>
@@ -218,52 +234,61 @@ export function MovieReviewsClient(
         {!error && !reviews.length && (
           <p className="mt-4 text-muted-foreground">{l.empty}</p>
         )}
-        {(props.preview ? reviews.slice(0, 2) : reviews).map((row) => (
-          <ReviewPost
-            key={row.id}
-            reviewId={row.id}
-            tmdbId={tmdbId}
-            locale={locale}
-            authorId={row.user_id}
-            viewerId={userId}
-            followed={row.followed}
-            placement="title"
-            mediaType="movie"
-            author={{
-              name: row.display_name || t.member,
-              href: row.handle
-                ? "/" + locale + "/profile/" + row.handle
-                : undefined,
-              avatarUrl: row.avatar_url,
-            }}
-            date={new Date(row.created_at).toLocaleDateString(locale, {
-              timeZone: "UTC",
-            })}
-            title={props.title}
-            year={props.year || undefined}
-            rating={row.rating}
-            text={row.body || ""}
-            content={row.body_document}
-            titleHref={props.titleHref}
-            backdropUrl={props.backdropUrl}
-            posterUrl={props.posterUrl}
-            trailerUrl={
-              row.youtube_video_id
-                ? "https://www.youtube.com/watch?v=" + row.youtube_video_id
-                : null
-            }
-            interaction={
-              <ReviewDiscussion
+        {(ownRow ? [ownRow, ...communityReviews] : communityReviews).map(
+          (row) => (
+            <section
+              key={row.id}
+              aria-label={row.id === ownRow?.id ? l.yours : undefined}
+            >
+              {row.id === ownRow?.id && (
+                <h3 className="mt-4 text-lg font-bold">{l.yours}</h3>
+              )}
+              <ReviewPost
                 reviewId={row.id}
+                tmdbId={tmdbId}
                 locale={locale}
-                userId={userId}
-                initialCount={summaries[row.id]?.count}
-                initialCommentCount={summaries[row.id]?.commentCount}
-                initialLiked={summaries[row.id]?.liked}
+                authorId={row.user_id}
+                viewerId={userId}
+                followed={row.followed}
+                placement="title"
+                mediaType="movie"
+                author={{
+                  name: row.display_name || t.member,
+                  href: row.handle
+                    ? "/" + locale + "/profile/" + row.handle
+                    : undefined,
+                  avatarUrl: row.avatar_url,
+                }}
+                date={new Date(row.created_at).toLocaleDateString(locale, {
+                  timeZone: "UTC",
+                })}
+                title={props.title}
+                year={props.year || undefined}
+                rating={row.rating}
+                text={row.body || ""}
+                content={row.body_document}
+                titleHref={props.titleHref}
+                backdropUrl={props.backdropUrl}
+                posterUrl={props.posterUrl}
+                trailerUrl={
+                  row.youtube_video_id
+                    ? "https://www.youtube.com/watch?v=" + row.youtube_video_id
+                    : null
+                }
+                interaction={
+                  <ReviewDiscussion
+                    reviewId={row.id}
+                    locale={locale}
+                    userId={userId}
+                    initialCount={summaries[row.id]?.count}
+                    initialCommentCount={summaries[row.id]?.commentCount}
+                    initialLiked={summaries[row.id]?.liked}
+                  />
+                }
               />
-            }
-          />
-        ))}
+            </section>
+          ),
+        )}
         {error && (
           <p role="alert" className="mt-4">
             {l.error}{" "}

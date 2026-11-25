@@ -9,6 +9,7 @@ import {
 export async function MovieReviews(props: MovieReviewsProps) {
   let result: {
     page: Awaited<ReturnType<typeof loadMovieReviewPage>>;
+    ownSeparate: boolean;
     own: Awaited<
       ReturnType<typeof import("./title-review-context").loadTitleReviewContext>
     >["own"];
@@ -17,8 +18,13 @@ export async function MovieReviews(props: MovieReviewsProps) {
     const db = await supabase();
     if (!db) throw new Error("Database unavailable");
     const [page, own] = await Promise.all([
-      loadMovieReviewPage(props.tmdbId, props.reviewId),
-      props.userId
+      loadMovieReviewPage(
+        props.tmdbId,
+        props.reviewId,
+        undefined,
+        props.preview,
+      ),
+      props.userId && !props.preview
         ? db
             .from("reviews")
             .select(
@@ -32,6 +38,11 @@ export async function MovieReviews(props: MovieReviewsProps) {
     ]);
     if (own.error) throw own.error;
     const ownReview = own.data;
+    const ownSeparate =
+      !props.preview &&
+      !!ownReview &&
+      (!page.reviews.some((row) => row.id === ownReview.id) ||
+        (page.selectedOutsidePage && ownReview.id === props.reviewId));
     if (
       !props.preview &&
       ownReview &&
@@ -49,7 +60,7 @@ export async function MovieReviews(props: MovieReviewsProps) {
         await getReviewLikeSummaries(db, [ownReview.id]),
       );
     }
-    result = { page, own: ownReview };
+    result = { page, own: ownReview, ownSeparate };
   } catch {}
   if (!result)
     return (
@@ -57,7 +68,12 @@ export async function MovieReviews(props: MovieReviewsProps) {
         key={props.tmdbId + ":error"}
         {...props}
         initialError
-        initialPage={{ reviews: [], summaries: {}, next: null }}
+        initialPage={{
+          reviews: [],
+          summaries: {},
+          next: null,
+          selectedOutsidePage: false,
+        }}
         own={null}
       />
     );
@@ -73,6 +89,7 @@ export async function MovieReviews(props: MovieReviewsProps) {
       {...props}
       initialPage={result.page}
       own={result.own}
+      ownSeparate={result.ownSeparate}
     />
   );
 }
