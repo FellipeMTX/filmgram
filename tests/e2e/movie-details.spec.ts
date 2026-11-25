@@ -59,7 +59,9 @@ test("one country updates releases and providers together", async ({
   page,
 }) => {
   await page.goto("/en/title/movie/1726?tab=info");
-  await expect(page.getByText("May 2, 2008")).toBeVisible();
+  await expect(
+    page.locator("#releases").getByText("May 2, 2008"),
+  ).toBeVisible();
   await expect(page.getByText("Apple TV", { exact: true })).toBeVisible();
   const country = page.getByRole("combobox", {
     name: "Availability and release country",
@@ -67,7 +69,9 @@ test("one country updates releases and providers together", async ({
   await country.focus();
   await country.selectOption("BR");
   await expect(page).toHaveURL(/country=BR/);
-  await expect(page.getByText("April 30, 2008")).toBeVisible();
+  await expect(
+    page.locator("#releases").getByText("April 30, 2008"),
+  ).toBeVisible();
   await expect(page.getByText("Disney Plus", { exact: true })).toBeVisible();
   await expect(page.getByText(/provided by JustWatch/i)).toBeVisible();
   await expect(
@@ -198,4 +202,25 @@ test("gallery categories open images and extras independently of hero trailers",
     "src",
     /Ke1Y3P9D0Bc/,
   );
+});
+
+test("a single trailer keeps the gallery link and a direct unavailable trailers category is empty", async ({
+  page,
+}) => {
+  await page.goto("/en/title/movie/1726");
+  await expect(
+    page.getByRole("link", { name: "View all trailers" }),
+  ).toHaveCount(0);
+  await page.goto("/en/title/movie/1726?tab=gallery&media=trailers");
+  const gallery = page.getByRole("region", { name: "Gallery" });
+  await expect(
+    gallery.getByText("No media available in this category."),
+  ).toBeVisible();
+  await expect(
+    gallery.getByRole("link", { name: "Trailers", exact: true }),
+  ).toHaveCount(0);
+  await gallery.getByRole("link", { name: "Extra videos" }).click();
+  await expect(
+    gallery.getByRole("button", { name: "Play: Teaser" }),
+  ).toBeVisible();
 });

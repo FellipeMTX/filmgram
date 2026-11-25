@@ -22,6 +22,7 @@ import {
   movieReviewId,
   movieHref,
   resolveMovieLocation,
+  movieCategory,
   movieHeroRelease,
 } from "./movie-section-links";
 import { MovieHeroTrailers } from "./MovieHeroTrailers";
@@ -240,10 +241,7 @@ export function MovieDetail({
   const href = (nextTab?: string, category?: string) =>
     movieHref(base, { country, tab: nextTab, media: category });
   const { active } = resolveMovieLocation({ tab, review });
-  const category =
-    media === "posters" || media === "images" || media === "extras"
-      ? media
-      : undefined;
+  const category = movieCategory(media);
   const tabs =
     locale === "pt-BR"
       ? ["Visão geral", "Informações", "Resenhas", "Galeria"]
@@ -352,6 +350,7 @@ export function MovieDetail({
                 locale={locale}
                 videos={videos}
                 galleryHref={href("gallery") + "#gallery"}
+                trailersHref={href("gallery", "trailers") + "#gallery"}
               />
             </Suspense>
           </div>
@@ -461,9 +460,9 @@ export function MovieDetail({
               category={category}
               variant={active === "overview" ? "preview" : "full"}
               galleryHref={href("gallery") + "#gallery"}
-              categoryHref={(value: "posters" | "images" | "extras") =>
-                href("gallery", value) + "#gallery"
-              }
+              categoryHref={(
+                value: "posters" | "images" | "extras" | "trailers",
+              ) => href("gallery", value) + "#gallery"}
             />
           </div>
         )}

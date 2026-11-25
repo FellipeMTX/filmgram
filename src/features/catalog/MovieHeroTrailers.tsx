@@ -12,6 +12,7 @@ const labels = {
     title: "Trailers",
     single: "Trailer",
     gallery: "View gallery",
+    allTrailers: "View all trailers",
     loading: "Loading trailers…",
     error: "Trailers are temporarily unavailable.",
   },
@@ -19,6 +20,7 @@ const labels = {
     title: "Trailers",
     single: "Trailer",
     gallery: "Ver galeria",
+    allTrailers: "Ver todos os trailers",
     loading: "Carregando trailers…",
     error: "Trailers temporariamente indisponíveis.",
   },
@@ -26,47 +28,79 @@ const labels = {
     title: "Tráileres",
     single: "Tráiler",
     gallery: "Ver galería",
+    allTrailers: "Ver todos los tráileres",
     loading: "Cargando tráileres…",
     error: "Los tráileres no están disponibles temporalmente.",
   },
 };
+
+function GalleryLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="self-center rounded-md border border-border bg-background/80 px-4 py-2 text-sm font-semibold text-primary hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      {label} <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
+async function GalleryLinkWithImages({
+  images,
+  href,
+  label,
+}: {
+  images: Promise<Awaited<ReturnType<typeof getMovieImages>> | null>;
+  href: string;
+  label: string;
+}) {
+  const available = await images;
+  return available?.posters.length || available?.backdrops.length ? (
+    <GalleryLink href={href} label={label} />
+  ) : null;
+}
 
 async function Trailers({
   locale,
   item,
   videos,
   galleryHref,
+  trailersHref,
 }: {
   locale: string;
   item: Title;
   videos: Promise<MovieVideo[]>;
   galleryHref: string;
+  trailersHref: string;
 }) {
   const t = labels[locale as keyof typeof labels] || labels.en;
-  const [result, images] = await Promise.all([
-    videos.then(
-      (data) => ({ data, failed: false }),
-      () => ({ data: [], failed: true }),
-    ),
-    getMovieImages(locale, item.id).catch(() => null),
-  ]);
-  const trailers = result.data
-    .filter((video) => video.type === "Trailer")
-    .slice(0, 3);
-  const artwork = [
-    ...new Set(
-      [
-        item.backdrop_path,
-        ...(images?.backdrops.map((image) => image.file_path) ?? []),
-      ].filter((path): path is string => Boolean(path)),
-    ),
-  ].slice(0, trailers.length);
-  const hasMedia = !!(
-    images?.posters.length ||
-    images?.backdrops.length ||
-    result.data.some((video) => video.type !== "Trailer")
+  const result = await videos.then(
+    (data) => ({ data, failed: false }),
+    () => ({ data: [] as MovieVideo[], failed: true }),
   );
-  if (!trailers.length && !hasMedia && !result.failed) return null;
+  const allTrailers = result.data.filter((video) => video.type === "Trailer");
+  const trailers = allTrailers.slice(0, 3);
+  const hasGalleryVideos =
+    allTrailers.length > 3 ||
+    result.data.some((video) => video.type !== "Trailer");
+  const backdrop = item.backdrop_path ?? item.poster_path;
+  const images =
+    trailers.length > 1 || !hasGalleryVideos
+      ? getMovieImages(locale, item.id).catch(() => null)
+      : undefined;
+  const artwork =
+    trailers.length > 1 && images
+      ? images.then((data) =>
+          [
+            ...new Set(
+              [
+                item.backdrop_path,
+                ...(data?.backdrops ?? []).map((image) => image.file_path),
+              ].filter((path): path is string => !!path),
+            ),
+          ].slice(0, trailers.length),
+        )
+      : undefined;
   return (
     <div
       className={`flex h-full min-h-0 flex-col gap-3 ${trailers.length <= 1 ? "justify-center" : ""}`}
@@ -82,7 +116,7 @@ async function Trailers({
             <VideoCards
               locale={locale}
               videos={trailers}
-              backdrop={item.backdrop_path ?? item.poster_path}
+              backdrop={backdrop}
               artwork={artwork}
               hero
             />
@@ -94,13 +128,26 @@ async function Trailers({
           {t.error}
         </p>
       )}
-      {hasMedia && (
+      {allTrailers.length > 3 && (
         <Link
-          href={galleryHref}
-          className="self-center rounded-md border border-border bg-background/80 px-4 py-2 text-sm font-semibold text-primary hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          href={trailersHref}
+          className="self-center text-sm font-semibold text-primary hover:underline"
         >
-          {t.gallery} →
+          {t.allTrailers} →
         </Link>
+      )}
+      {hasGalleryVideos ? (
+        <GalleryLink href={galleryHref} label={t.gallery} />
+      ) : (
+        images && (
+          <Suspense>
+            <GalleryLinkWithImages
+              images={images}
+              href={galleryHref}
+              label={t.gallery}
+            />
+          </Suspense>
+        )
       )}
     </div>
   );
@@ -110,6 +157,7 @@ export function MovieHeroTrailers(props: {
   item: Title;
   videos: Promise<MovieVideo[]>;
   galleryHref: string;
+  trailersHref: string;
 }) {
   const t = labels[props.locale as keyof typeof labels] || labels.en;
   return (

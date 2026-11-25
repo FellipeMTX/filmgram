@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, use, useRef, useState } from "react";
 import Image from "next/image";
 import { Dialog } from "radix-ui";
 import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -37,6 +37,33 @@ const labels = {
   },
 };
 
+function VideoArtwork({ path }: { path?: string | null }) {
+  const src = imageUrl(path, "w780");
+  return src ? (
+    <Image
+      src={src}
+      alt=""
+      fill
+      sizes="(min-width: 900px) 40vw, 90vw"
+      unoptimized
+      className="object-cover transition-transform group-hover:scale-105 motion-reduce:transition-none"
+    />
+  ) : null;
+}
+
+function TrailerArtwork({
+  artwork,
+  index,
+  backdrop,
+}: {
+  artwork: Promise<string[]>;
+  index: number;
+  backdrop?: string | null;
+}) {
+  const images = use(artwork);
+  return <VideoArtwork path={images[index] ?? backdrop} />;
+}
+
 export function VideoCards({
   locale,
   videos,
@@ -47,7 +74,7 @@ export function VideoCards({
   locale: string;
   videos: MovieVideo[];
   backdrop?: string | null;
-  artwork?: string[];
+  artwork?: Promise<string[]>;
   hero?: boolean;
 }) {
   const [selected, setSelected] = useState<MovieVideo | null>(null);
@@ -73,52 +100,50 @@ export function VideoCards({
             : undefined
         }
       >
-        {videos.slice(0, limit).map((video, index) => {
-          const src = imageUrl(artwork?.[index] ?? backdrop, "w780");
-          return (
-            <Dialog.Trigger asChild key={video.id}>
-              <button
-                type="button"
-                onClick={(event) => {
-                  opener.current = event.currentTarget;
-                  setSelected(video);
-                }}
-                aria-label={`${t.play}: ${video.name}`}
-                className={`group relative w-full overflow-hidden rounded-xl border border-border bg-surface text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${hero && videos.length > 1 ? "min-h-28" : "aspect-video"}`}
-              >
-                {src && (
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    sizes="(min-width: 900px) 40vw, 90vw"
-                    unoptimized
-                    className="object-cover transition-transform group-hover:scale-105"
+        {videos.slice(0, limit).map((video, index) => (
+          <Dialog.Trigger asChild key={video.id}>
+            <button
+              type="button"
+              onClick={(event) => {
+                opener.current = event.currentTarget;
+                setSelected(video);
+              }}
+              aria-label={`${t.play}: ${video.name}`}
+              className={`group relative w-full overflow-hidden rounded-xl border border-border bg-surface text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${hero && videos.length > 1 ? "min-h-28" : "aspect-video"}`}
+            >
+              {artwork ? (
+                <Suspense fallback={<VideoArtwork path={backdrop} />}>
+                  <TrailerArtwork
+                    artwork={artwork}
+                    index={index}
+                    backdrop={backdrop}
                   />
-                )}
-                <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/20" />
-                <span
-                  className={
-                    hero && videos.length > 1
-                      ? "absolute right-3 top-3"
-                      : "absolute inset-0 grid place-items-center"
-                  }
-                >
-                  <span className="grid size-12 place-items-center rounded-full border border-white bg-black/50 text-white">
-                    <Play
-                      aria-hidden="true"
-                      fill="currentColor"
-                      className="size-5"
-                    />
-                  </span>
+                </Suspense>
+              ) : (
+                <VideoArtwork path={backdrop} />
+              )}
+              <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/20" />
+              <span
+                className={
+                  hero && videos.length > 1
+                    ? "absolute right-3 top-3"
+                    : "absolute inset-0 grid place-items-center"
+                }
+              >
+                <span className="grid size-12 place-items-center rounded-full border border-white bg-black/50 text-white">
+                  <Play
+                    aria-hidden="true"
+                    fill="currentColor"
+                    className="size-5"
+                  />
                 </span>
-                <span className="absolute inset-x-0 bottom-0 p-3 text-sm font-semibold text-white">
-                  {video.name}
-                </span>
-              </button>
-            </Dialog.Trigger>
-          );
-        })}
+              </span>
+              <span className="absolute inset-x-0 bottom-0 p-3 text-sm font-semibold text-white">
+                {video.name}
+              </span>
+            </button>
+          </Dialog.Trigger>
+        ))}
       </div>
       {videos.length > limit && (
         <button
