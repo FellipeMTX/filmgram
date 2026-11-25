@@ -34,6 +34,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      viewing_events: {
+        Row: {
+          genre_ids: number[]
+          id: string
+          kind: string
+          media_title: string
+          media_type: string
+          poster_path: string | null
+          request_id: string | null
+          tmdb_id: number
+          user_id: string
+          watched_at: string
+        }
+        Insert: {
+          genre_ids?: number[]
+          id?: string
+          kind: string
+          media_title: string
+          media_type: string
+          poster_path?: string | null
+          request_id?: string | null
+          tmdb_id: number
+          user_id: string
+          watched_at?: string
+        }
+        Update: {
+          genre_ids?: number[]
+          id?: string
+          kind?: string
+          media_title?: string
+          media_type?: string
+          poster_path?: string | null
+          request_id?: string | null
+          tmdb_id?: number
+          user_id?: string
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viewing_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_comment_likes: {
         Row: { comment_id: string; user_id: string; created_at: string }
         Insert: { comment_id: string; user_id: string; created_at?: string }
@@ -491,6 +538,37 @@ export type Database = {
       flat_review_comments: { Row: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }; Relationships: [] }
     }
     Functions: {
+      profile_viewing_stats: {
+        Args: { p_period?: string }
+        Returns: {
+          genre_counts: Json
+          movie_count: number
+          series_count: number
+        }[]
+      }
+      profile_viewing_titles: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_period?: string
+          p_ranking?: boolean
+          p_type?: string
+        }
+        Returns: {
+          genre_ids: number[]
+          last_watched_at: string
+          media_title: string
+          media_type: string
+          poster_path: string | null
+          tmdb_id: number
+          total_count: number
+          watch_count: number
+        }[]
+      }
+      record_rewatch: {
+        Args: { p_media_type: string; p_request_id: string; p_tmdb_id: number }
+        Returns: undefined
+      }
       review_comment_like_summaries: { Args: { p_comment_ids: string[] }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
       set_review_comment_like: { Args: { p_comment_id: string; p_liked: boolean }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
       movie_review_page: { Args: { p_tmdb_id: number; p_after_followed?: boolean | null; p_after_created_at?: string | null; p_after_id?: string | null; p_limit?: number }; Returns: { id: string; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null; followed: boolean }[] }
