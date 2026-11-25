@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { ReviewPost } from "@/components/ReviewPost";
 import { FilmgramRating } from "@/components/FilmgramRating";
@@ -26,6 +27,8 @@ export type MovieReviewsProps = {
   average: number;
   count: number;
   userId: string | null;
+  preview?: boolean;
+  reviewsHref?: string;
 };
 
 const labels = {
@@ -37,6 +40,7 @@ const labels = {
     empty: "No reviews yet.",
     noRatings: "No Filmgram ratings yet",
     more: "Load more",
+    all: "View all reviews",
     loading: "Loading…",
     error: "Could not load reviews.",
     retry: "Try again",
@@ -49,6 +53,7 @@ const labels = {
     empty: "Ainda não há resenhas.",
     noRatings: "Ainda não há avaliações Filmgram",
     more: "Ver mais",
+    all: "Ver todas",
     loading: "Carregando…",
     error: "Não foi possível carregar as resenhas.",
     retry: "Tentar novamente",
@@ -61,6 +66,7 @@ const labels = {
     empty: "Todavía no hay reseñas.",
     noRatings: "Todavía no hay valoraciones Filmgram",
     more: "Ver más",
+    all: "Ver todas",
     loading: "Cargando…",
     error: "No se pudieron cargar las reseñas.",
     retry: "Reintentar",
@@ -169,9 +175,19 @@ export function MovieReviewsClient(
         className="[overflow-wrap:anywhere]"
       >
         <div className="space-y-3 border-b border-border pb-4">
-          <h2 className="font-display text-[clamp(1.65rem,3.2vw,2.5rem)] leading-tight font-bold">
-            {l.title}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-[clamp(1.65rem,3.2vw,2.5rem)] leading-tight font-bold">
+              {l.title}
+            </h2>
+            {props.preview && props.reviewsHref && (
+              <Link
+                href={props.reviewsHref}
+                className="font-semibold text-primary hover:underline"
+              >
+                {l.all}
+              </Link>
+            )}
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             {props.count > 0 ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -188,10 +204,12 @@ export function MovieReviewsClient(
             ) : (
               <p className="text-sm text-subtle">{l.noRatings}</p>
             )}
-            <Button type="button" onClick={() => setEditing(true)}>
-              <Pencil aria-hidden className="size-4" />
-              {own ? l.edit : l.write}
-            </Button>
+            {!props.preview && !own && (
+              <Button type="button" onClick={() => setEditing(true)}>
+                <Pencil aria-hidden className="size-4" />
+                {l.write}
+              </Button>
+            )}
           </div>
         </div>
         {(!own || !reviews.some((row) => row.id === own.id)) && (
@@ -200,7 +218,7 @@ export function MovieReviewsClient(
         {!error && !reviews.length && (
           <p className="mt-4 text-muted-foreground">{l.empty}</p>
         )}
-        {reviews.map((row) => (
+        {(props.preview ? reviews.slice(0, 2) : reviews).map((row) => (
           <ReviewPost
             key={row.id}
             reviewId={row.id}
@@ -259,7 +277,7 @@ export function MovieReviewsClient(
             </button>
           </p>
         )}
-        {next && !pageError && (
+        {!props.preview && next && !pageError && (
           <Button
             variant="outline"
             className="mt-4"

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase";
 import { loadMovieReviewPage } from "./movie-review-page";
+import { getReviewLikeSummaries } from "./review-discussion-queries";
 import {
   MovieReviewsClient,
   type MovieReviewsProps,
@@ -20,7 +21,9 @@ export async function MovieReviews(props: MovieReviewsProps) {
       props.userId
         ? db
             .from("reviews")
-            .select("id,rating,body,body_document,youtube_video_id")
+            .select(
+              "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
+            )
             .eq("media_type", "movie")
             .eq("tmdb_id", props.tmdbId)
             .eq("user_id", props.userId)
@@ -28,7 +31,25 @@ export async function MovieReviews(props: MovieReviewsProps) {
         : Promise.resolve({ data: null, error: null }),
     ]);
     if (own.error) throw own.error;
-    result = { page, own: own.data };
+    const ownReview = own.data;
+    if (
+      !props.preview &&
+      ownReview &&
+      !page.reviews.some((row) => row.id === ownReview.id)
+    ) {
+      page.reviews.push({
+        ...ownReview,
+        display_name: ownReview.profiles?.display_name ?? null,
+        handle: ownReview.profiles?.handle ?? null,
+        avatar_url: ownReview.profiles?.avatar_url ?? null,
+        followed: false,
+      });
+      Object.assign(
+        page.summaries,
+        await getReviewLikeSummaries(db, [ownReview.id]),
+      );
+    }
+    result = { page, own: ownReview };
   } catch {}
   if (!result)
     return (
@@ -42,7 +63,13 @@ export async function MovieReviews(props: MovieReviewsProps) {
     );
   return (
     <MovieReviewsClient
-      key={[props.locale, props.tmdbId, props.reviewId, props.userId].join(":")}
+      key={[
+        props.locale,
+        props.tmdbId,
+        props.reviewId,
+        props.userId,
+        props.preview,
+      ].join(":")}
       {...props}
       initialPage={result.page}
       own={result.own}
