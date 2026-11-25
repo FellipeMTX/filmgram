@@ -25,9 +25,31 @@ export type EditorContext = {
   next: string;
   refresh: () => Promise<void>;
   onDeleted: (id: string) => Promise<void>;
+  guardRef: React.MutableRefObject<(() => boolean) | null>;
+  registerGuard: (guard: (() => boolean) | null) => void;
 };
 export const CommunityEditorContext = createContext<EditorContext | null>(null);
 export const useCommunityEditor = () => useContext(CommunityEditorContext);
+const draftKey = (userId: string | null, mediaType: string, tmdbId: number) =>
+  `filmgram-review-draft:${userId}:${mediaType}:${tmdbId}`;
+
+export function useRestoreReviewDraft(
+  userId: string | null,
+  mediaType: string,
+  tmdbId: number,
+  ready: boolean,
+  scope: React.RefObject<HTMLElement | null>,
+) {
+  useEffect(() => {
+    if (!userId || !ready) return;
+    try {
+      if (!sessionStorage.getItem(draftKey(userId, mediaType, tmdbId))) return;
+      scope.current
+        ?.querySelector<HTMLButtonElement>("[data-review-open]")
+        ?.click();
+    } catch {}
+  }, [userId, mediaType, tmdbId, ready, scope]);
+}
 
 export function CommunityEditControl({ reviewId }: { reviewId: string }) {
   const ctx = useCommunityEditor();
@@ -67,6 +89,7 @@ export function CommunityEditControl({ reviewId }: { reviewId: string }) {
         variant="ghost"
         size="icon-sm"
         aria-label={label}
+        data-review-open
         onClick={(event) => ctx.setEditingTrigger(event.currentTarget)}
       >
         <Pencil size={16} />
@@ -150,21 +173,51 @@ export function CommunityEditor() {
   const formRef = useRef<HTMLFormElement>(null);
   const initialDocument = useRef<string | null>(null);
   const documentRef = useRef<string | null>(null);
+  const restored = useRef(false);
+  const [restoredDraft, setRestoredDraft] = useState<
+    | {
+        rating: string;
+        document: Parameters<typeof RichReviewEditor>[0]["document"];
+        reviewId: string | null;
+      }
+    | null
+    | undefined
+  >(undefined);
+  const trigger = ctx?.editingTrigger;
+  const user = ctx?.userId;
+  const type = ctx?.mediaType;
+  const titleId = ctx?.tmdbId;
+  const ownId = ctx?.own?.id;
+  useEffect(() => {
+    if (!trigger || !type || titleId == null) return;
+    let draft = null;
+    try {
+      const value = sessionStorage.getItem(
+        draftKey(user || null, type, titleId),
+      );
+      const saved = value ? JSON.parse(value) : null;
+      if (saved && saved.reviewId === (ownId || null)) draft = saved;
+    } catch {}
+    restored.current = !!draft;
+    // Load browser-only session data after hydration and before mounting the editor.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRestoredDraft(draft);
+  }, [trigger, user, type, titleId, ownId]);
   useEffect(() => {
     if (!ctx?.editingTrigger) {
       initialDocument.current = null;
       documentRef.current = null;
       return;
     }
-    const close = (event: Event) => {
+    const close = () => {
       if (saving) {
-        event.preventDefault();
-        return;
+        return false;
       }
       const form = formRef.current;
-      if (!form) return;
+      if (!form) return true;
       const rating = new FormData(form).get("rating")?.toString() ?? "";
       const changed =
+        restored.current ||
         rating !== (ctx.own?.rating == null ? "" : String(ctx.own.rating)) ||
         (initialDocument.current !== null &&
           documentRef.current !== initialDocument.current);
@@ -175,20 +228,71 @@ export function CommunityEditor() {
             ? "¿Descartar los cambios?"
             : "Discard changes?";
       if (changed && !window.confirm(prompt)) {
-        event.preventDefault();
-        return;
+        return false;
       }
       const trigger = ctx.editingTrigger;
+      try {
+        sessionStorage.removeItem(
+          draftKey(ctx.userId, ctx.mediaType, ctx.tmdbId),
+        );
+      } catch {}
+      restored.current = false;
+      setRestoredDraft(undefined);
+      ctx.registerGuard(null);
       ctx.setEditingTrigger(null);
       requestAnimationFrame(() => {
         if (trigger?.isConnected) trigger.focus();
       });
+      return true;
     };
-    const form = formRef.current;
-    form?.addEventListener("filmgram-review-close", close);
-    return () => form?.removeEventListener("filmgram-review-close", close);
+    ctx.registerGuard(close);
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      const form = formRef.current;
+      if (!form) return;
+      const rating = new FormData(form).get("rating")?.toString() ?? "";
+      if (
+        saving ||
+        restored.current ||
+        rating !== (ctx.own?.rating == null ? "" : String(ctx.own.rating)) ||
+        (initialDocument.current !== null &&
+          documentRef.current !== initialDocument.current)
+      ) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    const navigate = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest("a[href]");
+      if (
+        !link ||
+        link.closest("[data-review-editor]") ||
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        link.getAttribute("target") === "_blank" ||
+        link.hasAttribute("download")
+      )
+        return;
+      if (!close()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    window.document.addEventListener("click", navigate, true);
+    return () => {
+      if (ctx.guardRef.current === close) ctx.registerGuard(null);
+      window.removeEventListener("beforeunload", beforeUnload);
+      window.document.removeEventListener("click", navigate, true);
+    };
   }, [ctx, saving]);
   if (!ctx || !ctx.editingTrigger) return null;
+  if (restoredDraft === undefined) return null;
   const {
     own,
     locale,
@@ -230,14 +334,12 @@ export function CommunityEditor() {
         if (
           event.key !== "Escape" ||
           event.currentTarget.closest('[role="dialog"]')
-        )
+        ) {
           return;
+        }
         event.preventDefault();
         event.stopPropagation();
-        const form = event.currentTarget;
-        form.dispatchEvent(
-          new Event("filmgram-review-close", { cancelable: true }),
-        );
+        ctx.guardRef.current?.();
       }}
       onSubmit={async (event) => {
         event.preventDefault();
@@ -248,8 +350,13 @@ export function CommunityEditor() {
         setError(false);
         try {
           await submitReviewFromModal(form);
-          await refresh();
+          try {
+            sessionStorage.removeItem(draftKey(userId, mediaType, tmdbId));
+          } catch {}
+          restored.current = false;
+          setRestoredDraft(undefined);
           setEditingTrigger(null);
+          await refresh().catch(() => {});
         } catch {
           setError(true);
         } finally {
@@ -257,13 +364,47 @@ export function CommunityEditor() {
         }
       }}
       className="space-y-3 rounded-lg border border-primary/50 bg-background p-3"
+      onChange={() => {
+        if (
+          !formRef.current ||
+          !documentRef.current ||
+          !initialDocument.current
+        )
+          return;
+        const rating =
+          new FormData(formRef.current).get("rating")?.toString() ?? "";
+        if (
+          !restored.current &&
+          rating === (own?.rating == null ? "" : String(own.rating)) &&
+          documentRef.current === initialDocument.current
+        ) {
+          try {
+            sessionStorage.removeItem(draftKey(userId, mediaType, tmdbId));
+          } catch {}
+          return;
+        }
+        try {
+          sessionStorage.setItem(
+            draftKey(userId, mediaType, tmdbId),
+            JSON.stringify({
+              rating,
+              document: JSON.parse(documentRef.current),
+              reviewId: own?.id || null,
+            }),
+          );
+        } catch {}
+      }}
     >
+      {own && <input type="hidden" name="review_id" value={own.id} />}
       <input type="hidden" name="media_type" value={mediaType} />
       <input type="hidden" name="tmdb_id" value={tmdbId} />
       <fieldset className="space-y-2 text-sm font-bold">
         <legend>{t.yourRating}</legend>
         <FilmgramRatingPicker
-          defaultValue={own?.rating == null ? "" : String(own.rating)}
+          defaultValue={
+            restoredDraft?.rating ??
+            (own?.rating == null ? "" : String(own.rating))
+          }
         />
       </fieldset>
       <div className="space-y-1">
@@ -271,7 +412,9 @@ export function CommunityEditor() {
         <RichReviewEditor
           locale={locale}
           body={own?.body || ""}
-          document={parseReviewContent(own?.body_document)}
+          document={
+            restoredDraft?.document ?? parseReviewContent(own?.body_document)
+          }
           video={own?.youtube_video_id || null}
           onChange={(value) => {
             const serialized = JSON.stringify(value);
@@ -285,6 +428,29 @@ export function CommunityEditor() {
             }
             documentRef.current = serialized;
             setDocument(value);
+            const rating = formRef.current
+              ? (new FormData(formRef.current).get("rating")?.toString() ?? "")
+              : "";
+            if (
+              restored.current ||
+              serialized !== initialDocument.current ||
+              rating !== (own?.rating == null ? "" : String(own.rating))
+            ) {
+              try {
+                sessionStorage.setItem(
+                  draftKey(userId, mediaType, tmdbId),
+                  JSON.stringify({
+                    rating,
+                    document: value,
+                    reviewId: own?.id || null,
+                  }),
+                );
+              } catch {}
+            } else {
+              try {
+                sessionStorage.removeItem(draftKey(userId, mediaType, tmdbId));
+              } catch {}
+            }
           }}
         />
       </div>
@@ -292,12 +458,7 @@ export function CommunityEditor() {
         <Button
           type="button"
           variant="ghost"
-          onClick={(event) => {
-            const form = event.currentTarget.form;
-            form?.dispatchEvent(
-              new Event("filmgram-review-close", { cancelable: true }),
-            );
-          }}
+          onClick={() => ctx.guardRef.current?.()}
           disabled={saving}
         >
           {locale === "en" ? "Cancel" : "Cancelar"}

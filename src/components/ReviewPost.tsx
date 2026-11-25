@@ -210,6 +210,7 @@ export function ReviewPost(props: ReviewPostProps) {
   const inlineHost = useRef<HTMLDivElement>(null);
   const modalHost = useRef<HTMLDivElement>(null);
   const modalContent = useRef<HTMLDivElement>(null);
+  const modalEditorGuard = useRef<(() => boolean) | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const card = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
@@ -253,13 +254,10 @@ export function ReviewPost(props: ReviewPostProps) {
   }, [text]);
 
   const requestClose = () => {
-    const editor = modalContent.current?.querySelector("[data-review-editor]");
-    return (
-      !editor ||
-      editor.dispatchEvent(
-        new Event("filmgram-review-close", { cancelable: true }),
-      )
-    );
+    const guard =
+      modalEditorGuard.current ||
+      (editingThisCard ? communityEditor?.guardRef.current : null);
+    return guard ? guard() : true;
   };
 
   return (
@@ -542,6 +540,7 @@ export function ReviewPost(props: ReviewPostProps) {
             </Link>
             {props.mediaType && (
               <TitleReviewContext
+                editorGuardRef={modalEditorGuard}
                 locale={props.locale}
                 mediaType={props.mediaType}
                 tmdbId={props.tmdbId}

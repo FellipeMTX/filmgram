@@ -2,7 +2,13 @@
 
 import { titleReviewHref } from "@/features/catalog/movie-section-links";
 
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,6 +19,7 @@ import {
   CommunityEditControl,
   CommunityCardEditor,
   useCommunityEditor,
+  useRestoreReviewDraft,
 } from "./CommunityEditor";
 import { loadTitleReviewContext } from "./title-review-context";
 import { ReviewDiscussion } from "./ReviewDiscussion";
@@ -78,6 +85,7 @@ export function TitleReviewContext({
   titleHref,
   onTitlePage,
   reuseEditor,
+  editorGuardRef,
   children,
 }: {
   locale: string;
@@ -88,9 +96,12 @@ export function TitleReviewContext({
   titleHref: string;
   onTitlePage?: boolean;
   reuseEditor?: { authorId: string; followed: boolean };
+  editorGuardRef?: RefObject<(() => boolean) | null>;
   children?: ReactNode;
 }) {
   const existingEditor = useCommunityEditor();
+  const localGuardRef = useRef<(() => boolean) | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const reuse = !!reuseEditor && !!existingEditor;
   const [data, setData] = useState<Context | null>(null);
   const router = useRouter();
@@ -121,16 +132,29 @@ export function TitleReviewContext({
     };
   }, [locale, mediaType, tmdbId, reviewId, attempt, reuse]);
   const own = data?.own;
+  useRestoreReviewDraft(
+    data?.userId || null,
+    mediaType,
+    tmdbId,
+    !!data && !reuse,
+    sectionRef,
+  );
   const others = data?.reviews || [];
   const refresh = async () => {
-    const updated = await loadTitleReviewContext(
-      locale,
-      mediaType,
-      tmdbId,
-      reviewId,
-    );
-    setData(updated);
-    if (onTitlePage) router.refresh();
+    try {
+      const updated = await loadTitleReviewContext(
+        locale,
+        mediaType,
+        tmdbId,
+        reviewId,
+      );
+      setData(updated);
+      setError(false);
+      if (onTitlePage) router.refresh();
+    } catch (reason) {
+      setError(true);
+      throw reason;
+    }
   };
   if (reuse && existingEditor && reuseEditor) {
     const selectedData = {
@@ -155,6 +179,12 @@ export function TitleReviewContext({
         own: own || null,
         editingTrigger,
         setEditingTrigger,
+        guardRef: editorGuardRef || localGuardRef,
+        registerGuard: (guard) => {
+          // The parent supplies this ref specifically to register the dialog guard.
+          // eslint-disable-next-line react-hooks/immutability
+          (editorGuardRef || localGuardRef).current = guard;
+        },
         locale,
         mediaType,
         tmdbId,
@@ -222,6 +252,7 @@ export function TitleReviewContext({
         </div>
       )}
       <section
+        ref={sectionRef}
         className={
           onTitlePage
             ? "space-y-4 [overflow-wrap:anywhere]"
@@ -230,11 +261,12 @@ export function TitleReviewContext({
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-2xl font-bold">{l.community}</h2>
-          {!own && (
+          {!own && !error && (
             <Button
               type="button"
               disabled={!data}
               aria-label={l.write}
+              data-review-open
               onClick={(event) => setEditingTrigger(event.currentTarget)}
             >
               +
@@ -260,7 +292,20 @@ export function TitleReviewContext({
           </article>
         )}
         {onTitlePage ? (
-          children
+          <>
+            {error && (
+              <p role="alert">
+                {l.error}{" "}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setAttempt((n) => n + 1)}
+                >
+                  {l.retry}
+                </button>
+              </p>
+            )}
+            {children}
+          </>
         ) : (
           <>
             {!data && !error && <p role="status">{l.loading}</p>}

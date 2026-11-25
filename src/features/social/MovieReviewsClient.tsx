@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
@@ -8,7 +8,11 @@ import { ReviewPost } from "@/components/ReviewPost";
 import { FilmgramRating } from "@/components/FilmgramRating";
 import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
-import { CommunityEditorContext, CommunityEditor } from "./CommunityEditor";
+import {
+  CommunityEditorContext,
+  CommunityEditor,
+  useRestoreReviewDraft,
+} from "./CommunityEditor";
 import { ReviewDiscussion } from "./ReviewDiscussion";
 import { loadMovieReviewPage } from "./movie-review-page";
 import type { loadTitleReviewContext } from "./title-review-context";
@@ -130,9 +134,18 @@ export function MovieReviewsClient(
   const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
     null,
   );
+  const guardRef = useRef<(() => boolean) | null>(null);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
   const [pending, setPending] = useState(false);
   const [pageError, setPageError] = useState(false);
   const error = props.initialError || pageError;
+  useRestoreReviewDraft(
+    userId,
+    "movie",
+    tmdbId,
+    !props.initialError && !props.preview,
+    sectionRef,
+  );
 
   async function loadMore() {
     if (!next || pending) return;
@@ -168,6 +181,10 @@ export function MovieReviewsClient(
         own,
         editingTrigger,
         setEditingTrigger,
+        guardRef,
+        registerGuard: (guard) => {
+          guardRef.current = guard;
+        },
         locale,
         mediaType: "movie",
         tmdbId,
@@ -184,6 +201,7 @@ export function MovieReviewsClient(
       }}
     >
       <div
+        ref={sectionRef}
         data-movie-reviews-ready={props.initialError ? undefined : true}
         className="[overflow-wrap:anywhere]"
       >
@@ -217,9 +235,10 @@ export function MovieReviewsClient(
             ) : (
               <p className="text-sm text-subtle">{l.noRatings}</p>
             )}
-            {!props.preview && !own && (
+            {!props.preview && !props.initialError && !own && (
               <Button
                 type="button"
+                data-review-open
                 onClick={(event) => setEditingTrigger(event.currentTarget)}
               >
                 <Pencil aria-hidden className="size-4" />

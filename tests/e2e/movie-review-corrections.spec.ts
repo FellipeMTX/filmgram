@@ -82,7 +82,13 @@ test("keeps own review unique across pagination and closes an edited modal safel
         if (result.error) throw result.error;
       }),
     );
-    await page.goto("/en/title/movie/1003596?tab=reviews&country=CY");
+    await page.goto("/en/title/movie/1003596?country=CY&tab=gallery");
+    const movieSections = page.getByRole("navigation", {
+      name: "Movie sections",
+    });
+    await movieSections
+      .getByRole("link", { name: "Reviews", exact: true })
+      .click();
     const ownCard = page.locator(`#review-${ownId}`);
     await expect(
       page.getByRole("heading", { name: "Your review" }),
@@ -101,6 +107,19 @@ test("keeps own review unique across pagination and closes an edited modal safel
     await expect(inlineEditor).toBeFocused();
     await inlineEditor.fill("Unsaved change");
     page.once("dialog", (dialog) => dialog.dismiss());
+    await movieSections
+      .getByRole("link", { name: "Gallery", exact: true })
+      .click();
+    await expect(page).toHaveURL(/tab=reviews/);
+    await expect(inlineEditor).toHaveText("Unsaved change");
+
+    await page.goBack();
+    await expect(page).toHaveURL(/tab=gallery/);
+    await page.goForward();
+    await expect(page).toHaveURL(/tab=reviews/);
+    await expect(inlineEditor).toHaveText("Unsaved change");
+
+    page.once("dialog", (dialog) => dialog.dismiss());
     await ownCard.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(inlineEditor).toBeVisible();
     page.once("dialog", (dialog) => dialog.accept());
@@ -117,6 +136,13 @@ test("keeps own review unique across pagination and closes an edited modal safel
     await expect(
       page.getByRole("textbox", { name: "Write a review" }),
     ).toHaveCount(1);
+    const modalEditor = modal.getByRole("textbox", { name: "Write a review" });
+    await modalEditor.fill("Unsaved modal change");
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await modal.locator('a[href*="/profile/"]').first().click();
+    await expect(modal).toBeVisible();
+    await expect(modalEditor).toHaveText("Unsaved modal change");
+
     await modal.locator('label:has(input[name="rating"][value="1"])').click();
     page.once("dialog", (dialog) => dialog.dismiss());
     await page.keyboard.press("Escape");

@@ -84,18 +84,28 @@ async function saveReview(form: FormData, revalidate: boolean) {
   const videoBlock = document?.blocks.find((block) => block.type === "youtube");
   const video = reviewVideoId(videoBlock?.url ?? url);
   if (url && !video) throw new Error("Enter a valid YouTube video URL");
-  const { error } = await db.from("reviews").upsert(
-    {
-      user_id: user.id,
-      media_type,
-      tmdb_id,
-      rating,
-      body: (document ? reviewPlainText(document) : text(form, "body")) || null,
-      body_document: document,
-      youtube_video_id: video,
-    },
-    { onConflict: "user_id,media_type,tmdb_id" },
-  );
+  const reviewId = text(form, "review_id");
+  const values = {
+    rating,
+    body: (document ? reviewPlainText(document) : text(form, "body")) || null,
+    body_document: document,
+    youtube_video_id: video,
+  };
+  const result = reviewId
+    ? await db
+        .from("reviews")
+        .update(values)
+        .eq("id", reviewId)
+        .eq("user_id", user.id)
+        .eq("media_type", media_type)
+        .eq("tmdb_id", tmdb_id)
+        .select("id")
+        .maybeSingle()
+    : await db
+        .from("reviews")
+        .insert({ ...values, user_id: user.id, media_type, tmdb_id });
+  const { error } = result;
+  if (reviewId && !error && !result.data) throw new Error("Review not found");
   if (error) throw error;
   if (revalidate) revalidatePath("/", "layout");
 }
