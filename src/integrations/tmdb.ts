@@ -346,6 +346,68 @@ export async function getMovieVideos(
   });
 }
 
+const movieImageSchema = z.object({
+  file_path: z.string().regex(/^\/[A-Za-z0-9_.-]+$/),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  iso_639_1: z.string().nullable().optional().catch(null),
+  vote_average: z.number().optional().catch(0),
+});
+export type MovieImage = z.infer<typeof movieImageSchema>;
+export type MovieImages = { posters: MovieImage[]; backdrops: MovieImage[] };
+export const getMovieImages = cache(
+  async (locale: string, id: number): Promise<MovieImages> => {
+    if (process.env.FILMGRAM_FIXTURES === "1") {
+      const item = fixtures.find(
+        (entry) => entry.media_type === "movie" && entry.id === id,
+      );
+      const make = (
+        file_path: string,
+        width: number,
+        height: number,
+      ): MovieImage => ({
+        file_path,
+        width,
+        height,
+        iso_639_1: null,
+        vote_average: 0,
+      });
+      return {
+        posters:
+          id === 1726
+            ? [make("/78lPtwv72eTNqFW9COBYI0dWDJa.jpg", 500, 750)]
+            : item?.poster_path
+              ? [make(item.poster_path, 500, 750)]
+              : [],
+        backdrops: item?.backdrop_path
+          ? [make(item.backdrop_path, 1280, 720)]
+          : [],
+      };
+    }
+    const language = locale.toLowerCase().split("-")[0];
+    const data = z
+      .object({
+        posters: validItems(movieImageSchema),
+        backdrops: validItems(movieImageSchema),
+      })
+      .parse(
+        await request(
+          `/movie/${id}/images?include_image_language=${encodeURIComponent([...new Set([language, "en", "null"])].join(","))}`,
+          locale,
+          3600,
+        ),
+      );
+    const rank = (image: MovieImage) =>
+      image.iso_639_1 === language ? 0 : image.iso_639_1 == null ? 1 : 2;
+    const sort = (images: MovieImage[]) =>
+      [...images].sort(
+        (a, b) =>
+          rank(a) - rank(b) || (b.vote_average || 0) - (a.vote_average || 0),
+      );
+    return { posters: sort(data.posters), backdrops: sort(data.backdrops) };
+  },
+);
+
 const providerSchema = z.object({
   provider_id: positiveId,
   provider_name: namedItem,

@@ -6,6 +6,7 @@ import {
   getTrending,
   getMovieReleases,
   getMovieVideos,
+  getMovieImages,
   getMovieWatchProviders,
   getMovieReleaseCountries,
   getMovieProviderCountries,
@@ -15,6 +16,39 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("TMDB catalog", () => {
+  it("validates and orders localized movie images", async () => {
+    vi.stubEnv("FILMGRAM_FIXTURES", "0");
+    vi.stubEnv("TMDB_READ_TOKEN", "test");
+    const image = { width: 500, height: 750, vote_average: 1 };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        posters: [
+          { ...image, file_path: "/english.jpg", iso_639_1: "en" },
+          { ...image, file_path: "/local.jpg", iso_639_1: "pt" },
+          {
+            ...image,
+            file_path: "https://bad.example/image.jpg",
+            iso_639_1: "pt",
+          },
+          { ...image, file_path: "/neutral.jpg", iso_639_1: null },
+        ],
+        backdrops: [{ ...image, file_path: "/bad.jpg", width: 0 }],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const images = await getMovieImages("pt-BR", 123456);
+    expect(images.posters.map((entry) => entry.file_path)).toEqual([
+      "/local.jpg",
+      "/neutral.jpg",
+      "/english.jpg",
+    ]);
+    expect(images.backdrops).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("include_image_language=pt%2Cen%2Cnull"),
+      expect.objectContaining({ next: { revalidate: 3600 } }),
+    );
+  });
   it("filters explicit fixtures by media type and returns missing titles as null", async () => {
     vi.stubEnv("FILMGRAM_FIXTURES", "1");
     const films = await getTrending("en", "movie");
