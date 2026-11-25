@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
@@ -16,6 +16,7 @@ import {
 import { ReviewDiscussion } from "./ReviewDiscussion";
 import { loadMovieReviewPage } from "./movie-review-page";
 import type { loadTitleReviewContext } from "./title-review-context";
+import { useMovieReviewPages } from "./useMovieReviewPages";
 
 type Page = Awaited<ReturnType<typeof loadMovieReviewPage>>;
 type Own = Awaited<ReturnType<typeof loadTitleReviewContext>>["own"];
@@ -39,7 +40,6 @@ const labels = {
   en: {
     title: "Community reviews",
     write: "Write review",
-    edit: "Edit my review",
     average: "community ratings",
     empty: "No reviews yet.",
     noRatings: "No Filmgram ratings yet",
@@ -53,7 +53,6 @@ const labels = {
   "pt-BR": {
     title: "Resenhas da comunidade",
     write: "Escrever resenha",
-    edit: "Editar minha resenha",
     average: "avaliações da comunidade",
     empty: "Ainda não há resenhas.",
     noRatings: "Ainda não há avaliações Filmgram",
@@ -67,7 +66,6 @@ const labels = {
   es: {
     title: "Reseñas de la comunidad",
     write: "Escribir reseña",
-    edit: "Editar mi reseña",
     average: "valoraciones de la comunidad",
     empty: "Todavía no hay reseñas.",
     noRatings: "Todavía no hay valoraciones Filmgram",
@@ -92,23 +90,22 @@ export function MovieReviewsClient(
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   const router = useRouter();
-  const [loaded, setLoaded] = useState<{ page: Page; order: string } | null>(
-    null,
-  );
+  const {
+    page,
+    first,
+    pending,
+    error: pageError,
+    refresh,
+    loadMore,
+  } = useMovieReviewPages(props.initialPage, tmdbId, reviewId, props.preview);
   const [deletedId, setDeletedId] = useState<string | null>(null);
-  const order = props.initialPage.reviews
-    .map((row) => row.id + ":" + row.followed)
-    .join(",");
-  const extra = loaded?.order === order ? loaded.page : null;
   const own = props.own?.id === deletedId ? null : props.own;
-  const initialIds = new Set(props.initialPage.reviews.map((row) => row.id));
+  const ownFallback =
+    own && props.initialPage.reviews.find((row) => row.id === own.id);
+  const ownInPage = own && page.reviews.some((row) => row.id === own.id);
   const reviews = [
-    ...props.initialPage.reviews,
-    ...(extra?.reviews.filter(
-      (row, index, rows) =>
-        !initialIds.has(row.id) &&
-        rows.findIndex((candidate) => candidate.id === row.id) === index,
-    ) || []),
+    ...page.reviews,
+    ...(!ownInPage && ownFallback ? [ownFallback] : []),
   ]
     .filter((row) => row.id !== deletedId)
     .map((row) =>
@@ -122,23 +119,45 @@ export function MovieReviewsClient(
           }
         : row,
     );
-  const summaries = { ...extra?.summaries, ...props.initialPage.summaries };
+  const summaries = { ...props.initialPage.summaries, ...page.summaries };
+  const ownSeparate =
+    own &&
+    (!first.reviews.some((row) => row.id === own.id) ||
+      (first.selectedOutsidePage && reviewId === own.id) ||
+      (first === props.initialPage && props.ownSeparate));
   const ownRow =
-    props.ownSeparate && own
-      ? reviews.find((row) => row.id === own.id)
-      : undefined;
+    ownSeparate && own ? reviews.find((row) => row.id === own.id) : undefined;
   const communityReviews = ownRow
     ? reviews.filter((row) => row.id !== ownRow.id)
     : reviews;
-  const next = extra ? extra.next : props.initialPage.next;
+  const next = page.next;
   const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
     null,
   );
   const guardRef = useRef<(() => boolean) | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
-  const [pending, setPending] = useState(false);
-  const [pageError, setPageError] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const followFocusRef = useRef<HTMLElement | null>(null);
   const error = props.initialError || pageError;
+  useEffect(() => {
+    const onFollow = (event: Event) => {
+      const detail = (event as CustomEvent<{ key: string }>).detail;
+      if (!userId || !detail?.key.startsWith(`${userId}:`)) return;
+      const active = document.activeElement;
+      followFocusRef.current =
+        active instanceof HTMLElement && sectionRef.current?.contains(active)
+          ? active
+          : null;
+      void refresh();
+    };
+    window.addEventListener("filmgram-follow-change", onFollow);
+    return () => window.removeEventListener("filmgram-follow-change", onFollow);
+  }, [refresh, userId]);
+  useEffect(() => {
+    if (pending || !followFocusRef.current) return;
+    if (!followFocusRef.current.isConnected) headingRef.current?.focus();
+    followFocusRef.current = null;
+  }, [pending, page]);
   useRestoreReviewDraft(
     userId,
     "movie",
@@ -146,34 +165,6 @@ export function MovieReviewsClient(
     !props.initialError && !props.preview,
     sectionRef,
   );
-
-  async function loadMore() {
-    if (!next || pending) return;
-    setPending(true);
-    setPageError(false);
-    try {
-      const more = await loadMovieReviewPage(tmdbId, reviewId, next);
-      setLoaded({
-        order,
-        page: {
-          ...more,
-          reviews: [
-            ...new Map(
-              [...(extra?.reviews || []), ...more.reviews].map((row) => [
-                row.id,
-                row,
-              ]),
-            ).values(),
-          ],
-          summaries: { ...extra?.summaries, ...more.summaries },
-        },
-      });
-    } catch {
-      setPageError(true);
-    } finally {
-      setPending(false);
-    }
-  }
 
   return (
     <CommunityEditorContext.Provider
@@ -207,7 +198,11 @@ export function MovieReviewsClient(
       >
         <div className="space-y-3 border-b border-border pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-[clamp(1.65rem,3.2vw,2.5rem)] leading-tight font-bold">
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className="font-display text-[clamp(1.65rem,3.2vw,2.5rem)] leading-tight font-bold"
+            >
               {l.title}
             </h2>
             {props.preview && props.reviewsHref && (
@@ -315,7 +310,13 @@ export function MovieReviewsClient(
               type="button"
               className="text-primary underline"
               disabled={pending}
-              onClick={props.initialError ? () => router.refresh() : loadMore}
+              onClick={
+                props.initialError
+                  ? () => router.refresh()
+                  : pageError === "refresh"
+                    ? refresh
+                    : loadMore
+              }
             >
               {l.retry}
             </button>
