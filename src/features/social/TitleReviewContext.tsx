@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { titleReviewHref } from "@/features/catalog/movie-section-links";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,6 +18,8 @@ import {
   CommunityEditorContext,
   CommunityEditControl,
   CommunityCardEditor,
+  useCommunityEditor,
+  useRestoreReviewDraft,
 } from "./CommunityEditor";
 import { loadTitleReviewContext } from "./title-review-context";
 import { ReviewDiscussion } from "./ReviewDiscussion";
@@ -74,6 +84,8 @@ export function TitleReviewContext({
   selected,
   titleHref,
   onTitlePage,
+  reuseEditor,
+  editorGuardRef,
   children,
 }: {
   locale: string;
@@ -83,18 +95,27 @@ export function TitleReviewContext({
   selected?: (own: Context["own"], data: Context | null) => ReactNode;
   titleHref: string;
   onTitlePage?: boolean;
+  reuseEditor?: { authorId: string; followed: boolean };
+  editorGuardRef?: RefObject<(() => boolean) | null>;
   children?: ReactNode;
 }) {
+  const existingEditor = useCommunityEditor();
+  const localGuardRef = useRef<(() => boolean) | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const reuse = !!reuseEditor && !!existingEditor;
   const [data, setData] = useState<Context | null>(null);
   const router = useRouter();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [editing, setEditing] = useState(false);
+  const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
+    null,
+  );
   const [loadingMore, setLoadingMore] = useState(false);
   const [deletedSelected, setDeletedSelected] = useState(false);
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   useEffect(() => {
+    if (reuse) return;
     let active = true;
     loadTitleReviewContext(locale, mediaType, tmdbId, reviewId)
       .then((result) => {
@@ -109,36 +130,70 @@ export function TitleReviewContext({
     return () => {
       active = false;
     };
-  }, [locale, mediaType, tmdbId, reviewId, attempt]);
+  }, [locale, mediaType, tmdbId, reviewId, attempt, reuse]);
   const own = data?.own;
+  useRestoreReviewDraft(
+    data?.userId || null,
+    mediaType,
+    tmdbId,
+    !!data && !reuse,
+    sectionRef,
+  );
   const others = data?.reviews || [];
   const refresh = async () => {
-    const updated = await loadTitleReviewContext(
-      locale,
-      mediaType,
-      tmdbId,
-      reviewId,
-    );
-    setData(updated);
-    if (onTitlePage) router.refresh();
+    try {
+      const updated = await loadTitleReviewContext(
+        locale,
+        mediaType,
+        tmdbId,
+        reviewId,
+      );
+      setData(updated);
+      setError(false);
+      if (onTitlePage) router.refresh();
+    } catch (reason) {
+      setError(true);
+      throw reason;
+    }
   };
+  if (reuse && existingEditor && reuseEditor) {
+    const selectedData = {
+      own: existingEditor.own,
+      userId: existingEditor.userId,
+      selectedAuthorId: reuseEditor.authorId,
+      followed: reuseEditor.followed ? [reuseEditor.authorId] : [],
+    } as Context;
+    return (
+      <section className="space-y-4 p-[clamp(12px,3vw,24px)] [overflow-wrap:anywhere]">
+        {selected && (
+          <article className="rounded-xl border border-border bg-card p-4">
+            {selected(existingEditor.own, selectedData)}
+          </article>
+        )}
+      </section>
+    );
+  }
   return (
     <CommunityEditorContext.Provider
       value={{
         own: own || null,
-        editing,
-        setEditing,
+        editingTrigger,
+        setEditingTrigger,
+        guardRef: editorGuardRef || localGuardRef,
+        registerGuard: (guard) => {
+          // The parent supplies this ref specifically to register the dialog guard.
+          // eslint-disable-next-line react-hooks/immutability
+          (editorGuardRef || localGuardRef).current = guard;
+        },
         locale,
         mediaType,
         tmdbId,
         userId: data?.userId || null,
-        next: reviewId
-          ? `${titleHref}?review=${reviewId}#review-${reviewId}`
-          : titleHref,
+        next: reviewId ? titleReviewHref(titleHref, reviewId) : titleHref,
         refresh,
         onDeleted: async (id) => {
           if (id === reviewId) setDeletedSelected(true);
-          setEditing(false);
+          setEditingTrigger(null);
           setData((previous) =>
             previous
               ? {
@@ -197,6 +252,7 @@ export function TitleReviewContext({
         </div>
       )}
       <section
+        ref={sectionRef}
         className={
           onTitlePage
             ? "space-y-4 [overflow-wrap:anywhere]"
@@ -205,12 +261,13 @@ export function TitleReviewContext({
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-2xl font-bold">{l.community}</h2>
-          {!own && (
+          {!own && !error && (
             <Button
               type="button"
               disabled={!data}
               aria-label={l.write}
-              onClick={() => setEditing(true)}
+              data-review-open
+              onClick={(event) => setEditingTrigger(event.currentTarget)}
             >
               +
             </Button>
@@ -235,7 +292,20 @@ export function TitleReviewContext({
           </article>
         )}
         {onTitlePage ? (
-          children
+          <>
+            {error && (
+              <p role="alert">
+                {l.error}{" "}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setAttempt((n) => n + 1)}
+                >
+                  {l.retry}
+                </button>
+              </p>
+            )}
+            {children}
+          </>
         ) : (
           <>
             {!data && !error && <p role="status">{l.loading}</p>}

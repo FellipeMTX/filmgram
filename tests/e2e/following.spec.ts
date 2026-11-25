@@ -237,6 +237,7 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     );
     await dialog.getByRole("link", { name: /^view title:/i }).click();
     await expect(page).toHaveURL(/\/en\/title\/movie\/1726/);
+    await expect(page).toHaveURL(/tab=reviews/);
     const linkedReview = page.locator(`#review-${longId}`);
     await expect(
       linkedReview.locator('iframe[title="YouTube video player"]'),
@@ -247,7 +248,8 @@ test("opens only overflowing reviews in the modal and shares their discussion wi
     ).toBeVisible();
 
     const authorPage = await authorContext.newPage();
-    await authorPage.goto(page.url());
+    await authorPage.goto(`${baseURL}/en/title/movie/1726#review-${longId}`);
+    await expect(authorPage).toHaveURL(/tab=reviews/);
     const original = authorPage.locator(`#review-${longId}`);
     await expect(original.getByText(note)).toBeVisible();
     await original.getByRole("button", { name: "Reply", exact: true }).click();

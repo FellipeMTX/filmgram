@@ -1,5 +1,6 @@
 "use client";
 
+import { movieReviewId } from "@/features/catalog/movie-section-links";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -135,9 +136,7 @@ export function ReviewDiscussion({
     setPreviousModal(modalOpen);
     if (modalOpen) setModalExpanded(modal.mode === "discussion" || open);
   }
-  const nextPath = pathname.includes("/title/")
-    ? `${pathname}?review=${reviewId}`
-    : pathname;
+  const nextPath = pathname;
   const composer = useRef<HTMLTextAreaElement>(null);
   const [liked, setLiked] = useState(initialLiked),
     [count, setCount] = useState(initialCount);
@@ -187,22 +186,50 @@ export function ReviewDiscussion({
   const [error, setError] = useState(false),
     [pending, start] = useTransition();
   useEffect(() => {
-    if (window.location.hash !== `#review-${reviewId}`) return;
     let active = true;
-    loadReviewComments(reviewId)
-      .then((page) => {
-        if (active) {
+    let openedForLocation = false;
+    let loadingTarget = false;
+    function isLocationTarget() {
+      const location = window.location;
+      if (location.hash !== "#review-" + reviewId) return false;
+      if (!/^\/[^/]+\/title\/movie\/\d+\/?$/.test(location.pathname))
+        return true;
+      const query = new URLSearchParams(location.search).get("review");
+      return query === null || movieReviewId(query) === reviewId;
+    }
+    const openTarget = () => {
+      if (!isLocationTarget()) {
+        if (openedForLocation) {
+          openedForLocation = false;
+          setOpen(false);
+        }
+        return;
+      }
+      if (loadingTarget || openedForLocation) return;
+      loadingTarget = true;
+      loadReviewComments(reviewId)
+        .then((page) => {
+          if (!active || !isLocationTarget()) return;
+          openedForLocation = true;
           setOpen(true);
           setComments(page.comments);
           setNext(page.nextCursor);
           setLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (active) setError(true);
-      });
+        })
+        .catch(() => {
+          if (active && isLocationTarget()) setError(true);
+        })
+        .finally(() => {
+          loadingTarget = false;
+        });
+    };
+    openTarget();
+    window.addEventListener("hashchange", openTarget);
+    window.addEventListener("popstate", openTarget);
     return () => {
       active = false;
+      window.removeEventListener("hashchange", openTarget);
+      window.removeEventListener("popstate", openTarget);
     };
   }, [reviewId]);
   useEffect(() => {
@@ -612,7 +639,20 @@ export function ReviewDiscussion({
               </div>
             </div>
           ) : (
-            <form action={signIn}>
+            <form
+              action={signIn}
+              onSubmit={(event) => {
+                const url = new URL(window.location.href);
+                if (pathname.includes("/title/"))
+                  url.searchParams.set("review", reviewId);
+                const input = event.currentTarget.elements.namedItem(
+                  "next",
+                ) as HTMLInputElement | null;
+                if (input)
+                  input.value =
+                    url.pathname + url.search + `#review-${reviewId}`;
+              }}
+            >
               <input
                 type="hidden"
                 name="next"

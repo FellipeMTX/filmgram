@@ -19,19 +19,44 @@ import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
 import { ReviewPost } from "@/components/ReviewPost";
 import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
 import type { Json } from "@/types/database.generated";
-
+import { MovieDetail } from "@/features/catalog/MovieDetail";
+import { getTitleActionsData } from "@/features/catalog/title-actions-data";
 export default async function Detail({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string; mediaType: string; id: string }>;
-  searchParams: Promise<{ review?: string }>;
+  searchParams: Promise<{
+    review?: string | string[];
+    tab?: string | string[];
+    country?: string | string[];
+    media?: string | string[];
+  }>;
 }) {
   const { locale, mediaType, id } = await params;
   if (!["movie", "tv"].includes(mediaType) || !/^\d+$/.test(id)) notFound();
-  const { review } = await searchParams;
+  const query = await searchParams;
+  const reviewParam =
+    typeof query.review === "string" ? query.review : undefined;
   const item = await getDetail(locale, mediaType as MediaType, Number(id));
   if (!item) notFound();
+  if (mediaType === "movie") {
+    return (
+      <MovieDetail
+        item={item}
+        locale={locale}
+        review={Array.isArray(query.review) ? query.review[0] : reviewParam}
+        country={typeof query.country === "string" ? query.country : undefined}
+        tab={typeof query.tab === "string" ? query.tab : undefined}
+        media={typeof query.media === "string" ? query.media : undefined}
+      />
+    );
+  }
+  const review =
+    reviewParam &&
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(reviewParam)
+      ? reviewParam
+      : null;
   const t = messages(locale),
     user = await currentUser(),
     db = await supabase();
@@ -49,25 +74,24 @@ export default async function Detail({
       avatar_url: string | null;
     } | null;
   }[] = [];
-  let playlists: { id: string; name: string; contains: boolean }[] = [];
+  const { states, playlists } = await getTitleActionsData(
+    db,
+    "tv",
+    Number(id),
+    user?.id,
+  );
   let followedAuthors: string[] = [];
-  const states: Record<string, boolean> = {};
   let likes = 0;
   let reviewLikes: Record<
     string,
     { count: number; liked: boolean; commentCount: number }
   > = {};
   if (db) {
-    const highlightedReview =
-      typeof review === "string" &&
-      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review)
-        ? review
-        : null;
     const [reviewsResult, countResult] = await Promise.all([
       db.rpc("title_reviews_followed_first", {
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
-        p_highlighted_review_id: highlightedReview,
+        p_highlighted_review_id: review,
         p_limit: 1000,
       }),
       db.rpc("title_like_count", {
@@ -88,10 +112,7 @@ export default async function Detail({
           : null,
     }));
     // PostgREST can truncate the extra deep-link row after the usual 1,000.
-    if (
-      highlightedReview &&
-      !reviews.some((row) => row.id === highlightedReview)
-    ) {
+    if (review && !reviews.some((row) => row.id === review)) {
       const target = await db
         .from("reviews")
         .select(
@@ -99,7 +120,7 @@ export default async function Detail({
         )
         .eq("media_type", mediaType)
         .eq("tmdb_id", Number(id))
-        .eq("id", highlightedReview)
+        .eq("id", review)
         .maybeSingle();
       if (target.error) throw target.error;
       if (target.data) reviews.push(target.data);
@@ -110,71 +131,15 @@ export default async function Detail({
     );
     likes = Number(countResult.data || 0);
     if (user) {
-      const followedResult = await db
+      const followed = await db
         .from("follows")
         .select("following_id")
         .eq("follower_id", user.id);
-      if (followedResult.error) throw followedResult.error;
-      followedAuthors = followedResult.data.map((row) => row.following_id);
-      const [f, w, l, p] = await Promise.all([
-        db
-          .from("favorites")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("watched")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("title_likes")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("playlists")
-          .select("id,name,playlist_items(id)")
-          .eq("user_id", user.id)
-          .eq("playlist_items.media_type", mediaType)
-          .eq("playlist_items.tmdb_id", Number(id))
-          .order("name")
-          .order("id"),
-      ]);
-      states.favorites = !!f.data;
-      states.watched = !!w.data;
-      states.title_likes = !!l.data;
-      if (f.error) throw f.error;
-      if (p.error) throw p.error;
-      playlists = p.data.map((row) => ({
-        id: row.id,
-        name: row.name,
-        contains: row.playlist_items.length > 0,
-      }));
+      if (followed.error) throw followed.error;
+      followedAuthors = followed.data.map((row) => row.following_id);
     }
   }
   const poster = imageUrl(item.poster_path);
-  const directors =
-    mediaType === "movie"
-      ? [
-          ...new Map(
-            (item.credits?.crew || [])
-              .filter(
-                (person) =>
-                  person.job === "Director" &&
-                  Number.isSafeInteger(person.id) &&
-                  person.id > 0,
-              )
-              .map((person) => [person.id, person]),
-          ).values(),
-        ]
-      : [];
   return (
     <main>
       <div
@@ -229,32 +194,6 @@ export default async function Detail({
           </div>
         </div>
       </div>
-      {directors.length > 0 && (
-        <section
-          className={cn(container, "pt-[35px] mobile:pt-[30px]")}
-          aria-labelledby="directors-heading"
-        >
-          <h2
-            id="directors-heading"
-            className="mt-0 mb-5 font-display text-[26px] font-semibold"
-          >
-            {t.directors}
-          </h2>
-          <div className="flex flex-wrap gap-[22px]">
-            {directors.map((person) => (
-              <div key={person.id} className="w-[120px] mobile:w-[88px]">
-                <PersonCard
-                  id={person.id}
-                  name={person.name}
-                  profilePath={person.profile_path}
-                  role={t.roleDirector}
-                  locale={locale}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
       <section
         className={cn(
           container,
@@ -284,6 +223,7 @@ export default async function Detail({
           <p className="text-muted-foreground">{t.noCast}</p>
         )}
       </section>
+
       <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
         <TitleReviewContext
           locale={locale}

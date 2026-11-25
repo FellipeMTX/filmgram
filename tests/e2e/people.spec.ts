@@ -4,7 +4,10 @@ test("cast links to the actor profile and filmography links back to a title", as
   page,
 }) => {
   await page.goto("/en/title/movie/1726");
-  await page.getByRole("link", { name: /Robert Downey Jr/ }).click();
+  await page
+    .getByRole("link", { name: /Robert Downey Jr/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/en\/person\/3223$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Robert Downey Jr." }),
@@ -23,20 +26,10 @@ test("cast links to the actor profile and filmography links back to a title", as
   ).toBeVisible();
 });
 
-test("movie direction appears before ratings and links to a shared professional profile", async ({
+test("movie information links its director to a shared professional profile", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1726");
-  const direction = page.getByRole("heading", {
-    name: "Direction",
-    exact: true,
-  });
-  await expect(direction).toBeVisible();
-  const directionBounds = await direction.boundingBox();
-  const ratingBounds = await page
-    .getByRole("heading", { name: "Community reviews", exact: true })
-    .boundingBox();
-  expect(directionBounds!.y).toBeLessThan(ratingBounds!.y);
+  await page.goto("/en/title/movie/1726?tab=info");
   await page
     .getByRole("link", { name: /Jon Favreau/ })
     .first()
@@ -60,7 +53,7 @@ test("movie direction appears before ratings and links to a shared professional 
 test("co-directors are listed independently without changing series credits", async ({
   page,
 }) => {
-  await page.goto("/en/title/movie/1003596");
+  await page.goto("/en/title/movie/1003596?tab=info");
   await expect(page.getByRole("link", { name: /Joe Russo/ })).toHaveAttribute(
     "href",
     "/en/person/19272",
@@ -216,19 +209,16 @@ test("collapsed filmography presents two responsive rows and a bounded DOM", asy
   );
 });
 
-test("direction and cast appear before community reviews", async ({ page }) => {
+test("movie credits and reviews use separate sections while the TV layout is retained", async ({
+  page,
+}) => {
   await page.goto("/en/title/movie/1726");
-  const direction = await page
-    .getByRole("heading", { name: "Direction", exact: true })
-    .boundingBox();
-  const cast = await page
-    .getByRole("heading", { name: "Cast", exact: true })
-    .boundingBox();
-  const rating = await page
-    .getByRole("heading", { name: "Community reviews", exact: true })
-    .boundingBox();
-  expect(direction!.y).toBeLessThan(cast!.y);
-  expect(cast!.y).toBeLessThan(rating!.y);
+  await expect(
+    page.getByRole("heading", { name: "Cast", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Community reviews", exact: true }),
+  ).toBeVisible();
   await page.goto("/en/title/tv/42009");
   const tvCast = await page
     .getByRole("heading", { name: "Cast", exact: true })

@@ -60,7 +60,7 @@ test.describe("signed-in account", () => {
     try {
       await signUp(stranger, baseURL);
       await page.goto("/en/title/movie/1726");
-      const save = page.getByRole("button", { name: "Save to playlist" });
+      const save = page.getByRole("button", { name: "Save", exact: true });
       await save.click();
       const saved = page
         .getByRole("dialog")
@@ -79,7 +79,7 @@ test.describe("signed-in account", () => {
       const strangerPage = await stranger.newPage();
       await strangerPage.goto(`${baseURL}/en/title/movie/1726`);
       await strangerPage
-        .getByRole("button", { name: "Save to playlist" })
+        .getByRole("button", { name: "Save", exact: true })
         .click();
       await expect(
         strangerPage.getByRole("dialog").getByRole("button", { name: /Saved/ }),
@@ -127,6 +127,7 @@ test.describe("signed-in account", () => {
 
       const review = `Quiet thriller with a vivid sense of place. ${randomUUID()}`;
       await page.goto("/en/title/movie/1726");
+      await page.getByRole("link", { name: "Reviews", exact: true }).click();
       await page
         .getByRole("button", { name: "Write review", exact: true })
         .click();
@@ -151,13 +152,26 @@ test.describe("signed-in account", () => {
       await expect(
         editor.locator('a[href="https://example.com/review"]'),
       ).toHaveCount(1);
-      await editor.press("Control+End");
-      await editor.press("Enter");
-      await editor.pressSequentially("https://youtu.be/dQw4w9WgXcQ");
+      await editor.evaluate((element) => {
+        element.focus();
+        window
+          .getSelection()
+          ?.collapse(element.lastChild, element.lastChild?.childNodes.length);
+      });
+      await page.keyboard.press("Enter");
+      await expect(editor.locator("p")).toHaveCount(2);
+      await page.keyboard.insertText("https://youtu.be/dQw4w9WgXcQ");
       await page.getByRole("button", { name: "Publish", exact: true }).click();
       await expect(
         page.getByRole("article").getByText(review, { exact: true }),
       ).toBeVisible();
+      const ownReview = page.getByRole("article").filter({ hasText: review });
+      await expect(
+        page.getByRole("button", { name: "Write review", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        ownReview.getByRole("button", { name: "Edit my review" }),
+      ).toHaveCount(1);
       await expect(
         page
           .getByRole("article")
@@ -181,12 +195,15 @@ test.describe("signed-in account", () => {
       await expect(
         followerPage.getByText(review, { exact: false }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Delete review" }).click();
+      await ownReview.getByRole("button", { name: "Delete review" }).click();
       await page
         .getByRole("dialog", { name: "Delete this review?" })
         .getByRole("button", { name: "Delete review" })
         .click();
       await expect(page.getByText(review, { exact: true })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Write review", exact: true }),
+      ).toBeVisible();
       await followerPage.reload();
       await expect(
         followerPage.getByText(review, { exact: false }),
@@ -208,6 +225,7 @@ test.describe("signed-in account", () => {
     const { client, userId } = await signUp(page.context(), baseURL);
     try {
       await page.goto("/en/title/movie/1726");
+      await page.getByRole("link", { name: "Reviews", exact: true }).click();
       await page
         .getByRole("button", { name: "Write review", exact: true })
         .click();
@@ -412,7 +430,12 @@ test.describe("signed-in account", () => {
 
     for (const title of ["movie/1726", "tv/1434"]) {
       await page.goto(`/en/title/${title}`);
-      await page.getByRole("button", { name: "Save to playlist" }).click();
+      await page
+        .getByRole("button", {
+          name: title.startsWith("movie/") ? "Save" : "Save to playlist",
+          exact: true,
+        })
+        .click();
       const destination = page
         .getByRole("dialog")
         .getByRole("button", { name, exact: true });

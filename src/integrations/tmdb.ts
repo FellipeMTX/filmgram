@@ -1,5 +1,6 @@
 import { z } from "zod";
 import "server-only";
+import { cache } from "react";
 import fixtureData from "./fixtures.json";
 import peopleFixtureData from "./people-fixtures.json";
 import { normalizePersonWorks } from "@/features/people/filmography";
@@ -18,7 +19,38 @@ const itemSchema = z.object({
   vote_average: z.number().optional(),
   genre_ids: z.array(z.number()).optional(),
 });
+function validItems<T extends z.ZodType>(schema: T) {
+  return z.array(z.unknown()).transform((items) =>
+    items.flatMap((item) => {
+      const parsed = schema.safeParse(item);
+      return parsed.success ? [parsed.data] : [];
+    }),
+  );
+}
+const namedItem = z.string().trim().min(1);
+const positiveId = z.number().int().positive();
+const companySchema = z.object({
+  id: positiveId,
+  name: namedItem,
+  logo_path: z.string().nullable().optional(),
+  origin_country: z.string().optional(),
+});
+const countrySchema = z.object({ iso_3166_1: z.string(), name: namedItem });
+const languageSchema = z.object({
+  iso_639_1: z.string(),
+  name: z.string(),
+  english_name: z.string().optional(),
+});
 const detailSchema = itemSchema.extend({
+  production_companies: validItems(companySchema).optional().catch(undefined),
+  production_countries: validItems(countrySchema).optional().catch(undefined),
+  spoken_languages: validItems(languageSchema).optional().catch(undefined),
+  original_language: z.string().optional().catch(undefined),
+  original_title: z.string().optional().catch(undefined),
+  budget: z.number().nonnegative().optional().catch(undefined),
+  revenue: z.number().nonnegative().optional().catch(undefined),
+  status: z.string().optional().catch(undefined),
+  tagline: z.string().nullable().optional().catch(undefined),
   genres: z.array(z.object({ id: z.number(), name: z.string() })).optional(),
   runtime: z.number().nullable().optional(),
   episode_run_time: z.array(z.number()).optional(),
@@ -38,6 +70,7 @@ const detailSchema = itemSchema.extend({
             id: z.number(),
             name: z.string(),
             job: z.string(),
+            department: z.string().optional().catch(undefined),
             profile_path: z.string().nullable().optional(),
           }),
         )
@@ -98,8 +131,42 @@ export async function getDetail(
   type: MediaType,
   id: number,
 ): Promise<Title | null> {
-  if (process.env.FILMGRAM_FIXTURES === "1")
-    return fixtures.find((x) => x.media_type === type && x.id === id) || null;
+  if (process.env.FILMGRAM_FIXTURES === "1") {
+    const fixture = fixtures.find((x) => x.media_type === type && x.id === id);
+    if (!fixture || type !== "movie" || id !== 1726) return fixture || null;
+    return {
+      ...fixture,
+      original_title: "Iron Man",
+      original_language: "en",
+      spoken_languages: [
+        { iso_639_1: "en", name: "English", english_name: "English" },
+      ],
+      production_countries: [
+        { iso_3166_1: "US", name: "United States of America" },
+      ],
+      production_companies: [
+        { id: 420, name: "Marvel Studios", origin_country: "US" },
+      ],
+      budget: 140000000,
+      revenue: 585174222,
+      status: "Released",
+      tagline: "Heroes aren't born. They're built.",
+      credits: fixture.credits
+        ? {
+            ...fixture.credits,
+            crew: [
+              ...(fixture.credits.crew || []),
+              {
+                id: 10850,
+                name: "Ramin Djawadi",
+                job: "Original Music Composer",
+                department: "Sound",
+              },
+            ],
+          }
+        : undefined,
+    };
+  }
   try {
     const data = detailSchema.parse(
       await request(`/${type}/${id}?append_to_response=credits`, locale),
@@ -109,6 +176,370 @@ export async function getDetail(
     if (error instanceof TmdbError && error.status === 404) return null;
     throw error;
   }
+}
+
+const regionCode = /^[A-Z]{2}$/;
+export function movieRegion(locale: string, region?: string): string {
+  const normalized = region?.trim().toUpperCase();
+  if (normalized && regionCode.test(normalized)) return normalized;
+  return locale === "pt-BR" ? "BR" : locale === "es" ? "ES" : "US";
+}
+const releaseSchema = z.object({
+  type: z.number().int().min(1).max(6),
+  certification: z.string().trim().optional().catch(undefined),
+  release_date: z.iso.datetime({ offset: true }).or(z.iso.date()),
+});
+const releaseResult = z.object({
+  iso_3166_1: z.string(),
+  release_dates: validItems(releaseSchema),
+});
+export type MovieRelease = {
+  date: string;
+  type: number;
+  certification: string | null;
+};
+const getMovieReleaseResults = cache(async (locale: string, id: number) => {
+  if (process.env.FILMGRAM_FIXTURES === "1") {
+    return id === 1726
+      ? [
+          {
+            iso_3166_1: "BR",
+            release_dates: [
+              { release_date: "2008-04-30", certification: "12", type: 3 },
+            ],
+          },
+          {
+            iso_3166_1: "US",
+            release_dates: [
+              { release_date: "2008-05-02", certification: "PG-13", type: 3 },
+            ],
+          },
+          {
+            iso_3166_1: "ES",
+            release_dates: [
+              { release_date: "2008-04-30", certification: "12", type: 3 },
+            ],
+          },
+        ]
+      : [];
+  }
+  return z
+    .object({ results: validItems(releaseResult) })
+    .parse(await request(`/movie/${id}/release_dates`, locale, 3600)).results;
+});
+export async function getMovieReleaseCountries(
+  locale: string,
+  id: number,
+): Promise<string[]> {
+  const releases = await getMovieReleaseResults(locale, id);
+  return [
+    ...new Set(
+      releases
+        .filter(
+          (row) =>
+            regionCode.test(row.iso_3166_1) && row.release_dates.length > 0,
+        )
+        .map((row) => row.iso_3166_1),
+    ),
+  ].sort();
+}
+export async function getMovieReleases(
+  locale: string,
+  id: number,
+  region?: string,
+): Promise<MovieRelease[]> {
+  const country = movieRegion(locale, region);
+  const releases = await getMovieReleaseResults(locale, id);
+  const rows = releases
+    .filter((entry) => entry.iso_3166_1 === country)
+    .flatMap((entry) => entry.release_dates);
+  const values = rows.map((row) => ({
+    date: row.release_date.slice(0, 10),
+    type: row.type,
+    certification: row.certification || null,
+  }));
+  return [
+    ...new Map(values.map((row) => [JSON.stringify(row), row])).values(),
+  ].sort((a, b) => a.date.localeCompare(b.date) || a.type - b.type);
+}
+
+const videoSchema = z.object({
+  id: namedItem,
+  key: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+  name: namedItem,
+  type: namedItem,
+  site: z.literal("YouTube"),
+  iso_639_1: z
+    .string()
+    .nullable()
+    .optional()
+    .catch(null)
+    .transform((value) => value ?? null),
+  official: z
+    .boolean()
+    .optional()
+    .transform((value) => value ?? false),
+  published_at: z.iso
+    .datetime({ offset: true })
+    .nullable()
+    .optional()
+    .catch(null)
+    .transform((value) => value ?? null),
+});
+export type MovieVideo = Omit<z.infer<typeof videoSchema>, "site">;
+export async function getMovieVideos(
+  locale: string,
+  id: number,
+): Promise<MovieVideo[]> {
+  if (process.env.FILMGRAM_FIXTURES === "1")
+    return id === 1726
+      ? [
+          {
+            id: "iron-man-trailer",
+            key: "8ugaeA-nMTc",
+            name: "Official Trailer",
+            type: "Trailer",
+            official: true,
+            iso_639_1: "en",
+            published_at: null,
+          },
+          {
+            id: "iron-man-teaser-pt",
+            key: "Ke1Y3P9D0Bc",
+            name: "Teaser",
+            type: "Teaser",
+            official: true,
+            iso_639_1: "pt",
+            published_at: null,
+          },
+        ]
+      : [];
+  const schema = z.object({ results: validItems(videoSchema) });
+  const languages = [...new Set([locale, "en"])];
+  const responses = await Promise.allSettled(
+    languages.map(
+      async (language) =>
+        schema.parse(await request(`/movie/${id}/videos`, language, 3600))
+          .results,
+    ),
+  );
+  const videos = responses.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+  const failure = responses.find((result) => result.status === "rejected");
+  if (!videos.length && failure?.status === "rejected") throw failure.reason;
+  const language = locale.toLowerCase().split("-")[0];
+  const ranked = videos.sort((a, b) => {
+    const rank = (video: typeof a) => {
+      const trailer = video.type === "Trailer";
+      const sameLanguage =
+        video.iso_639_1?.toLowerCase().split("-")[0] === language;
+      return trailer && video.official && sameLanguage ? 0 : trailer ? 1 : 2;
+    };
+    return rank(a) - rank(b) || Number(b.official) - Number(a.official);
+  });
+  const seen = new Set<string>();
+  return ranked.filter(({ key }) => {
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const movieImageSchema = z.object({
+  file_path: z.string().regex(/^\/[A-Za-z0-9_.-]+$/),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  iso_639_1: z.string().nullable().optional().catch(null),
+  vote_average: z.number().optional().catch(0),
+});
+export type MovieImage = z.infer<typeof movieImageSchema>;
+export type MovieImages = { posters: MovieImage[]; backdrops: MovieImage[] };
+export const getMovieImages = cache(
+  async (locale: string, id: number): Promise<MovieImages> => {
+    if (process.env.FILMGRAM_FIXTURES === "1") {
+      const item = fixtures.find(
+        (entry) => entry.media_type === "movie" && entry.id === id,
+      );
+      const make = (
+        file_path: string,
+        width: number,
+        height: number,
+      ): MovieImage => ({
+        file_path,
+        width,
+        height,
+        iso_639_1: null,
+        vote_average: 0,
+      });
+      return {
+        posters:
+          id === 1726
+            ? [make("/78lPtwv72eTNqFW9COBYI0dWDJa.jpg", 500, 750)]
+            : item?.poster_path
+              ? [make(item.poster_path, 500, 750)]
+              : [],
+        backdrops: item?.backdrop_path
+          ? [make(item.backdrop_path, 1280, 720)]
+          : [],
+      };
+    }
+    const language = locale.toLowerCase().split("-")[0];
+    const data = z
+      .object({
+        posters: validItems(movieImageSchema),
+        backdrops: validItems(movieImageSchema),
+      })
+      .parse(
+        await request(
+          `/movie/${id}/images?include_image_language=${encodeURIComponent([...new Set([language, "en", "null"])].join(","))}`,
+          locale,
+          3600,
+        ),
+      );
+    const rank = (image: MovieImage) =>
+      image.iso_639_1 === language ? 0 : image.iso_639_1 == null ? 1 : 2;
+    const sort = (images: MovieImage[]) =>
+      [...images].sort(
+        (a, b) =>
+          rank(a) - rank(b) || (b.vote_average || 0) - (a.vote_average || 0),
+      );
+    return { posters: sort(data.posters), backdrops: sort(data.backdrops) };
+  },
+);
+
+const providerSchema = z.object({
+  provider_id: positiveId,
+  provider_name: namedItem,
+  logo_path: z.string().nullable().optional().catch(undefined),
+  display_priority: z.number().optional().catch(undefined),
+});
+export type WatchProvider = z.infer<typeof providerSchema>;
+const providerModes = ["flatrate", "rent", "buy", "ads", "free"] as const;
+const providerRegion = z.object({
+  link: z.string().optional().catch(undefined),
+  flatrate: validItems(providerSchema).optional().catch(undefined),
+  rent: validItems(providerSchema).optional().catch(undefined),
+  buy: validItems(providerSchema).optional().catch(undefined),
+  ads: validItems(providerSchema).optional().catch(undefined),
+  free: validItems(providerSchema).optional().catch(undefined),
+});
+export type MovieWatchProviders = Record<
+  (typeof providerModes)[number],
+  WatchProvider[]
+> & {
+  region: string;
+  link: string | null;
+};
+function tmdbProviderLink(value?: string) {
+  try {
+    const url = new URL(value || "");
+    return url.protocol === "https:" &&
+      ["www.themoviedb.org", "themoviedb.org"].includes(url.hostname) &&
+      !url.username &&
+      !url.password
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+const getMovieProviderResults = cache(
+  async (locale: string, id: number): Promise<Record<string, unknown>> => {
+    const data =
+      process.env.FILMGRAM_FIXTURES === "1"
+        ? {
+            results:
+              id === 1726
+                ? {
+                    BR: {
+                      link: "https://www.themoviedb.org/movie/1726/watch?locale=BR",
+                      flatrate: [
+                        {
+                          provider_id: 337,
+                          provider_name: "Disney Plus",
+                          display_priority: 1,
+                        },
+                      ],
+                    },
+                    PT: {
+                      link: "https://www.themoviedb.org/movie/1726/watch?locale=PT",
+                      flatrate: [
+                        {
+                          provider_id: 337,
+                          provider_name: "Disney Plus",
+                          display_priority: 1,
+                        },
+                      ],
+                    },
+                    US: {
+                      link: "https://www.themoviedb.org/movie/1726/watch?locale=US",
+                      rent: [
+                        {
+                          provider_id: 2,
+                          provider_name: "Apple TV",
+                          display_priority: 1,
+                        },
+                      ],
+                    },
+                  }
+                : {},
+          }
+        : z
+            .object({ results: z.record(z.string(), z.unknown()) })
+            .parse(await request(`/movie/${id}/watch/providers`, locale, 3600));
+    return data.results;
+  },
+);
+
+export async function getMovieProviderCountries(
+  locale: string,
+  id: number,
+): Promise<string[]> {
+  const results = await getMovieProviderResults(locale, id);
+  return Object.keys(results)
+    .filter((country) => {
+      if (!regionCode.test(country)) return false;
+      const result = providerRegion.safeParse(results[country]);
+      return (
+        result.success &&
+        providerModes.some((mode) => (result.data[mode]?.length ?? 0) > 0)
+      );
+    })
+    .sort();
+}
+
+export async function getMovieWatchProviders(
+  locale: string,
+  id: number,
+  region?: string,
+): Promise<MovieWatchProviders | null> {
+  const country = movieRegion(locale, region);
+  const results = await getMovieProviderResults(locale, id);
+  const result = providerRegion.safeParse(results[country]);
+  if (!result.success) return null;
+  const sort = (mode: (typeof providerModes)[number]) =>
+    [
+      ...new Map(
+        (result.data[mode] || []).map((item) => [item.provider_id, item]),
+      ).values(),
+    ].sort(
+      (a, b) =>
+        (a.display_priority ?? Infinity) - (b.display_priority ?? Infinity) ||
+        a.provider_id - b.provider_id,
+    );
+  const options: MovieWatchProviders = {
+    region: country,
+    link: tmdbProviderLink(result.data.link),
+    flatrate: sort("flatrate"),
+    rent: sort("rent"),
+    buy: sort("buy"),
+    ads: sort("ads"),
+    free: sort("free"),
+  };
+  return providerModes.some((mode) => options[mode].length > 0)
+    ? options
+    : null;
 }
 
 /** Small, public catalog metadata for social cards; never includes credits. */

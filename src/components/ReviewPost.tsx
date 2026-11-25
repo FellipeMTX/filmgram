@@ -1,5 +1,7 @@
 "use client";
 
+import { titleReviewHref } from "@/features/catalog/movie-section-links";
+
 import {
   createContext,
   useContext,
@@ -19,6 +21,7 @@ import { TitleReviewContext } from "@/features/social/TitleReviewContext";
 import {
   CommunityEditControl,
   CommunityCardEditor,
+  useCommunityEditor,
 } from "@/features/social/CommunityEditor";
 import { FollowReviewAuthor } from "@/features/social/FollowReviewAuthor";
 import { ReviewVideo } from "@/components/ReviewVideo";
@@ -86,7 +89,11 @@ function Byline({
   author,
   date,
   follow,
-}: Pick<ReviewPostProps, "author" | "date"> & { follow?: ReactNode }) {
+  stackedDate = false,
+}: Pick<ReviewPostProps, "author" | "date"> & {
+  follow?: ReactNode;
+  stackedDate?: boolean;
+}) {
   const initials = author.name
     .trim()
     .split(/\s+/)
@@ -114,9 +121,14 @@ function Byline({
             )}
           </strong>
           {follow}
+          {stackedDate && (
+            <time className="block text-xs text-subtle">{date}</time>
+          )}
         </div>
       </div>
-      <time className="shrink-0 text-right text-xs text-subtle">{date}</time>
+      {!stackedDate && (
+        <time className="shrink-0 text-right text-xs text-subtle">{date}</time>
+      )}
     </div>
   );
 }
@@ -188,6 +200,8 @@ export function ReviewPost(props: ReviewPostProps) {
   const lang =
     props.locale === "pt-BR" || props.locale === "es" ? props.locale : "en";
   const t = labels[lang];
+  const movieReview =
+    props.placement === "title" && props.mediaType === "movie";
   const [failedArtwork, setFailedArtwork] = useState<string[]>([]);
   const artwork = [backdropUrl, posterUrl].find(
     (url) => url && !failedArtwork.includes(url),
@@ -195,9 +209,15 @@ export function ReviewPost(props: ReviewPostProps) {
   const copyRef = useRef<HTMLDivElement>(null);
   const inlineHost = useRef<HTMLDivElement>(null);
   const modalHost = useRef<HTMLDivElement>(null);
+  const modalContent = useRef<HTMLDivElement>(null);
+  const modalEditorGuard = useRef<(() => boolean) | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const card = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
+  const communityEditor = useCommunityEditor();
+  const editingThisCard =
+    !!communityEditor?.editingTrigger &&
+    communityEditor.own?.id === props.reviewId;
   const [mode, setMode] = useState<"read" | "discussion">("read");
   const [overflow, setOverflow] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -233,10 +253,18 @@ export function ReviewPost(props: ReviewPostProps) {
     };
   }, [text]);
 
+  const requestClose = () => {
+    const guard =
+      modalEditorGuard.current ||
+      (editingThisCard ? communityEditor?.guardRef.current : null);
+    return guard ? guard() : true;
+  };
+
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(nextOpen) => {
+        if (!nextOpen && !requestClose()) return;
         if (!nextOpen && interactionContainer && inlineHost.current)
           inlineHost.current.appendChild(interactionContainer);
         setOpen(nextOpen);
@@ -257,16 +285,21 @@ export function ReviewPost(props: ReviewPostProps) {
             )
           )
             return;
-          if (window.getSelection()?.toString()) return;
+          if (editingThisCard || window.getSelection()?.toString()) return;
           opener.current = card.current;
           setMode("read");
           setOpen(true);
         }}
-        className="min-w-0 cursor-pointer rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
+        className={
+          movieReview
+            ? "min-w-0 cursor-pointer border-b border-border py-4 [overflow-wrap:anywhere]"
+            : "min-w-0 cursor-pointer rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
+        }
       >
         {(!artwork || props.placement === "title") && (
           <button
             type="button"
+            disabled={editingThisCard}
             className="sr-only focus:not-sr-only focus:mb-3 focus:rounded focus:outline-2 focus:outline-primary"
             onClick={(event) => {
               opener.current = event.currentTarget;
@@ -277,10 +310,17 @@ export function ReviewPost(props: ReviewPostProps) {
             {t.open}: {title}
           </button>
         )}
-        <div className="mb-3 flex items-start gap-3">
+        <div
+          className={
+            movieReview
+              ? "mb-3 flex items-center gap-2 sm:gap-3"
+              : "mb-3 flex items-start gap-3"
+          }
+        >
           <Byline
             author={author}
             date={date}
+            stackedDate={movieReview}
             follow={
               props.placement === "title" && props.authorId ? (
                 <FollowReviewAuthor
@@ -295,8 +335,15 @@ export function ReviewPost(props: ReviewPostProps) {
           {props.placement === "title" && (
             <CommunityEditControl reviewId={props.reviewId} />
           )}
+          {movieReview && props.rating != null && (
+            <FilmgramRating
+              value={props.rating}
+              locale={props.locale}
+              className="shrink-0 text-lg text-primary"
+            />
+          )}
         </div>
-        <Heading {...props} />
+        {!movieReview && <Heading {...props} />}
         {artwork && props.placement !== "title" && (
           <button
             type="button"
@@ -382,7 +429,7 @@ export function ReviewPost(props: ReviewPostProps) {
               locale={props.locale}
             />
           )}
-        {props.placement === "title" && (
+        {props.placement === "title" && !open && (
           <CommunityCardEditor reviewId={props.reviewId} />
         )}
         <div
@@ -406,6 +453,7 @@ export function ReviewPost(props: ReviewPostProps) {
               mode,
               feed: props.placement !== "title",
               openDiscussion: (button) => {
+                if (editingThisCard) return;
                 opener.current = button;
                 setMode("discussion");
                 setOpen(true);
@@ -419,6 +467,7 @@ export function ReviewPost(props: ReviewPostProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/85" />
         <Dialog.Content
+          ref={modalContent}
           aria-describedby={undefined}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -440,9 +489,13 @@ export function ReviewPost(props: ReviewPostProps) {
           </Dialog.Close>
           <div className="max-h-[min(calc(100dvh-26px),760px)] overflow-auto overscroll-contain">
             <Link
-              href={`${titleHref}?review=${props.reviewId}#review-${props.reviewId}`}
+              href={titleReviewHref(titleHref, props.reviewId)}
               aria-label={`${t.title}: ${title}`}
-              onNavigate={() => {
+              onNavigate={(event) => {
+                if (!requestClose()) {
+                  event.preventDefault();
+                  return;
+                }
                 if (props.placement === "title") {
                   if (interactionContainer && inlineHost.current)
                     inlineHost.current.appendChild(interactionContainer);
@@ -487,11 +540,19 @@ export function ReviewPost(props: ReviewPostProps) {
             </Link>
             {props.mediaType && (
               <TitleReviewContext
+                editorGuardRef={modalEditorGuard}
                 locale={props.locale}
                 mediaType={props.mediaType}
                 tmdbId={props.tmdbId}
                 reviewId={props.reviewId}
                 titleHref={titleHref}
+                reuseEditor={
+                  props.placement === "title" &&
+                  props.mediaType === "movie" &&
+                  props.authorId
+                    ? { authorId: props.authorId, followed: !!props.followed }
+                    : undefined
+                }
                 selected={(own, data) => (
                   <>
                     <div>
@@ -556,7 +617,7 @@ export function ReviewPost(props: ReviewPostProps) {
                           locale={props.locale}
                         />
                       )}
-                    <CommunityCardEditor reviewId={props.reviewId} />
+                    {open && <CommunityCardEditor reviewId={props.reviewId} />}
                     <div
                       ref={(node) => {
                         modalHost.current = node;
