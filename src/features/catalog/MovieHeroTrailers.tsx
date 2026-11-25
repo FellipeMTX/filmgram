@@ -6,6 +6,7 @@ import {
   type Title,
 } from "@/integrations/tmdb";
 import { VideoCards } from "./MovieMediaClient";
+import { hasTrailerCategory } from "./movie-gallery-category";
 
 const labels = {
   en: {
@@ -81,7 +82,7 @@ async function Trailers({
   const allTrailers = result.data.filter((video) => video.type === "Trailer");
   const trailers = allTrailers.slice(0, 3);
   const hasGalleryVideos =
-    allTrailers.length > 3 ||
+    hasTrailerCategory(result.data) ||
     result.data.some((video) => video.type !== "Trailer");
   const backdrop = item.backdrop_path ?? item.poster_path;
   const images =
@@ -128,7 +129,7 @@ async function Trailers({
           {t.error}
         </p>
       )}
-      {allTrailers.length > 3 && (
+      {hasTrailerCategory(result.data) && (
         <Link
           href={trailersHref}
           className="self-center text-sm font-semibold text-primary hover:underline"

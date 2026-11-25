@@ -1,3 +1,5 @@
+import { isMovieGalleryCategory } from "./movie-gallery-category";
+
 const legacySections: Record<string, string> = {
   overview: "film-details",
   crew: "cast-and-crew",
@@ -85,12 +87,7 @@ export function resolveMovieLocation({
 }
 
 export function movieCategory(media?: string) {
-  return media === "posters" ||
-    media === "images" ||
-    media === "extras" ||
-    media === "trailers"
-    ? media
-    : undefined;
+  return isMovieGalleryCategory(media) ? media : undefined;
 }
 
 export function movieHeroRelease<T extends { type: number }>(

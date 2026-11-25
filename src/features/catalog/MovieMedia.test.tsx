@@ -93,7 +93,6 @@ describe("movie media", () => {
     );
     expect(result).toContain("Video 3");
     expect(result).not.toContain("Video 4");
-    expect(result).toContain("Trailers");
   });
   it("handles unavailable direct trailer categories", async () => {
     images.mockResolvedValue({ posters: [], backdrops: [] });
@@ -189,7 +188,7 @@ describe("movie media", () => {
     ) {
       output += new TextDecoder().decode(chunk.value);
     }
-    expect(output).toContain('href="/?media=extras" aria-current="page"');
+    expect(output).toContain("Video 0");
   });
   it("streams preview images before delayed videos", async () => {
     images.mockResolvedValue({

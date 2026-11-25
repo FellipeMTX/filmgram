@@ -460,9 +460,7 @@ export function MovieDetail({
               category={category}
               variant={active === "overview" ? "preview" : "full"}
               galleryHref={href("gallery") + "#gallery"}
-              categoryHref={(
-                value: "posters" | "images" | "extras" | "trailers",
-              ) => href("gallery", value) + "#gallery"}
+              categoryHref={(value) => href("gallery", value) + "#gallery"}
             />
           </div>
         )}

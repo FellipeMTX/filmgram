@@ -8,8 +8,12 @@ import {
 } from "@/integrations/tmdb";
 import { imageUrl, titleName } from "@/integrations/tmdb-display";
 import { ImageGrid, VideoCards } from "./MovieMediaClient";
+import { GalleryNavigation } from "./MovieGalleryNavigation";
+import {
+  hasTrailerCategory,
+  type MovieGalleryCategory as Category,
+} from "./movie-gallery-category";
 
-type Category = "posters" | "images" | "trailers" | "extras";
 const labels = {
   en: {
     gallery: "Gallery",
@@ -57,50 +61,6 @@ type Props = {
 
 type ImageResult = Awaited<ReturnType<typeof getMovieImages>> | null;
 type VideoResult = MovieVideo[] | null;
-
-function CategoryLink({
-  value,
-  category,
-  categoryHref,
-  t,
-}: {
-  value: Category;
-  category?: Category;
-  categoryHref: Props["categoryHref"];
-  t: typeof labels.en;
-}) {
-  return (
-    <Link
-      href={categoryHref(value)}
-      aria-current={category === value ? "page" : undefined}
-      className={`border-b-2 pb-2 text-sm font-semibold ${category === value ? "border-primary text-primary" : "border-transparent text-subtle hover:text-foreground"}`}
-    >
-      {t[value]}
-    </Link>
-  );
-}
-
-async function TrailerNav({
-  videos,
-  category,
-  categoryHref,
-  t,
-}: {
-  videos: Promise<VideoResult>;
-  category?: Category;
-  categoryHref: Props["categoryHref"];
-  t: typeof labels.en;
-}) {
-  const data = await videos;
-  return data && data.filter((video) => video.type === "Trailer").length > 3 ? (
-    <CategoryLink
-      value="trailers"
-      category={category}
-      categoryHref={categoryHref}
-      t={t}
-    />
-  ) : null;
-}
 
 async function PreviewImages({
   images,
@@ -195,8 +155,7 @@ async function PreviewVideos({
       </p>
     );
   const values: Category[] = [];
-  if (data.filter((video) => video.type === "Trailer").length > 3)
-    values.push("trailers");
+  if (hasTrailerCategory(data)) values.push("trailers");
   if (data.some((video) => video.type !== "Trailer")) values.push("extras");
   return (
     <>
@@ -226,7 +185,7 @@ async function PreviewEmpty({
   if (!imageData || !videoData) return null;
   const hasVideos =
     videoData.some((video) => video.type !== "Trailer") ||
-    videoData.filter((video) => video.type === "Trailer").length > 3;
+    hasTrailerCategory(videoData);
   return !imageData.posters.length &&
     !imageData.backdrops.length &&
     !hasVideos ? (
@@ -263,7 +222,7 @@ async function CategoryContent({
         : video.type !== "Trailer",
     );
     // A direct trailers URL is unavailable unless the category is offered.
-    if (category === "trailers" && selected.length <= 3)
+    if (category === "trailers" && !hasTrailerCategory(data))
       return <p className="text-sm text-subtle">{t.empty}</p>;
     return selected.length ? (
       <VideoCards
@@ -304,11 +263,7 @@ async function defaultCategory(
   if (imageData?.backdrops.length) return "images";
   const videoData = await videos;
   if (videoData?.some((video) => video.type !== "Trailer")) return "extras";
-  if (
-    videoData &&
-    videoData.filter((video) => video.type === "Trailer").length > 3
-  )
-    return "trailers";
+  if (videoData && hasTrailerCategory(videoData)) return "trailers";
   return imageData ? (videoData ? "posters" : "extras") : "posters";
 }
 
@@ -319,71 +274,6 @@ async function ResolvedContent({
   resolved: Promise<Category>;
 }) {
   return <CategoryContent {...props} category={await resolved} />;
-}
-
-async function ResolvedNav({
-  resolved,
-  videos,
-  categoryHref,
-  t,
-}: {
-  resolved: Promise<Category>;
-  videos: Promise<VideoResult>;
-  categoryHref: Props["categoryHref"];
-  t: typeof labels.en;
-}) {
-  const category = await resolved;
-  return (
-    <Navigation
-      category={category}
-      videos={videos}
-      categoryHref={categoryHref}
-      t={t}
-    />
-  );
-}
-
-function Navigation({
-  category,
-  videos,
-  categoryHref,
-  t,
-}: {
-  category?: Category;
-  videos: Promise<VideoResult>;
-  categoryHref: Props["categoryHref"];
-  t: typeof labels.en;
-}) {
-  return (
-    <nav
-      aria-label={t.gallery}
-      className="flex flex-wrap gap-4 border-b border-border"
-    >
-      {(["posters", "images"] as Category[]).map((value) => (
-        <CategoryLink
-          key={value}
-          value={value}
-          category={category}
-          categoryHref={categoryHref}
-          t={t}
-        />
-      ))}
-      <Suspense>
-        <TrailerNav
-          videos={videos}
-          category={category}
-          categoryHref={categoryHref}
-          t={t}
-        />
-      </Suspense>
-      <CategoryLink
-        value="extras"
-        category={category}
-        categoryHref={categoryHref}
-        t={t}
-      />
-    </nav>
-  );
 }
 
 export function MovieGallery({
@@ -436,38 +326,34 @@ export function MovieGallery({
       </section>
     );
   const contentProps = { images, videos: safeVideos, item, locale, t };
-  const resolved = category
-    ? Promise.resolve(category)
-    : defaultCategory(images, safeVideos);
+  const resolved = category ? undefined : defaultCategory(images, safeVideos);
   return (
     <section className="space-y-4" aria-label={t.gallery}>
       <h2 className="font-display text-2xl font-bold">{t.gallery}</h2>
-      {category ? (
-        <Navigation
-          category={category}
-          videos={safeVideos}
-          categoryHref={categoryHref}
-          t={t}
-        />
-      ) : (
-        <Suspense
-          fallback={
-            <Navigation videos={safeVideos} categoryHref={categoryHref} t={t} />
-          }
-        >
-          <ResolvedNav
-            resolved={resolved}
-            videos={safeVideos}
-            categoryHref={categoryHref}
-            t={t}
-          />
-        </Suspense>
-      )}
+      <GalleryNavigation
+        category={category}
+        resolved={resolved}
+        videos={safeVideos}
+        hrefs={
+          Object.fromEntries(
+            (["posters", "images", "trailers", "extras"] as Category[]).map(
+              (value) => [value, categoryHref(value)],
+            ),
+          ) as Record<Category, string>
+        }
+        labels={{
+          gallery: t.gallery,
+          posters: t.posters,
+          images: t.images,
+          trailers: t.trailers,
+          extras: t.extras,
+        }}
+      />
       <Suspense fallback={fallback}>
         {category ? (
           <CategoryContent {...contentProps} category={category} />
         ) : (
-          <ResolvedContent {...contentProps} resolved={resolved} />
+          <ResolvedContent {...contentProps} resolved={resolved!} />
         )}
       </Suspense>
     </section>
