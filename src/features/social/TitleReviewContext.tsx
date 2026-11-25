@@ -1,5 +1,7 @@
 "use client";
 
+import { titleReviewHref } from "@/features/catalog/movie-section-links";
+
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -155,9 +157,7 @@ export function TitleReviewContext({
         mediaType,
         tmdbId,
         userId: data?.userId || null,
-        next: reviewId
-          ? `${titleHref}?review=${reviewId}#review-${reviewId}`
-          : titleHref,
+        next: reviewId ? titleReviewHref(titleHref, reviewId) : titleHref,
         refresh,
         onDeleted: async (id) => {
           if (id === reviewId) setDeletedSelected(true);

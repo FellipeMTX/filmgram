@@ -18,7 +18,12 @@ import { MovieCrew } from "./MovieCrew";
 import { MovieExtraPanel } from "./MovieExtraPanel";
 import { MovieOverview } from "./MovieOverview";
 import { MovieSectionNavigation } from "./MovieSectionNavigation";
-import { movieReviewId } from "./movie-section-links";
+import {
+  movieReviewId,
+  movieHref,
+  resolveMovieLocation,
+  movieHeroRelease,
+} from "./movie-section-links";
 import { MovieHeroTrailers } from "./MovieHeroTrailers";
 import { MovieGallery } from "./MovieGallery";
 import Link from "next/link";
@@ -45,28 +50,53 @@ const labels = {
 
 type MovieStats = { average_rating: number; review_count: number } | null;
 
-async function Certification({
+async function ReleaseMetadata({
   locale,
   id,
   country,
+  originalDate,
+  metadata,
 }: {
   locale: string;
   id: number;
   country?: string;
+  originalDate?: string;
+  metadata: string;
 }) {
   const releases = await getMovieReleases(
     locale,
     id,
     movieRegion(locale, country),
   ).catch(() => []);
-  const certification = releases.find(
-    (release) => release.certification,
-  )?.certification;
-  return certification ? (
-    <strong className="ml-2 inline-block rounded bg-primary/15 px-1.5 text-primary">
-      {certification}
-    </strong>
-  ) : null;
+  const release = movieHeroRelease(releases);
+  const rawDate = release?.date || originalDate;
+  const date = rawDate ? new Date(rawDate + "T00:00:00Z") : null;
+  if (!date || Number.isNaN(date.valueOf())) return metadata || null;
+  const formatted = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(date);
+  const original =
+    locale === "pt-BR"
+      ? "Lan\u00e7amento original"
+      : locale === "es"
+        ? "Estreno original"
+        : "Original release";
+  return (
+    <>
+      {!release && original + ": "}
+      <time dateTime={rawDate}>{formatted}</time>
+      {release?.certification && (
+        <>
+          {" "}
+          <strong className="inline-block rounded bg-primary/15 px-1.5 text-primary">
+            {release.certification}
+          </strong>
+        </>
+      )}
+      {metadata && <> · {metadata}</>}
+    </>
+  );
 }
 
 async function HeroRating({
@@ -145,9 +175,11 @@ async function CommunityReviews({
   user,
   preview,
   reviewsHref,
+  country,
 }: {
   preview?: boolean;
   reviewsHref?: string;
+  country?: string;
   item: Title;
   locale: string;
   review: string | undefined;
@@ -167,7 +199,9 @@ async function CommunityReviews({
         year={year(item)}
         posterUrl={imageUrl(item.poster_path) ?? null}
         backdropUrl={imageUrl(item.backdrop_path, "w780") ?? null}
-        titleHref={"/" + locale + "/title/movie/" + item.id}
+        titleHref={movieHref("/" + locale + "/title/movie/" + item.id, {
+          country,
+        })}
         average={Number(aggregate?.average_rating || 0)}
         count={Number(aggregate?.review_count || 0)}
         userId={viewer?.id ?? null}
@@ -203,21 +237,9 @@ export function MovieDetail({
   });
   const videos = getMovieVideos(locale, item.id);
   const base = "/" + locale + "/title/movie/" + item.id;
-  const href = (nextTab?: string, category?: string) => {
-    const query = new URLSearchParams();
-    if (country) query.set("country", country);
-    if (nextTab) query.set("tab", nextTab);
-    if (category) query.set("media", category);
-    const suffix = query.toString();
-    return base + (suffix ? "?" + suffix : "");
-  };
-  const active = review
-    ? "reviews"
-    : tab === "info" || tab === "reviews" || tab === "gallery"
-      ? tab
-      : ["overview", "crew", "releases", "watch"].includes(tab || "")
-        ? "info"
-        : "overview";
+  const href = (nextTab?: string, category?: string) =>
+    movieHref(base, { country, tab: nextTab, media: category });
+  const { active } = resolveMovieLocation({ tab, review });
   const category =
     media === "posters" || media === "images" || media === "extras"
       ? media
@@ -229,20 +251,11 @@ export function MovieDetail({
         ? ["Resumen", "Información", "Reseñas", "Galería"]
         : ["Overview", "Info", "Reviews", "Gallery"];
   const backdrop = imageUrl(item.backdrop_path, "original");
-  const rawDate = item.release_date;
-  const parsedDate = rawDate ? new Date(rawDate + "T00:00:00Z") : null;
-  const date =
-    parsedDate && !Number.isNaN(parsedDate.valueOf())
-      ? new Intl.DateTimeFormat(locale, {
-          dateStyle: "medium",
-          timeZone: "UTC",
-        }).format(parsedDate)
-      : year(item);
   const genres = item.genres?.map((genre) => genre.name) || [];
   const runtime = item.runtime
     ? Math.floor(item.runtime / 60) + "h " + (item.runtime % 60) + "m"
     : "";
-  const metadata = [date, runtime, ...genres].filter(Boolean).join(" · ");
+  const metadata = [runtime, ...genres].filter(Boolean).join(" · ");
 
   return (
     <main>
@@ -280,18 +293,17 @@ export function MovieDetail({
                 · {item.original_title}
               </p>
             )}
-            {metadata && (
-              <p className="text-sm text-detail-meta">
-                {metadata}
-                <Suspense fallback={null}>
-                  <Certification
-                    locale={locale}
-                    id={item.id}
-                    country={country}
-                  />
-                </Suspense>
-              </p>
-            )}
+            <p className="text-sm text-detail-meta">
+              <Suspense fallback={metadata || null}>
+                <ReleaseMetadata
+                  locale={locale}
+                  id={item.id}
+                  country={country}
+                  originalDate={item.release_date}
+                  metadata={metadata}
+                />
+              </Suspense>
+            </p>
             <p className="max-w-[52ch] leading-relaxed text-title-overview">
               {item.overview || t.noOverview}
             </p>
@@ -430,6 +442,7 @@ export function MovieDetail({
               <CommunityReviews
                 item={item}
                 locale={locale}
+                country={country}
                 review={review}
                 stats={stats}
                 user={user}

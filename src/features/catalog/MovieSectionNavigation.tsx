@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { legacyMovieSection, movieReviewId } from "./movie-section-links";
+import { resolveMovieLocation } from "./movie-section-links";
 
 export function MovieSectionNavigation({
   legacyTab,
@@ -18,39 +18,23 @@ export function MovieSectionNavigation({
   useEffect(() => {
     function navigate() {
       const url = new URL(window.location.href);
-      const query = url.searchParams.get("review");
       const fragment = url.hash.slice(1);
-      const fragmentIsReview = fragment.startsWith("review-");
-      const id = movieReviewId(
-        query ?? (fragmentIsReview ? fragment.slice(7) : null),
-      );
-
-      const targetTab =
-        id || query !== null || fragmentIsReview || fragment === "reviews"
-          ? "reviews"
-          : [
-                "cast-and-crew",
-                "film-details",
-                "releases",
-                "where-to-watch",
-              ].includes(fragment)
-            ? "info"
-            : ["overview", "crew", "releases", "watch"].includes(
-                  url.searchParams.get("tab") || "",
-                )
-              ? "info"
-              : null;
-      const currentTab = url.searchParams.get("tab");
-      if (
-        (query === null && id && fragmentIsReview) ||
-        (targetTab && currentTab !== targetTab)
-      ) {
-        if (query === null && id && fragmentIsReview)
-          url.searchParams.set("review", id);
-        if (targetTab) {
-          if (!fragment && currentTab && legacyMovieSection(currentTab))
-            url.hash = legacyMovieSection(currentTab)!;
-          url.searchParams.set("tab", targetTab);
+      const {
+        reviewId: id,
+        target: initialTarget,
+        tabReplacement,
+        saveReviewQuery,
+        legacyTarget,
+      } = resolveMovieLocation({
+        tab: url.searchParams.get("tab"),
+        review: url.searchParams.get("review"),
+        fragment,
+      });
+      if (saveReviewQuery || tabReplacement) {
+        if (saveReviewQuery && id) url.searchParams.set("review", id);
+        if (tabReplacement) {
+          if (!fragment && legacyTarget) url.hash = legacyTarget;
+          url.searchParams.set("tab", tabReplacement);
         }
         const href = url.pathname + url.search + url.hash;
         if (pendingQuery.current !== href) {
@@ -61,16 +45,7 @@ export function MovieSectionNavigation({
       }
       pendingQuery.current = null;
 
-      let target = id
-        ? "review-" + id
-        : query !== null || fragmentIsReview
-          ? "reviews"
-          : fragment ||
-            (["overview", "crew", "releases", "watch", "videos"].includes(
-              url.searchParams.get("tab") || "",
-            )
-              ? legacyMovieSection(url.searchParams.get("tab"))
-              : null);
+      let target = initialTarget;
 
       if (!target) {
         lastTarget.current = null;

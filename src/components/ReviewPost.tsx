@@ -1,5 +1,7 @@
 "use client";
 
+import { titleReviewHref } from "@/features/catalog/movie-section-links";
+
 import {
   createContext,
   useContext,
@@ -469,7 +471,7 @@ export function ReviewPost(props: ReviewPostProps) {
           </Dialog.Close>
           <div className="max-h-[min(calc(100dvh-26px),760px)] overflow-auto overscroll-contain">
             <Link
-              href={`${titleHref}?review=${props.reviewId}#review-${props.reviewId}`}
+              href={titleReviewHref(titleHref, props.reviewId)}
               aria-label={`${t.title}: ${title}`}
               onNavigate={() => {
                 if (props.placement === "title") {
