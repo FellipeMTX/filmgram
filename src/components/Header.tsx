@@ -71,7 +71,10 @@ export function Header({ locale }: { locale: string }) {
   function changeLocale(value: string) {
     const parts = path.split("/");
     parts[1] = value;
-    location.href = parts.join("/") + (query.toString() ? `?${query}` : "");
+    location.href =
+      parts.join("/") +
+      (query.toString() ? `?${query}` : "") +
+      (parts[2] === "title" && parts[3] === "movie" ? location.hash : "");
   }
   return (
     <>

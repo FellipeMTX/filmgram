@@ -86,7 +86,11 @@ function Byline({
   author,
   date,
   follow,
-}: Pick<ReviewPostProps, "author" | "date"> & { follow?: ReactNode }) {
+  stackedDate = false,
+}: Pick<ReviewPostProps, "author" | "date"> & {
+  follow?: ReactNode;
+  stackedDate?: boolean;
+}) {
   const initials = author.name
     .trim()
     .split(/\s+/)
@@ -114,9 +118,14 @@ function Byline({
             )}
           </strong>
           {follow}
+          {stackedDate && (
+            <time className="block text-xs text-subtle">{date}</time>
+          )}
         </div>
       </div>
-      <time className="shrink-0 text-right text-xs text-subtle">{date}</time>
+      {!stackedDate && (
+        <time className="shrink-0 text-right text-xs text-subtle">{date}</time>
+      )}
     </div>
   );
 }
@@ -188,6 +197,8 @@ export function ReviewPost(props: ReviewPostProps) {
   const lang =
     props.locale === "pt-BR" || props.locale === "es" ? props.locale : "en";
   const t = labels[lang];
+  const movieReview =
+    props.placement === "title" && props.mediaType === "movie";
   const [failedArtwork, setFailedArtwork] = useState<string[]>([]);
   const artwork = [backdropUrl, posterUrl].find(
     (url) => url && !failedArtwork.includes(url),
@@ -262,7 +273,11 @@ export function ReviewPost(props: ReviewPostProps) {
           setMode("read");
           setOpen(true);
         }}
-        className="min-w-0 cursor-pointer rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
+        className={
+          movieReview
+            ? "min-w-0 cursor-pointer border-b border-border py-4 [overflow-wrap:anywhere]"
+            : "min-w-0 cursor-pointer rounded-xl border border-border bg-card p-[clamp(12px,2.5vw,20px)] [overflow-wrap:anywhere]"
+        }
       >
         {(!artwork || props.placement === "title") && (
           <button
@@ -277,10 +292,17 @@ export function ReviewPost(props: ReviewPostProps) {
             {t.open}: {title}
           </button>
         )}
-        <div className="mb-3 flex items-start gap-3">
+        <div
+          className={
+            movieReview
+              ? "mb-3 flex items-center gap-2 sm:gap-3"
+              : "mb-3 flex items-start gap-3"
+          }
+        >
           <Byline
             author={author}
             date={date}
+            stackedDate={movieReview}
             follow={
               props.placement === "title" && props.authorId ? (
                 <FollowReviewAuthor
@@ -295,8 +317,15 @@ export function ReviewPost(props: ReviewPostProps) {
           {props.placement === "title" && (
             <CommunityEditControl reviewId={props.reviewId} />
           )}
+          {movieReview && props.rating != null && (
+            <FilmgramRating
+              value={props.rating}
+              locale={props.locale}
+              className="shrink-0 text-lg text-primary"
+            />
+          )}
         </div>
-        <Heading {...props} />
+        {!movieReview && <Heading {...props} />}
         {artwork && props.placement !== "title" && (
           <button
             type="button"
@@ -492,6 +521,13 @@ export function ReviewPost(props: ReviewPostProps) {
                 tmdbId={props.tmdbId}
                 reviewId={props.reviewId}
                 titleHref={titleHref}
+                reuseEditor={
+                  props.placement === "title" &&
+                  props.mediaType === "movie" &&
+                  props.authorId
+                    ? { authorId: props.authorId, followed: !!props.followed }
+                    : undefined
+                }
                 selected={(own, data) => (
                   <>
                     <div>

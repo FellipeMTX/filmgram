@@ -181,6 +181,70 @@ describe("TMDB movie supplements", () => {
     ]);
   });
 
+  it("prefers an official trailer in the page language and loads English fallback", async () => {
+    const video = {
+      key: "8ugaeA-nMTc",
+      name: "Video",
+      site: "YouTube",
+      official: true,
+    };
+    mock({
+      results: [
+        {
+          ...video,
+          id: "clip",
+          type: "Clip",
+          iso_639_1: "pt",
+          key: "01234567890",
+        },
+        {
+          ...video,
+          id: "english",
+          type: "Trailer",
+          iso_639_1: "en",
+          key: "abcdefghijk",
+        },
+        { ...video, id: "portuguese", type: "Trailer", iso_639_1: "pt" },
+      ],
+    });
+    const result = await getMovieVideos("pt-BR", 1726);
+    expect(result.map((item) => item.id)).toEqual([
+      "portuguese",
+      "english",
+      "clip",
+    ]);
+    expect(result[0]?.iso_639_1).toBe("pt");
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes("language=en")),
+    ).toBe(true);
+  });
+
+  it("keeps videos when one language fails and reports failure when none are usable", async () => {
+    mock({});
+    const video = {
+      id: "fallback",
+      key: "8ugaeA-nMTc",
+      name: "Trailer",
+      type: "Trailer",
+      site: "YouTube",
+      iso_639_1: "en",
+    };
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockRejectedValueOnce(new Error("failed")).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [video] }),
+    } as Response);
+    expect(
+      (await getMovieVideos("pt-BR", 1726)).map((item) => item.id),
+    ).toEqual(["fallback"]);
+    fetchMock.mockRejectedValueOnce(new Error("failed")).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [] }),
+    } as Response);
+    await expect(getMovieVideos("pt-BR", 1726)).rejects.toThrow("failed");
+  });
   it("lists only valid countries with release rows or provider offers", async () => {
     const validRelease = { release_date: "2008-05-02", type: 3 };
     mock({

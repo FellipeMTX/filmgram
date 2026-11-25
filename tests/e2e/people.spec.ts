@@ -4,7 +4,6 @@ test("cast links to the actor profile and filmography links back to a title", as
   page,
 }) => {
   await page.goto("/en/title/movie/1726");
-  await page.getByRole("link", { name: "Cast and crew", exact: true }).click();
   await page
     .getByRole("link", { name: /Robert Downey Jr/ })
     .first()
@@ -214,14 +213,9 @@ test("movie credits and reviews use separate sections while the TV layout is ret
   page,
 }) => {
   await page.goto("/en/title/movie/1726");
-  await page.getByRole("link", { name: "Cast and crew", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Cast", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Community reviews", exact: true }),
-  ).toBeHidden();
-  await page.getByRole("link", { name: "Reviews", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Community reviews", exact: true }),
   ).toBeVisible();

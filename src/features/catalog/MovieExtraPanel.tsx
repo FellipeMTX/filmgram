@@ -1,25 +1,21 @@
+import { Suspense } from "react";
+import Image from "next/image";
 import { imageUrl } from "@/integrations/tmdb-display";
 import {
   getMovieReleases,
-  getMovieVideos,
   getMovieWatchProviders,
   getMovieReleaseCountries,
   getMovieProviderCountries,
   movieRegion,
 } from "@/integrations/tmdb";
-import { MovieVideos } from "./MovieVideos";
 import { MovieCountrySelect } from "./MovieCountrySelect";
-import Image from "next/image";
 
 const labels = {
   en: {
-    country: "Country",
-    apply: "Show",
+    country: "Availability and release country",
     releases: "Release dates",
-    videos: "Videos",
     watch: "Where to watch",
     noReleases: "No release dates are available for this country.",
-    noVideos: "No videos are available.",
     noWatch: "No streaming information is available for this country.",
     error: "This information is temporarily unavailable.",
     attribution: "Streaming information provided by JustWatch.",
@@ -34,7 +30,7 @@ const labels = {
       "TV",
     ],
     groups: {
-      flatrate: "Stream",
+      flatrate: "Streaming",
       rent: "Rent",
       buy: "Buy",
       ads: "With ads",
@@ -42,13 +38,10 @@ const labels = {
     },
   },
   "pt-BR": {
-    country: "País",
-    apply: "Mostrar",
+    country: "País de disponibilidade e lançamentos",
     releases: "Lançamentos",
-    videos: "Vídeos",
     watch: "Onde assistir",
     noReleases: "Não há datas de lançamento disponíveis para este país.",
-    noVideos: "Não há vídeos disponíveis.",
     noWatch: "Não há informações de streaming disponíveis para este país.",
     error: "Estas informações estão temporariamente indisponíveis.",
     attribution: "Informações de streaming fornecidas por JustWatch.",
@@ -64,20 +57,17 @@ const labels = {
     ],
     groups: {
       flatrate: "Streaming",
-      rent: "Alugar",
-      buy: "Comprar",
+      rent: "Aluguel",
+      buy: "Compra",
       ads: "Com anúncios",
       free: "Grátis",
     },
   },
   es: {
-    country: "País",
-    apply: "Mostrar",
+    country: "País de disponibilidad y estrenos",
     releases: "Estrenos",
-    videos: "Vídeos",
     watch: "Dónde ver",
     noReleases: "No hay fechas de estreno disponibles para este país.",
-    noVideos: "No hay vídeos disponibles.",
     noWatch: "No hay información de streaming disponible para este país.",
     error: "Esta información no está disponible temporalmente.",
     attribution: "Información de streaming proporcionada por JustWatch.",
@@ -93,173 +83,225 @@ const labels = {
     ],
     groups: {
       flatrate: "Streaming",
-      rent: "Alquilar",
-      buy: "Comprar",
+      rent: "Alquiler",
+      buy: "Compra",
       ads: "Con anuncios",
       free: "Gratis",
     },
   },
 };
-export async function MovieExtraPanel({
-  tab,
+
+type ExtraLabels = (typeof labels)[keyof typeof labels];
+
+async function RegionPicker({
+  locale,
+  region,
+  id,
+  label,
+}: {
+  locale: string;
+  region: string;
+  id: number;
+  label: string;
+}) {
+  const [providers, releases] = await Promise.all([
+    getMovieProviderCountries(locale, id).catch(() => []),
+    getMovieReleaseCountries(locale, id).catch(() => []),
+  ]);
+  const names = new Intl.DisplayNames([locale], { type: "region" });
+  const collator = new Intl.Collator(locale);
+  const regions = [...new Set([region, ...providers, ...releases])]
+    .map((value) => ({ value, label: names.of(value) || value }))
+    .sort((a, b) => collator.compare(a.label, b.label));
+  return <MovieCountrySelect label={label} region={region} regions={regions} />;
+}
+
+async function WatchProviders({
   locale,
   id,
-  country,
+  region,
+  text,
 }: {
-  tab: "releases" | "videos" | "watch";
   locale: string;
   id: number;
-  country?: string;
+  region: string;
+  text: ExtraLabels;
 }) {
-  const l = labels[locale as keyof typeof labels] || labels.en;
-  const region = movieRegion(locale, country);
-  const regions =
-    tab === "videos"
-      ? []
-      : await (
-          tab === "releases"
-            ? getMovieReleaseCountries(locale, id)
-            : getMovieProviderCountries(locale, id)
-        ).catch(() => []);
-  const selector = (
-    <MovieCountrySelect
-      label={l.country}
-      locale={locale}
-      id={id}
-      tab={tab}
-      region={region}
-      regions={[...new Set([region, ...regions])]}
-    />
+  const result = await getMovieWatchProviders(locale, id, region).then(
+    (data) => ({ data, failed: false }),
+    () => ({ data: null, failed: true }),
   );
-  const result = await (
-    tab === "releases"
-      ? getMovieReleases(locale, id, region)
-      : tab === "videos"
-        ? getMovieVideos(locale, id)
-        : getMovieWatchProviders(locale, id, region)
-  ).then(
-    (value) => ({ value, failed: false as const }),
-    () => ({ value: null, failed: true as const }),
-  );
-  if (result.failed)
-    return (
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-semibold">{l[tab]}</h2>
-        {tab !== "videos" && selector}
-        <p role="alert" className="text-muted-foreground">
-          {l.error}
+  const data = result.data;
+  const rows = data
+    ? (Object.keys(text.groups) as (keyof ExtraLabels["groups"])[]).flatMap(
+        (mode) => data[mode].map((provider) => ({ provider, mode })),
+      )
+    : [];
+
+  return (
+    <>
+      {result.failed ? (
+        <p role="alert" className="text-sm text-subtle">
+          {text.error}
         </p>
-        {tab === "watch" && (
-          <p className="mt-4 text-sm text-muted-foreground">{l.attribution}</p>
-        )}
-      </section>
-    );
-  if (tab === "releases") {
-    const dates = result.value as Awaited<ReturnType<typeof getMovieReleases>>;
-    return (
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-semibold">
-          {l.releases}
-        </h2>
-        {selector}
-        {dates.length ? (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-            {dates.map((entry, index) => (
+      ) : rows.length ? (
+        <ul className="divide-y divide-border text-sm">
+          {rows.map(({ provider, mode }) => {
+            const logo = imageUrl(provider.logo_path, "w185");
+            return (
               <li
-                key={`${entry.date}-${entry.type}-${index}`}
-                className="flex flex-wrap items-center justify-between gap-2 p-4"
+                key={mode + ":" + provider.provider_id}
+                className="grid grid-cols-[1.55rem_minmax(0,1fr)_auto] items-center gap-2.5 py-2"
               >
-                <time dateTime={entry.date}>
-                  {new Date(entry.date).toLocaleDateString(locale, {
-                    timeZone: "UTC",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </time>
-                <span className="text-sm text-muted-foreground">
-                  {l.types[entry.type] || ""}
-                  {entry.certification ? ` · ${entry.certification}` : ""}
+                <span aria-hidden="true">
+                  {logo && (
+                    <Image
+                      src={logo}
+                      alt=""
+                      width={24}
+                      height={24}
+                      unoptimized
+                      className="size-6 rounded object-cover"
+                    />
+                  )}
+                </span>
+                <span className="font-semibold [overflow-wrap:anywhere]">
+                  {provider.provider_name}
+                </span>
+                <span className="text-right text-subtle">
+                  {text.groups[mode]}
                 </span>
               </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground">{l.noReleases}</p>
-        )}
-      </section>
-    );
-  }
-  if (tab === "videos") {
-    const videos = result.value as Awaited<ReturnType<typeof getMovieVideos>>;
-    return (
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-semibold">{l.videos}</h2>
-        {videos.length ? (
-          <MovieVideos videos={videos} locale={locale} />
-        ) : (
-          <p className="text-muted-foreground">{l.noVideos}</p>
-        )}
-      </section>
-    );
-  }
-  const data = result.value as Awaited<
-    ReturnType<typeof getMovieWatchProviders>
-  >;
-  return (
-    <section>
-      <h2 className="mb-4 font-display text-2xl font-semibold">{l.watch}</h2>
-      {selector}
-      {data &&
-      Object.keys(l.groups).some(
-        (key) => data[key as keyof typeof l.groups].length,
-      ) ? (
-        <div className="space-y-5">
-          {(Object.keys(l.groups) as (keyof typeof l.groups)[]).map(
-            (key) =>
-              data[key].length > 0 && (
-                <div key={key}>
-                  <h3 className="mb-2 font-bold">{l.groups[key]}</h3>
-                  <ul className="flex flex-wrap gap-3">
-                    {data[key].map((provider) => (
-                      <li
-                        key={provider.provider_id}
-                        className="flex w-28 flex-col items-center gap-2 rounded-lg border border-border bg-card p-3 text-center text-sm"
-                      >
-                        {provider.logo_path && (
-                          <Image
-                            src={imageUrl(provider.logo_path, "w185")!}
-                            alt=""
-                            width={56}
-                            height={56}
-                            unoptimized
-                            className="size-14 rounded-md object-cover"
-                          />
-                        )}
-                        <span>{provider.provider_name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ),
-          )}
-        </div>
+            );
+          })}
+        </ul>
       ) : (
-        <p className="text-muted-foreground">{l.noWatch}</p>
+        <p className="text-sm text-subtle">{text.noWatch}</p>
       )}
-      <p className="mt-6 text-sm text-muted-foreground">
-        {l.attribution}{" "}
+      <p className="mt-2 text-xs leading-relaxed text-subtle">
+        {text.attribution}{" "}
         {data?.link && (
           <a
-            className="text-primary hover:underline"
             href={data.link}
             target="_blank"
             rel="noreferrer"
+            className="text-primary hover:underline"
           >
-            {l.providerLink} ↗
+            {text.providerLink} ↗
           </a>
         )}
       </p>
-    </section>
+    </>
+  );
+}
+
+async function ReleaseDates({
+  locale,
+  id,
+  region,
+  text,
+}: {
+  locale: string;
+  id: number;
+  region: string;
+  text: ExtraLabels;
+}) {
+  const dates = await getMovieReleases(locale, id, region).catch(() => null);
+  if (!dates)
+    return (
+      <p role="alert" className="text-sm text-subtle">
+        {text.error}
+      </p>
+    );
+  if (!dates.length)
+    return <p className="text-sm text-subtle">{text.noReleases}</p>;
+  const formatter = new Intl.DateTimeFormat(locale, {
+    timeZone: "UTC",
+    dateStyle: "long",
+  });
+  const country =
+    new Intl.DisplayNames([locale], { type: "region" }).of(region) || region;
+  return (
+    <ul className="divide-y divide-border">
+      {dates.map((entry, index) => (
+        <li
+          key={[entry.date, entry.type, index].join("-")}
+          className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+        >
+          <time dateTime={entry.date} className="font-semibold">
+            {formatter.format(new Date(entry.date))}{" "}
+            <span className="font-normal">({country})</span>
+          </time>
+          <span className="flex items-center gap-2 text-subtle">
+            {text.types[entry.type]}
+            {entry.certification && (
+              <strong className="rounded bg-primary/15 px-1.5 py-0.5 text-primary">
+                {entry.certification}
+              </strong>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function MovieExtraPanel({
+  locale,
+  id,
+  country,
+  loading,
+}: {
+  locale: string;
+  id: number;
+  country?: string;
+  loading: string;
+}) {
+  const text = labels[locale as keyof typeof labels] || labels.en;
+  const region = movieRegion(locale, country);
+  const heading =
+    "font-display text-[clamp(1.5rem,2.6vw,2.1rem)] leading-tight font-bold";
+  const fallback = (
+    <p role="status" className="text-sm text-subtle">
+      {loading}
+    </p>
+  );
+  return (
+    <>
+      <section
+        id="where-to-watch"
+        aria-labelledby="movie-watch-heading"
+        className="scroll-mt-4 border-t border-border pt-4"
+      >
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="movie-watch-heading" className={heading}>
+            {text.watch}
+          </h2>
+          <Suspense fallback={null}>
+            <RegionPicker
+              locale={locale}
+              region={region}
+              id={id}
+              label={text.country}
+            />
+          </Suspense>
+        </div>
+        <Suspense fallback={fallback}>
+          <WatchProviders locale={locale} region={region} id={id} text={text} />
+        </Suspense>
+      </section>
+      <section
+        id="releases"
+        aria-labelledby="movie-release-heading"
+        className="scroll-mt-4 border-t border-border pt-4"
+      >
+        <h2 id="movie-release-heading" className={"mb-2 " + heading}>
+          {text.releases}
+        </h2>
+        <Suspense fallback={fallback}>
+          <ReleaseDates locale={locale} region={region} id={id} text={text} />
+        </Suspense>
+      </section>
+    </>
   );
 }

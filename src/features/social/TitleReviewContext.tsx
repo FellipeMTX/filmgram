@@ -10,6 +10,7 @@ import {
   CommunityEditorContext,
   CommunityEditControl,
   CommunityCardEditor,
+  useCommunityEditor,
 } from "./CommunityEditor";
 import { loadTitleReviewContext } from "./title-review-context";
 import { ReviewDiscussion } from "./ReviewDiscussion";
@@ -74,6 +75,7 @@ export function TitleReviewContext({
   selected,
   titleHref,
   onTitlePage,
+  reuseEditor,
   children,
 }: {
   locale: string;
@@ -83,8 +85,11 @@ export function TitleReviewContext({
   selected?: (own: Context["own"], data: Context | null) => ReactNode;
   titleHref: string;
   onTitlePage?: boolean;
+  reuseEditor?: { authorId: string; followed: boolean };
   children?: ReactNode;
 }) {
+  const existingEditor = useCommunityEditor();
+  const reuse = !!reuseEditor && !!existingEditor;
   const [data, setData] = useState<Context | null>(null);
   const router = useRouter();
   const [error, setError] = useState(false);
@@ -95,6 +100,7 @@ export function TitleReviewContext({
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   useEffect(() => {
+    if (reuse) return;
     let active = true;
     loadTitleReviewContext(locale, mediaType, tmdbId, reviewId)
       .then((result) => {
@@ -109,7 +115,7 @@ export function TitleReviewContext({
     return () => {
       active = false;
     };
-  }, [locale, mediaType, tmdbId, reviewId, attempt]);
+  }, [locale, mediaType, tmdbId, reviewId, attempt, reuse]);
   const own = data?.own;
   const others = data?.reviews || [];
   const refresh = async () => {
@@ -122,6 +128,23 @@ export function TitleReviewContext({
     setData(updated);
     if (onTitlePage) router.refresh();
   };
+  if (reuse && existingEditor && reuseEditor) {
+    const selectedData = {
+      own: existingEditor.own,
+      userId: existingEditor.userId,
+      selectedAuthorId: reuseEditor.authorId,
+      followed: reuseEditor.followed ? [reuseEditor.authorId] : [],
+    } as Context;
+    return (
+      <section className="space-y-4 p-[clamp(12px,3vw,24px)] [overflow-wrap:anywhere]">
+        {selected && (
+          <article className="rounded-xl border border-border bg-card p-4">
+            {selected(existingEditor.own, selectedData)}
+          </article>
+        )}
+      </section>
+    );
+  }
   return (
     <CommunityEditorContext.Provider
       value={{

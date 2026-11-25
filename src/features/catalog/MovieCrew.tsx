@@ -1,10 +1,6 @@
 "use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { NativeSelect } from "@/components/ui/native-select";
-import { MediaImage } from "@/features/catalog/MediaImage";
-import { imageUrl } from "@/integrations/tmdb-display";
+import { Dialog } from "radix-ui";
 import { Rail } from "@/features/catalog/Rail";
 import { PersonCard } from "@/features/people/PersonCard";
 import { messages } from "@/i18n/messages";
@@ -20,30 +16,36 @@ type Person = {
 const labels = {
   en: {
     title: "Cast and crew",
-    filter: "Credits",
     cast: "Cast",
+    crew: "Crew",
+    more: "See all",
+    close: "Close",
+    empty: "No credits available.",
     direction: "Direction and writing",
     production: "Production",
     technical: "Technical crew",
-    empty: "No credits available.",
   },
   "pt-BR": {
     title: "Elenco e equipe",
-    filter: "Créditos",
     cast: "Elenco",
+    crew: "Equipe técnica",
+    more: "Ver mais",
+    close: "Fechar",
+    empty: "Nenhum crédito disponível.",
     direction: "Direção e roteiro",
     production: "Produção",
     technical: "Equipe técnica",
-    empty: "Nenhum crédito disponível.",
   },
   es: {
     title: "Reparto y equipo",
-    filter: "Créditos",
     cast: "Reparto",
+    crew: "Equipo técnico",
+    more: "Ver más",
+    close: "Cerrar",
+    empty: "No hay créditos disponibles.",
     direction: "Dirección y guion",
     production: "Producción",
     technical: "Equipo técnico",
-    empty: "No hay créditos disponibles.",
   },
 };
 export function MovieCrew({
@@ -55,9 +57,6 @@ export function MovieCrew({
   crew: Person[];
   locale: string;
 }) {
-  const [filter, setFilter] = useState<
-    "cast" | "direction" | "production" | "technical"
-  >("cast");
   const t = labels[locale as keyof typeof labels] || labels.en;
   const common = messages(locale);
   const roles: Record<string, [string, string]> = {
@@ -69,11 +68,11 @@ export function MovieCrew({
     "Original Music Composer": ["Trilha sonora", "Música original"],
     "Director of Photography": ["Fotografia", "Fotografía"],
   };
-  const role = (person: Person) =>
-    person.character ||
-    (person.job && locale !== "en"
-      ? roles[person.job]?.[locale === "es" ? 1 : 0] || person.job
-      : person.job);
+  const role = (p: Person) =>
+    p.character ||
+    (p.job && locale !== "en"
+      ? roles[p.job]?.[locale === "es" ? 1 : 0] || p.job
+      : p.job);
   const group = (p: Person) =>
     p.department === "Directing" ||
     p.department === "Writing" ||
@@ -82,75 +81,116 @@ export function MovieCrew({
       : p.department === "Production"
         ? "production"
         : "technical";
-  const rows =
-    filter === "cast" ? cast : crew.filter((p) => group(p) === filter);
-  const listRows = filter === "cast" ? rows.slice(6) : rows;
-  return (
-    <section className="space-y-4">
-      <h2 className="font-display text-2xl font-bold">{t.title}</h2>
-      <label className="flex flex-wrap items-center gap-3 text-sm font-bold">
-        {t.filter}
-        <NativeSelect
-          value={filter}
-          onChange={(event) => setFilter(event.target.value as typeof filter)}
-        >
-          {(["cast", "direction", "production", "technical"] as const).map(
-            (key) => (
-              <option key={key} value={key}>
-                {t[key]}
-              </option>
-            ),
+  function row(title: string, people: Person[], isCrew: boolean) {
+    if (!people.length) return null;
+    const featured = isCrew
+      ? [
+          ["Director"],
+          ["Screenplay", "Writer", "Story"],
+          ["Producer", "Executive Producer"],
+          ["Director of Photography"],
+          ["Editor"],
+        ].flatMap((jobs) => {
+          const person = people.find((candidate) =>
+            jobs.includes(candidate.job || ""),
+          );
+          return person ? [person] : [];
+        })
+      : [];
+    const preview = [...new Set([...featured, ...people])];
+    const groups = isCrew
+      ? (["direction", "production", "technical"] as const).map((key) => ({
+          name: t[key],
+          people: people.filter((p) => group(p) === key),
+        }))
+      : [{ name: title, people }];
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-display text-lg font-semibold">{title}</h3>
+          {people.length > 6 && (
+            <Dialog.Root>
+              <Dialog.Trigger asChild>
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-primary hover:underline"
+                >
+                  {t.more}
+                  <span className="sr-only">: {title}</span>
+                </button>
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/75" />
+                <Dialog.Content className="fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xl">
+                  <div className="flex items-center justify-between gap-3">
+                    <Dialog.Title className="font-display text-xl font-bold">
+                      {title}
+                    </Dialog.Title>
+                    <Dialog.Close className="text-sm font-semibold text-primary">
+                      {t.close}
+                    </Dialog.Close>
+                  </div>
+                  <Dialog.Description className="sr-only">
+                    {title}
+                  </Dialog.Description>
+                  {groups
+                    .filter((g) => g.people.length > 0)
+                    .map((g) => (
+                      <section key={g.name} className="mt-4">
+                        <h4 className="font-semibold">{g.name}</h4>
+                        <ul className="divide-y divide-border">
+                          {g.people.map((p, i) => (
+                            <li key={`${p.id}-${p.job || p.character}-${i}`}>
+                              <Link
+                                className="block py-2 hover:text-primary"
+                                href={`/${locale}/person/${p.id}`}
+                              >
+                                <strong>{p.name}</strong>
+                                {role(p) && (
+                                  <span className="block text-sm text-subtle">
+                                    {role(p)}
+                                  </span>
+                                )}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
           )}
-        </NativeSelect>
-      </label>
-      {filter === "cast" && cast.length > 0 && (
-        <section aria-label={common.cast}>
-          <h3 className="sr-only">{common.cast}</h3>
-          <Rail
-            variant="cast"
-            label={common.cast}
-            previous={common.previous}
-            next={common.next}
-          >
-            {cast.slice(0, 6).map((p) => (
-              <PersonCard
-                key={p.id}
-                id={p.id}
-                name={p.name}
-                profilePath={p.profile_path}
-                role={p.character}
-                locale={locale}
-              />
-            ))}
-          </Rail>
-        </section>
-      )}
-      {listRows.length ? (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-          {listRows.map((p, i) => (
-            <li key={`${p.id}-${p.job || p.character}-${i}`} className="p-3">
-              <Link
-                href={`/${locale}/person/${p.id}`}
-                className="flex items-center gap-3 hover:text-primary"
-              >
-                <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-title-placeholder text-title-muted [&_img]:size-full [&_img]:object-cover">
-                  <MediaImage
-                    src={imageUrl(p.profile_path, "w185")}
-                    alt=""
-                    fallback={p.name.slice(0, 1)}
-                  />
-                </span>
-                <span>
-                  <strong>{p.name}</strong>
-                  <span className="block text-sm text-subtle">{role(p)}</span>
-                </span>
-              </Link>
-            </li>
+        </div>
+        <Rail
+          variant="cast"
+          label={title}
+          previous={common.previous}
+          next={common.next}
+        >
+          {preview.slice(0, 6).map((p, i) => (
+            <PersonCard
+              key={`${p.id}-${p.job || p.character}-${i}`}
+              id={p.id}
+              name={p.name}
+              profilePath={p.profile_path}
+              role={role(p)}
+              locale={locale}
+              movie
+            />
           ))}
-        </ul>
-      ) : !rows.length ? (
-        <p className="text-subtle">{t.empty}</p>
-      ) : null}
+        </Rail>
+      </section>
+    );
+  }
+  return (
+    <section className="space-y-5">
+      <h2 className="font-display text-[clamp(1.5rem,2.6vw,2.1rem)] leading-tight font-bold">
+        {t.title}
+      </h2>
+      {row(t.cast, cast, false)}
+      {row(t.crew, crew, true)}
+      {!cast.length && !crew.length && <p className="text-subtle">{t.empty}</p>}
     </section>
   );
 }

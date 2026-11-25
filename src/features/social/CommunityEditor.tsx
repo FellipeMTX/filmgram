@@ -153,7 +153,20 @@ export function CommunityEditor() {
   const t = messages(locale);
   if (!userId)
     return (
-      <form action={signIn}>
+      <form
+        action={signIn}
+        onSubmit={(event) => {
+          if (!window.location.pathname.includes("/title/")) return;
+          const input = event.currentTarget.elements.namedItem(
+            "next",
+          ) as HTMLInputElement | null;
+          if (input)
+            input.value =
+              window.location.pathname +
+              window.location.search +
+              window.location.hash;
+        }}
+      >
         <input type="hidden" name="next" value={next} />
         <Button type="submit" variant="outline">
           {t.signInPrompt}

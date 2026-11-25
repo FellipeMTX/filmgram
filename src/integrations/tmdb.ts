@@ -269,6 +269,12 @@ const videoSchema = z.object({
   name: namedItem,
   type: namedItem,
   site: z.literal("YouTube"),
+  iso_639_1: z
+    .string()
+    .nullable()
+    .optional()
+    .catch(null)
+    .transform((value) => value ?? null),
   official: z
     .boolean()
     .optional()
@@ -294,19 +300,44 @@ export async function getMovieVideos(
             name: "Official Trailer",
             type: "Trailer",
             official: true,
+            iso_639_1: "en",
+            published_at: null,
+          },
+          {
+            id: "iron-man-teaser-pt",
+            key: "Ke1Y3P9D0Bc",
+            name: "Teaser",
+            type: "Teaser",
+            official: true,
+            iso_639_1: "pt",
             published_at: null,
           },
         ]
       : [];
-  const data = z
-    .object({ results: validItems(videoSchema) })
-    .parse(await request(`/movie/${id}/videos`, locale, 3600));
-  const ranked = data.results.sort(
-    (a, b) =>
-      Number(b.official) - Number(a.official) ||
-      Number(b.type === "Trailer") - Number(a.type === "Trailer") ||
-      (b.published_at ?? "").localeCompare(a.published_at ?? ""),
+  const schema = z.object({ results: validItems(videoSchema) });
+  const languages = [...new Set([locale, "en"])];
+  const responses = await Promise.allSettled(
+    languages.map(
+      async (language) =>
+        schema.parse(await request(`/movie/${id}/videos`, language, 3600))
+          .results,
+    ),
   );
+  const videos = responses.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+  const failure = responses.find((result) => result.status === "rejected");
+  if (!videos.length && failure?.status === "rejected") throw failure.reason;
+  const language = locale.toLowerCase().split("-")[0];
+  const ranked = videos.sort((a, b) => {
+    const rank = (video: typeof a) => {
+      const trailer = video.type === "Trailer";
+      const sameLanguage =
+        video.iso_639_1?.toLowerCase().split("-")[0] === language;
+      return trailer && video.official && sameLanguage ? 0 : trailer ? 1 : 2;
+    };
+    return rank(a) - rank(b) || Number(b.official) - Number(a.official);
+  });
   const seen = new Set<string>();
   return ranked.filter(({ key }) => {
     if (seen.has(key)) return false;
@@ -361,6 +392,16 @@ const getMovieProviderResults = cache(
                 ? {
                     BR: {
                       link: "https://www.themoviedb.org/movie/1726/watch?locale=BR",
+                      flatrate: [
+                        {
+                          provider_id: 337,
+                          provider_name: "Disney Plus",
+                          display_priority: 1,
+                        },
+                      ],
+                    },
+                    PT: {
+                      link: "https://www.themoviedb.org/movie/1726/watch?locale=PT",
                       flatrate: [
                         {
                           provider_id: 337,

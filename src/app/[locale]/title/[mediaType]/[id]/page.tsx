@@ -19,43 +19,8 @@ import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
 import { ReviewPost } from "@/components/ReviewPost";
 import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
 import type { Json } from "@/types/database.generated";
-import Link from "next/link";
-import { Suspense } from "react";
-import { FilmgramRating } from "@/components/FilmgramRating";
-import { MovieOverview } from "@/features/catalog/MovieOverview";
-import { MovieCrew } from "@/features/catalog/MovieCrew";
-import { MovieExtraPanel } from "@/features/catalog/MovieExtraPanel";
-
-const movieTabs = {
-  en: {
-    label: "Title sections",
-    overview: "Overview",
-    crew: "Cast and crew",
-    releases: "Releases",
-    videos: "Videos",
-    watch: "Where to watch",
-    reviews: "Reviews",
-  },
-  "pt-BR": {
-    label: "Seções da ficha",
-    overview: "Visão geral",
-    crew: "Elenco e equipe",
-    releases: "Lançamentos",
-    videos: "Vídeos",
-    watch: "Onde assistir",
-    reviews: "Resenhas",
-  },
-  es: {
-    label: "Secciones de la ficha",
-    overview: "Vista general",
-    crew: "Reparto y equipo",
-    releases: "Estrenos",
-    videos: "Vídeos",
-    watch: "Dónde ver",
-    reviews: "Reseñas",
-  },
-};
-
+import { MovieDetail } from "@/features/catalog/MovieDetail";
+import { getTitleActionsData } from "@/features/catalog/title-actions-data";
 export default async function Detail({
   params,
   searchParams,
@@ -70,30 +35,26 @@ export default async function Detail({
   const { locale, mediaType, id } = await params;
   if (!["movie", "tv"].includes(mediaType) || !/^\d+$/.test(id)) notFound();
   const query = await searchParams;
-  const review =
-    typeof query.review === "string" &&
-    /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(query.review)
-      ? query.review
-      : undefined;
-  const tab = typeof query.tab === "string" ? query.tab : undefined;
-  const country = typeof query.country === "string" ? query.country : undefined;
-  const allowedTabs = [
-    "overview",
-    "crew",
-    "releases",
-    "videos",
-    "watch",
-    "reviews",
-  ] as const;
-  type MovieTab = (typeof allowedTabs)[number];
-  const activeTab: MovieTab = review
-    ? "reviews"
-    : allowedTabs.includes(tab as MovieTab)
-      ? (tab as MovieTab)
-      : "overview";
-  const tabLabels = movieTabs[locale as keyof typeof movieTabs] || movieTabs.en;
+  const reviewParam =
+    typeof query.review === "string" ? query.review : undefined;
   const item = await getDetail(locale, mediaType as MediaType, Number(id));
   if (!item) notFound();
+  if (mediaType === "movie") {
+    return (
+      <MovieDetail
+        item={item}
+        locale={locale}
+        review={Array.isArray(query.review) ? query.review[0] : reviewParam}
+        country={typeof query.country === "string" ? query.country : undefined}
+        tab={typeof query.tab === "string" ? query.tab : undefined}
+      />
+    );
+  }
+  const review =
+    reviewParam &&
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(reviewParam)
+      ? reviewParam
+      : null;
   const t = messages(locale),
     user = await currentUser(),
     db = await supabase();
@@ -111,45 +72,32 @@ export default async function Detail({
       avatar_url: string | null;
     } | null;
   }[] = [];
-  let playlists: { id: string; name: string; contains: boolean }[] = [];
+  const { states, playlists } = await getTitleActionsData(
+    db,
+    "tv",
+    Number(id),
+    user?.id,
+  );
   let followedAuthors: string[] = [];
-  const states: Record<string, boolean> = {};
   let likes = 0;
-  let filmgramStats: { review_count: number; average_rating: number } | null =
-    null;
   let reviewLikes: Record<
     string,
     { count: number; liked: boolean; commentCount: number }
   > = {};
   if (db) {
-    const highlightedReview =
-      typeof review === "string" &&
-      /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(review)
-        ? review
-        : null;
-    const [reviewsResult, countResult, statsResult] = await Promise.all([
-      mediaType === "tv" || activeTab === "reviews"
-        ? db.rpc("title_reviews_followed_first", {
-            p_media_type: mediaType,
-            p_tmdb_id: Number(id),
-            p_highlighted_review_id: highlightedReview,
-            p_limit: 1000,
-          })
-        : Promise.resolve({ data: [], error: null }),
+    const [reviewsResult, countResult] = await Promise.all([
+      db.rpc("title_reviews_followed_first", {
+        p_media_type: mediaType,
+        p_tmdb_id: Number(id),
+        p_highlighted_review_id: review,
+        p_limit: 1000,
+      }),
       db.rpc("title_like_count", {
         p_media_type: mediaType,
         p_tmdb_id: Number(id),
       }),
-      db
-        .rpc("title_review_stats", {
-          p_media_type: mediaType,
-          p_tmdb_id: Number(id),
-        })
-        .single(),
     ]);
     if (reviewsResult.error) throw reviewsResult.error;
-    if (statsResult.error) throw statsResult.error;
-    filmgramStats = statsResult.data;
     reviews = reviewsResult.data.map((row) => ({
       ...row,
       profiles:
@@ -162,10 +110,7 @@ export default async function Detail({
           : null,
     }));
     // PostgREST can truncate the extra deep-link row after the usual 1,000.
-    if (
-      highlightedReview &&
-      !reviews.some((row) => row.id === highlightedReview)
-    ) {
+    if (review && !reviews.some((row) => row.id === review)) {
       const target = await db
         .from("reviews")
         .select(
@@ -173,7 +118,7 @@ export default async function Detail({
         )
         .eq("media_type", mediaType)
         .eq("tmdb_id", Number(id))
-        .eq("id", highlightedReview)
+        .eq("id", review)
         .maybeSingle();
       if (target.error) throw target.error;
       if (target.data) reviews.push(target.data);
@@ -184,74 +129,15 @@ export default async function Detail({
     );
     likes = Number(countResult.data || 0);
     if (user) {
-      const followedResult =
-        mediaType === "tv" || activeTab === "reviews"
-          ? await db
-              .from("follows")
-              .select("following_id")
-              .eq("follower_id", user.id)
-          : { data: [], error: null };
-      if (followedResult.error) throw followedResult.error;
-      followedAuthors = followedResult.data.map((row) => row.following_id);
-      const [f, w, l, p] = await Promise.all([
-        db
-          .from("favorites")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("watched")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("title_likes")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .eq("media_type", mediaType)
-          .eq("tmdb_id", Number(id))
-          .maybeSingle(),
-        db
-          .from("playlists")
-          .select("id,name,playlist_items(id)")
-          .eq("user_id", user.id)
-          .eq("playlist_items.media_type", mediaType)
-          .eq("playlist_items.tmdb_id", Number(id))
-          .order("name")
-          .order("id"),
-      ]);
-      states.favorites = !!f.data;
-      states.watched = !!w.data;
-      states.title_likes = !!l.data;
-      if (f.error) throw f.error;
-      if (p.error) throw p.error;
-      playlists = p.data.map((row) => ({
-        id: row.id,
-        name: row.name,
-        contains: row.playlist_items.length > 0,
-      }));
+      const followed = await db
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+      if (followed.error) throw followed.error;
+      followedAuthors = followed.data.map((row) => row.following_id);
     }
   }
   const poster = imageUrl(item.poster_path);
-  const directors =
-    mediaType === "movie"
-      ? [
-          ...new Map(
-            (item.credits?.crew || [])
-              .filter(
-                (person) =>
-                  person.job === "Director" &&
-                  Number.isSafeInteger(person.id) &&
-                  person.id > 0,
-              )
-              .map((person) => [person.id, person]),
-          ).values(),
-        ]
-      : [];
   return (
     <main>
       <div
@@ -293,22 +179,6 @@ export default async function Detail({
                 &nbsp; · &nbsp; ♡ {likes} {t.likes}
               </small>
             </p>
-            {mediaType === "movie" &&
-              filmgramStats &&
-              Number(filmgramStats.review_count) > 0 && (
-                <p className="mt-2 text-sm">
-                  <FilmgramRating
-                    value={Number(filmgramStats.average_rating)}
-                    locale={locale}
-                  />{" "}
-                  Filmgram · {filmgramStats.review_count}{" "}
-                  {locale === "pt-BR"
-                    ? "avaliações"
-                    : locale === "es"
-                      ? "valoraciones"
-                      : "ratings"}
-                </p>
-              )}
             <p className="max-w-[550px] leading-[1.6] text-detail-meta mobile:text-sm">
               {item.overview || t.noOverview}
             </p>
@@ -322,190 +192,98 @@ export default async function Detail({
           </div>
         </div>
       </div>
-      {mediaType === "movie" && (
-        <div className={cn(container, "pt-6")}>
-          <nav
-            aria-label={tabLabels.label}
-            className="flex flex-wrap gap-x-5 border-b border-border"
+      <section
+        className={cn(
+          container,
+          "pt-[35px] mobile:pt-[30px] [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-semibold",
+        )}
+      >
+        <h2>{t.cast}</h2>
+        {item.credits?.cast?.length ? (
+          <Rail
+            variant="cast"
+            label={t.cast}
+            previous={t.previous}
+            next={t.next}
           >
-            {allowedTabs.map((key) => (
-              <Link
-                key={key}
-                scroll={false}
-                href={
-                  key === "overview"
-                    ? `/${locale}/title/movie/${id}`
-                    : `/${locale}/title/movie/${id}?tab=${key}`
-                }
-                aria-current={activeTab === key ? "page" : undefined}
-                className="inline-flex min-h-11 items-center border-b-2 border-transparent py-2 text-sm font-bold text-subtle hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
-              >
-                {tabLabels[key]}
-              </Link>
+            {item.credits.cast.slice(0, 6).map((c) => (
+              <PersonCard
+                key={c.id}
+                id={c.id}
+                name={c.name}
+                profilePath={c.profile_path}
+                role={c.character}
+                locale={locale}
+              />
             ))}
-          </nav>
-          <div className="pt-6 pb-6">
-            {activeTab === "overview" && (
-              <MovieOverview
-                item={item}
-                locale={locale}
-                titleHref={`/${locale}/title/movie/${id}`}
-              />
-            )}
-            {activeTab === "crew" && (
-              <MovieCrew
-                cast={item.credits?.cast || []}
-                crew={item.credits?.crew || []}
-                locale={locale}
-              />
-            )}
-            {(activeTab === "releases" ||
-              activeTab === "videos" ||
-              activeTab === "watch") && (
-              <Suspense
-                key={activeTab}
-                fallback={
-                  <p role="status" className="text-subtle">
-                    {locale === "pt-BR"
-                      ? "Carregando…"
-                      : locale === "es"
-                        ? "Cargando…"
-                        : "Loading…"}
-                  </p>
-                }
-              >
-                <MovieExtraPanel
-                  tab={activeTab}
-                  locale={locale}
-                  id={Number(id)}
-                  country={country}
-                />
-              </Suspense>
-            )}
-          </div>
-        </div>
-      )}
-      {mediaType === "tv" && directors.length > 0 && (
-        <section
-          className={cn(container, "pt-[35px] mobile:pt-[30px]")}
-          aria-labelledby="directors-heading"
+          </Rail>
+        ) : (
+          <p className="text-muted-foreground">{t.noCast}</p>
+        )}
+      </section>
+
+      <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
+        <TitleReviewContext
+          locale={locale}
+          mediaType={mediaType as MediaType}
+          tmdbId={Number(id)}
+          reviewId={null}
+          titleHref={`/${locale}/title/${mediaType}/${id}`}
+          onTitlePage
         >
-          <h2
-            id="directors-heading"
-            className="mt-0 mb-5 font-display text-[26px] font-semibold"
-          >
-            {t.directors}
-          </h2>
-          <div className="flex flex-wrap gap-[22px]">
-            {directors.map((person) => (
-              <div key={person.id} className="w-[120px] mobile:w-[88px]">
-                <PersonCard
-                  id={person.id}
-                  name={person.name}
-                  profilePath={person.profile_path}
-                  role={t.roleDirector}
+          {reviews.length ? (
+            reviews.map((r) => (
+              <div className="mb-6" key={r.id}>
+                <ReviewPost
+                  reviewId={r.id}
+                  tmdbId={Number(id)}
                   locale={locale}
+                  authorId={r.user_id}
+                  viewerId={user?.id || null}
+                  followed={followedAuthors.includes(r.user_id)}
+                  placement="title"
+                  mediaType={mediaType as MediaType}
+                  author={{
+                    name: r.profiles?.display_name || t.member,
+                    href: r.profiles?.handle
+                      ? `/${locale}/profile/${r.profiles.handle}`
+                      : undefined,
+                    avatarUrl: r.profiles?.avatar_url,
+                  }}
+                  date={new Date(r.created_at).toLocaleDateString(locale)}
+                  title={titleName(item)}
+                  year={year(item)}
+                  rating={r.rating}
+                  text={r.body || ""}
+                  content={r.body_document}
+                  titleHref={`/${locale}/title/${mediaType}/${id}`}
+                  backdropUrl={imageUrl(item.backdrop_path, "w780")}
+                  posterUrl={poster}
+                  trailerUrl={
+                    r.youtube_video_id
+                      ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
+                      : null
+                  }
+                  interaction={
+                    <>
+                      <ReviewDiscussion
+                        reviewId={r.id}
+                        locale={locale}
+                        userId={user?.id || null}
+                        initialCount={reviewLikes[r.id]?.count}
+                        initialCommentCount={reviewLikes[r.id]?.commentCount}
+                        initialLiked={reviewLikes[r.id]?.liked}
+                      />
+                    </>
+                  }
                 />
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-      {mediaType === "tv" && (
-        <section
-          className={cn(
-            container,
-            "pt-[35px] mobile:pt-[30px] [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:font-semibold",
-          )}
-        >
-          <h2>{t.cast}</h2>
-          {item.credits?.cast?.length ? (
-            <Rail
-              variant="cast"
-              label={t.cast}
-              previous={t.previous}
-              next={t.next}
-            >
-              {item.credits.cast.slice(0, 6).map((c) => (
-                <PersonCard
-                  key={c.id}
-                  id={c.id}
-                  name={c.name}
-                  profilePath={c.profile_path}
-                  role={c.character}
-                  locale={locale}
-                />
-              ))}
-            </Rail>
+            ))
           ) : (
-            <p className="text-muted-foreground">{t.noCast}</p>
+            <p className="text-muted-foreground">{t.noReviews}</p>
           )}
-        </section>
-      )}
-      {(mediaType === "tv" || activeTab === "reviews") && (
-        <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
-          <TitleReviewContext
-            locale={locale}
-            mediaType={mediaType as MediaType}
-            tmdbId={Number(id)}
-            reviewId={null}
-            titleHref={`/${locale}/title/${mediaType}/${id}`}
-            onTitlePage
-          >
-            {reviews.length ? (
-              reviews.map((r) => (
-                <div className="mb-6" key={r.id}>
-                  <ReviewPost
-                    reviewId={r.id}
-                    tmdbId={Number(id)}
-                    locale={locale}
-                    authorId={r.user_id}
-                    viewerId={user?.id || null}
-                    followed={followedAuthors.includes(r.user_id)}
-                    placement="title"
-                    mediaType={mediaType as MediaType}
-                    author={{
-                      name: r.profiles?.display_name || t.member,
-                      href: r.profiles?.handle
-                        ? `/${locale}/profile/${r.profiles.handle}`
-                        : undefined,
-                      avatarUrl: r.profiles?.avatar_url,
-                    }}
-                    date={new Date(r.created_at).toLocaleDateString(locale)}
-                    title={titleName(item)}
-                    year={year(item)}
-                    rating={r.rating}
-                    text={r.body || ""}
-                    content={r.body_document}
-                    titleHref={`/${locale}/title/${mediaType}/${id}`}
-                    backdropUrl={imageUrl(item.backdrop_path, "w780")}
-                    posterUrl={poster}
-                    trailerUrl={
-                      r.youtube_video_id
-                        ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
-                        : null
-                    }
-                    interaction={
-                      <>
-                        <ReviewDiscussion
-                          reviewId={r.id}
-                          locale={locale}
-                          userId={user?.id || null}
-                          initialCount={reviewLikes[r.id]?.count}
-                          initialCommentCount={reviewLikes[r.id]?.commentCount}
-                          initialLiked={reviewLikes[r.id]?.liked}
-                        />
-                      </>
-                    }
-                  />
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">{t.noReviews}</p>
-            )}
-          </TitleReviewContext>
-        </div>
-      )}
+        </TitleReviewContext>
+      </div>
     </main>
   );
 }
