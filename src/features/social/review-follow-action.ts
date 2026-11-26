@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 export async function setReviewAuthorFollow(
   authorId: string,
   following: boolean,
+  refreshRoutes = true,
 ) {
   z.guid().parse(authorId);
   if (typeof following !== "boolean") throw new Error("Invalid request");
@@ -18,7 +19,7 @@ export async function setReviewAuthorFollow(
       })
     : await db.from("follows").delete().match(key);
   if (result.error) throw result.error;
-  revalidatePath("/", "layout");
+  if (refreshRoutes) revalidatePath("/", "layout");
   return following;
 }
 

@@ -24,12 +24,20 @@ export function useFollow(
     window.addEventListener("filmgram-follow-change", listener);
     return () => window.removeEventListener("filmgram-follow-change", listener);
   }, [key]);
-  async function change(desired: boolean, beforePublish?: () => void) {
+  async function change(
+    desired: boolean,
+    beforePublish?: () => void,
+    refreshRoutes = true,
+  ) {
     if (pending) return;
     setPending(true);
     setError(false);
     try {
-      const actual = await setReviewAuthorFollow(authorId, desired);
+      const actual = await setReviewAuthorFollow(
+        authorId,
+        desired,
+        refreshRoutes,
+      );
       beforePublish?.();
       window.dispatchEvent(
         new CustomEvent("filmgram-follow-change", {

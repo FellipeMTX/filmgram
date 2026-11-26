@@ -49,15 +49,21 @@ export async function createReviewComment(form: FormData) {
   const targetId = form.has("target_comment_id")
     ? id(form, "target_comment_id")
     : null;
+  const attemptId = form.has("attempt_id") ? id(form, "attempt_id") : null;
   const text = body(form);
   const db = await client();
   const { data, error } = await db.rpc("create_review_comment_with_mention", {
     p_review_id: reviewId,
     p_target_comment_id: targetId,
     p_body: text,
+    ...(attemptId ? { p_attempt_id: attemptId } : {}),
   });
   if (error) throw error;
-  return getReviewComment(db, data);
+  const [comment, summaries] = await Promise.all([
+    getReviewComment(db, data),
+    getReviewLikeSummaries(db, [reviewId]),
+  ]);
+  return { comment, commentCount: summaries[reviewId]?.commentCount ?? 0 };
 }
 export async function updateReviewComment(form: FormData) {
   const commentId = id(form, "comment_id"),
@@ -77,7 +83,9 @@ export async function deleteReviewComment(form: FormData) {
     p_comment_id: commentId,
   });
   if (error) throw error;
-  return getReviewComment(db, commentId);
+  const comment = await getReviewComment(db, commentId);
+  const summaries = await getReviewLikeSummaries(db, [comment.reviewId]);
+  return { comment, commentCount: summaries[comment.reviewId]?.commentCount ?? 0 };
 }
 
 export async function setReviewCommentLike(form: FormData) {

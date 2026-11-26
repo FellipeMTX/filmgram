@@ -547,9 +547,7 @@ export function ReviewPost(props: ReviewPostProps) {
                 reviewId={props.reviewId}
                 titleHref={titleHref}
                 reuseEditor={
-                  props.placement === "title" &&
-                  props.mediaType === "movie" &&
-                  props.authorId
+                  props.placement === "title" && props.authorId
                     ? { authorId: props.authorId, followed: !!props.followed }
                     : undefined
                 }

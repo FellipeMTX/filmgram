@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase";
-import { loadMovieReviewPage } from "./movie-review-page";
+import { loadTitleReviewPage } from "./title-review-page";
 import { getReviewLikeSummaries } from "./review-discussion-queries";
 import {
   MovieReviewsClient,
@@ -8,7 +8,7 @@ import {
 
 export async function MovieReviews(props: MovieReviewsProps) {
   let result: {
-    page: Awaited<ReturnType<typeof loadMovieReviewPage>>;
+    page: Awaited<ReturnType<typeof loadTitleReviewPage>>;
     ownSeparate: boolean;
     own: Awaited<
       ReturnType<typeof import("./title-review-context").loadTitleReviewContext>
@@ -18,7 +18,8 @@ export async function MovieReviews(props: MovieReviewsProps) {
     const db = await supabase();
     if (!db) throw new Error("Database unavailable");
     const [page, own] = await Promise.all([
-      loadMovieReviewPage(
+      loadTitleReviewPage(
+        props.mediaType || "movie",
         props.tmdbId,
         props.reviewId,
         undefined,
@@ -30,7 +31,7 @@ export async function MovieReviews(props: MovieReviewsProps) {
             .select(
               "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
             )
-            .eq("media_type", "movie")
+            .eq("media_type", props.mediaType || "movie")
             .eq("tmdb_id", props.tmdbId)
             .eq("user_id", props.userId)
             .maybeSingle()

@@ -10,15 +10,14 @@ import {
 } from "@/integrations/tmdb";
 import { messages } from "@/i18n/messages";
 import { supabase, currentUser } from "@/integrations/supabase";
-import { TitleReviewContext } from "@/features/social/TitleReviewContext";
+
 import { TitleActions } from "@/features/catalog/TitleActions";
 import { Rail } from "@/features/catalog/Rail";
 import { MediaImage } from "@/features/catalog/MediaImage";
 import { PersonCard } from "@/features/people/PersonCard";
-import { ReviewDiscussion } from "@/features/social/ReviewDiscussion";
-import { ReviewPost } from "@/components/ReviewPost";
-import { getReviewLikeSummaries } from "@/features/social/review-discussion-queries";
-import type { Json } from "@/types/database.generated";
+
+import { movieReviewId } from "@/features/catalog/movie-section-links";
+import { MovieReviews } from "@/features/social/MovieReviews";
 import { MovieDetail } from "@/features/catalog/MovieDetail";
 import { getTitleActionsData } from "@/features/catalog/title-actions-data";
 export default async function Detail({
@@ -52,93 +51,32 @@ export default async function Detail({
       />
     );
   }
-  const review =
-    reviewParam &&
-    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(reviewParam)
-      ? reviewParam
-      : null;
+  const review = movieReviewId(reviewParam);
   const t = messages(locale),
     user = await currentUser(),
     db = await supabase();
-  let reviews: {
-    id: string;
-    rating: number;
-    body: string | null;
-    body_document: Json | null;
-    youtube_video_id: string | null;
-    user_id: string;
-    created_at: string;
-    profiles: {
-      display_name: string;
-      handle: string;
-      avatar_url: string | null;
-    } | null;
-  }[] = [];
   const { states, playlists } = await getTitleActionsData(
     db,
     "tv",
     Number(id),
     user?.id,
   );
-  let followedAuthors: string[] = [];
-  let likes = 0;
-  let reviewLikes: Record<
-    string,
-    { count: number; liked: boolean; commentCount: number }
-  > = {};
-  if (db) {
-    const [reviewsResult, countResult] = await Promise.all([
-      db.rpc("title_reviews_followed_first", {
-        p_media_type: mediaType,
-        p_tmdb_id: Number(id),
-        p_highlighted_review_id: review,
-        p_limit: 1000,
-      }),
-      db.rpc("title_like_count", {
-        p_media_type: mediaType,
-        p_tmdb_id: Number(id),
-      }),
-    ]);
-    if (reviewsResult.error) throw reviewsResult.error;
-    reviews = reviewsResult.data.map((row) => ({
-      ...row,
-      profiles:
-        row.handle && row.display_name
-          ? {
-              display_name: row.display_name,
-              handle: row.handle,
-              avatar_url: row.avatar_url,
-            }
-          : null,
-    }));
-    // PostgREST can truncate the extra deep-link row after the usual 1,000.
-    if (review && !reviews.some((row) => row.id === review)) {
-      const target = await db
-        .from("reviews")
-        .select(
-          "id,rating,body,body_document,youtube_video_id,user_id,created_at,profiles!reviews_user_id_fkey(display_name,handle,avatar_url)",
-        )
-        .eq("media_type", mediaType)
-        .eq("tmdb_id", Number(id))
-        .eq("id", review)
-        .maybeSingle();
-      if (target.error) throw target.error;
-      if (target.data) reviews.push(target.data);
-    }
-    reviewLikes = await getReviewLikeSummaries(
-      db,
-      reviews.map((review) => review.id),
-    );
-    likes = Number(countResult.data || 0);
-    if (user) {
-      const followed = await db
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user.id);
-      if (followed.error) throw followed.error;
-      followedAuthors = followed.data.map((row) => row.following_id);
-    }
-  }
+  const [countResult, statsResult] = db
+    ? await Promise.all([
+        db.rpc("title_like_count", {
+          p_media_type: "tv",
+          p_tmdb_id: Number(id),
+        }),
+        db
+          .rpc("title_review_stats", {
+            p_media_type: "tv",
+            p_tmdb_id: Number(id),
+          })
+          .single(),
+      ])
+    : [null, null];
+  const likes = Number(countResult?.data || 0);
+  const stats = statsResult?.data;
   const poster = imageUrl(item.poster_path);
   return (
     <main>
@@ -225,66 +163,20 @@ export default async function Detail({
       </section>
 
       <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
-        <TitleReviewContext
+        <MovieReviews
+          mediaType="tv"
           locale={locale}
-          mediaType={mediaType as MediaType}
           tmdbId={Number(id)}
-          reviewId={null}
-          titleHref={`/${locale}/title/${mediaType}/${id}`}
-          onTitlePage
-        >
-          {reviews.length ? (
-            reviews.map((r) => (
-              <div className="mb-6" key={r.id}>
-                <ReviewPost
-                  reviewId={r.id}
-                  tmdbId={Number(id)}
-                  locale={locale}
-                  authorId={r.user_id}
-                  viewerId={user?.id || null}
-                  followed={followedAuthors.includes(r.user_id)}
-                  placement="title"
-                  mediaType={mediaType as MediaType}
-                  author={{
-                    name: r.profiles?.display_name || t.member,
-                    href: r.profiles?.handle
-                      ? `/${locale}/profile/${r.profiles.handle}`
-                      : undefined,
-                    avatarUrl: r.profiles?.avatar_url,
-                  }}
-                  date={new Date(r.created_at).toLocaleDateString(locale)}
-                  title={titleName(item)}
-                  year={year(item)}
-                  rating={r.rating}
-                  text={r.body || ""}
-                  content={r.body_document}
-                  titleHref={`/${locale}/title/${mediaType}/${id}`}
-                  backdropUrl={imageUrl(item.backdrop_path, "w780")}
-                  posterUrl={poster}
-                  trailerUrl={
-                    r.youtube_video_id
-                      ? `https://www.youtube.com/watch?v=${r.youtube_video_id}`
-                      : null
-                  }
-                  interaction={
-                    <>
-                      <ReviewDiscussion
-                        reviewId={r.id}
-                        locale={locale}
-                        userId={user?.id || null}
-                        initialCount={reviewLikes[r.id]?.count}
-                        initialCommentCount={reviewLikes[r.id]?.commentCount}
-                        initialLiked={reviewLikes[r.id]?.liked}
-                      />
-                    </>
-                  }
-                />
-              </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground">{t.noReviews}</p>
-          )}
-        </TitleReviewContext>
+          reviewId={review}
+          title={titleName(item)}
+          year={year(item)}
+          posterUrl={poster ?? null}
+          backdropUrl={imageUrl(item.backdrop_path, "w780") ?? null}
+          titleHref={`/${locale}/title/tv/${id}`}
+          average={Number(stats?.average_rating || 0)}
+          count={Number(stats?.review_count || 0)}
+          userId={user?.id ?? null}
+        />
       </div>
     </main>
   );
