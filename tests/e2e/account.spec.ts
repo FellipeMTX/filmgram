@@ -49,6 +49,170 @@ test.describe("signed-in account", () => {
     "Enable with the local Supabase stack",
   );
 
+  test("shows private profile collections and records another viewing from the title", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Expected the Playwright app origin");
+    const { client, userId } = await signUp(page.context(), baseURL);
+    const { data: profile, error: profileError } = await client
+      .from("profiles")
+      .select("handle")
+      .eq("id", userId)
+      .single();
+    if (profileError) throw profileError;
+    const { data: review, error: reviewError } = await client
+      .from("reviews")
+      .insert({
+        user_id: userId,
+        media_type: "movie",
+        tmdb_id: 1726,
+        rating: 0,
+        body: "Resenha de perfil com nota zero.",
+      })
+      .select("id")
+      .single();
+    if (reviewError) throw reviewError;
+    const { error: playlistsError } = await client.from("playlists").insert([
+      { user_id: userId, name: "Coleção pública de teste", is_public: true },
+      { user_id: userId, name: "Coleção privada de teste", is_public: false },
+    ]);
+    if (playlistsError) throw playlistsError;
+
+    await page.goto("/pt-BR/title/movie/1726");
+    const repeat = page.getByRole("button", {
+      name: "Registrar nova exibição",
+    });
+    await expect(repeat).toHaveCount(0);
+    await page.getByRole("button", { name: "Marcar como assistido" }).click();
+    await expect(repeat).toBeVisible();
+    await repeat.click();
+    await expect(page.getByText("Nova exibição registrada.")).toBeVisible();
+    await page.getByRole("button", { name: "Curtir", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Curtido", exact: true }),
+    ).toBeVisible();
+    await page.goto("/pt-BR/title/tv/42009");
+    await page.getByRole("button", { name: "Marcar como assistido" }).click();
+    await expect(
+      page.getByRole("button", { name: "Assistido", exact: true }),
+    ).toBeVisible();
+
+    await page.goto("/pt-BR/profile/me");
+    const accountMenu = page.getByRole("button", { name: "Minha conta" });
+    await accountMenu.click();
+    const accountOptions = page.getByRole("dialog", { name: "Minha conta" });
+    await expect(
+      accountOptions.getByRole("link", { name: "Salvos" }),
+    ).toHaveAttribute("href", "/pt-BR/favorites");
+    await expect(
+      accountOptions.getByRole("button", { name: "Sair" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(accountMenu).toBeFocused();
+    const profileNav = page.getByRole("navigation", {
+      name: "Perfil",
+      exact: true,
+    });
+    await expect(
+      page.getByRole("heading", { name: "Vistos recentemente" }),
+    ).toBeVisible();
+    await expect(page.getByText(/2 exibições/)).toBeVisible();
+    await expect(page.getByText("0/10", { exact: true })).toBeVisible();
+    await page.getByRole("combobox", { name: "Período" }).selectOption("30d");
+    await expect(page).toHaveURL(/period=30d/);
+    await page.goBack();
+    await expect(page.getByRole("combobox", { name: "Período" })).toHaveValue(
+      "all",
+    );
+    await page.goForward();
+    await expect(page.getByRole("combobox", { name: "Período" })).toHaveValue(
+      "30d",
+    );
+    await expect(page.getByText(/2 exibições/)).toBeVisible();
+    await profileNav
+      .getByRole("link", { name: "Assistidos", exact: true })
+      .click();
+    await expect(page).toHaveURL(/tab=watched/);
+    const main = page.getByRole("main");
+    await expect(
+      main.locator('a[href="/pt-BR/title/movie/1726"]'),
+    ).toBeVisible();
+    await main.getByRole("link", { name: "Séries", exact: true }).click();
+    await expect(page).toHaveURL(/type=tv/);
+    await expect(main.getByText("Black Mirror", { exact: true })).toBeVisible();
+    await expect(main.locator('a[href="/pt-BR/title/movie/1726"]')).toHaveCount(
+      0,
+    );
+    await page.goBack();
+    await expect(
+      main.locator('a[href="/pt-BR/title/movie/1726"]'),
+    ).toBeVisible();
+    await profileNav
+      .getByRole("link", { name: "Curtidos", exact: true })
+      .click();
+    await expect(
+      main.locator('a[href="/pt-BR/title/movie/1726"]'),
+    ).toBeVisible();
+    await expect(main.getByText("Black Mirror", { exact: true })).toHaveCount(
+      0,
+    );
+    await profileNav
+      .getByRole("link", { name: "Playlists", exact: true })
+      .click();
+    await expect(
+      main.getByText("Coleção privada de teste", { exact: true }),
+    ).toBeVisible();
+
+    const visitor = await browser.newContext();
+    try {
+      const publicProfile = await visitor.newPage();
+      await publicProfile.goto(`/pt-BR/profile/${profile.handle}?tab=watched`);
+      const publicNav = publicProfile.getByRole("navigation", {
+        name: "Perfil",
+        exact: true,
+      });
+      await expect(
+        publicNav.getByRole("link", { name: "Assistidos", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        publicNav.getByRole("link", { name: "Curtidos", exact: true }),
+      ).toHaveCount(0);
+      await expect(publicProfile.getByText(/2 exibições/)).toHaveCount(0);
+      await publicNav
+        .getByRole("link", { name: "Playlists", exact: true })
+        .click();
+      await expect(
+        publicProfile.getByText("Coleção pública de teste", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        publicProfile.getByText("Coleção privada de teste", { exact: true }),
+      ).toHaveCount(0);
+      await publicNav
+        .getByRole("link", { name: "Resenhas", exact: true })
+        .click();
+      await expect(
+        publicProfile.getByText("Resenha de perfil com nota zero."),
+      ).toBeVisible();
+      await expect(
+        publicProfile.getByRole("link", {
+          name: /Resenha de perfil com nota zero/,
+        }),
+      ).toHaveAttribute("href", /[?&]review=[0-9a-f-]+#review-/);
+      await publicProfile
+        .getByRole("link", { name: /Resenha de perfil com nota zero/ })
+        .click();
+      await expect(
+        publicProfile
+          .locator(`article[id="review-${review.id}"]`)
+          .getByText("Resenha de perfil com nota zero."),
+      ).toBeVisible();
+    } finally {
+      await visitor.close();
+    }
+  });
+
   test("favorites persist for their owner and are isolated from another account", async ({
     page,
     browser,

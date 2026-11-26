@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { toggleTitle } from "@/features/social/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
 import { TitleCollectionControl } from "./TitleCollectionControl";
+import { RecordRewatchButton } from "./RecordRewatchButton";
 import { messages } from "@/i18n/messages";
 export function TitleFields({ item }: { item: Title }) {
   return (
@@ -65,6 +66,13 @@ export function TitleActions({
           </Button>
         </form>
       ))}
+      {states.watched && (
+        <RecordRewatchButton
+          mediaType={item.media_type}
+          tmdbId={item.id}
+          locale={locale}
+        />
+      )}
     </div>
   );
 }
