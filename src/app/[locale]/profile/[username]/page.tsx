@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/features/auth/actions";
 import { ProfileAccountMenu } from "@/features/profile/ProfileAccountMenu";
-import { toggleFollow } from "@/features/social/actions";
+import { ProfileFollowButton } from "@/features/social/ProfileFollowButton";
 import {
   getPrivateProfileDashboard,
   getProfileViewingPage,
@@ -20,7 +20,7 @@ import { ProfileReviews } from "@/features/profile/ProfileReviews";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
-import { getDetail } from "@/integrations/tmdb";
+import { getFeedTitle } from "@/integrations/tmdb";
 import { titleName } from "@/integrations/tmdb-display";
 import { container, narrow, pageTitle } from "@/lib/layout";
 
@@ -62,7 +62,7 @@ export default async function Profile({
         </form>
       </main>
     );
-  if (!db) notFound();
+  if (!db) throw new Error("Database is not configured");
   let query = db.from("profiles").select("id,handle,display_name,avatar_url");
   query =
     username === "me" ? query.eq("id", user!.id) : query.eq("handle", username);
@@ -199,7 +199,7 @@ export default async function Profile({
       const mediaType: "tv" | "movie" = r.media_type === "tv" ? "tv" : "movie";
       let detail = null;
       try {
-        detail = await getDetail(locale, mediaType, r.tmdb_id);
+        detail = await getFeedTitle(locale, mediaType, r.tmdb_id);
       } catch {}
       return {
         ...r,
@@ -254,12 +254,14 @@ export default async function Profile({
             </p>
             {user && !own && (
               <div className="mt-4">
-                <form action={toggleFollow}>
-                  <input type="hidden" name="following_id" value={profile.id} />
-                  <Button type="submit" variant="outline">
-                    {followResult.data ? t.unfollow : t.follow}
-                  </Button>
-                </form>
+                <ProfileFollowButton
+                  userId={user.id}
+                  authorId={profile.id}
+                  followed={!!followResult.data}
+                  followLabel={t.follow}
+                  unfollowLabel={t.unfollow}
+                  locale={locale}
+                />
               </div>
             )}
           </div>

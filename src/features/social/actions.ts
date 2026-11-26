@@ -231,23 +231,6 @@ export async function reorderPlaylist(form: FormData) {
   if (error) throw error;
   revalidatePath("/", "layout");
 }
-export async function toggleFollow(form: FormData) {
-  const { db, user } = await auth();
-  const following_id = text(form, "following_id");
-  if (following_id === user.id) throw new Error("Cannot follow yourself");
-  const key = { follower_id: user.id, following_id };
-  const { data } = await db
-    .from("follows")
-    .select("follower_id")
-    .match(key)
-    .maybeSingle();
-  const { error } = data
-    ? await db.from("follows").delete().match(key)
-    : await db.from("follows").insert(key);
-  if (error) throw error;
-  revalidatePath("/", "layout");
-}
-
 export async function deleteReview(form: FormData) {
   const { db, user } = await auth();
   const { error } = await db

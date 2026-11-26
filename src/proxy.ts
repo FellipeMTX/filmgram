@@ -37,19 +37,37 @@ export async function proxy(request: NextRequest) {
     /^\/(?:en|pt-BR|es)\/playlists\/([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\/?$/i.exec(
       request.nextUrl.pathname,
     )?.[1];
+  const profileMatch = /^\/(?:en|pt-BR|es)\/profile\/([^/]+)\/?$/.exec(
+    request.nextUrl.pathname,
+  );
+  let requestedProfile: string | undefined;
+  try {
+    requestedProfile = profileMatch
+      ? decodeURIComponent(profileMatch[1]!)
+      : undefined;
+  } catch {
+    // Let the route handle malformed paths.
+  }
+  if (requestedProfile === "me") requestedProfile = undefined;
   if (
-    requestedPlaylist &&
+    (requestedPlaylist || requestedProfile) &&
     !authUnavailable &&
     (request.method === "GET" || request.method === "HEAD") &&
     request.headers.get("rsc") !== "1"
   ) {
     // Set the status before a loading boundary starts streaming. RLS is
     // applied to this lookup and again when the page loads the full record.
-    const { data, error } = await db
-      .from("playlists")
-      .select("id")
-      .eq("id", requestedPlaylist)
-      .maybeSingle();
+    const { data, error } = requestedPlaylist
+      ? await db
+          .from("playlists")
+          .select("id")
+          .eq("id", requestedPlaylist)
+          .maybeSingle()
+      : await db
+          .from("profiles")
+          .select("id")
+          .eq("handle", requestedProfile!)
+          .maybeSingle();
     if (!error && !data) {
       const lang = locale === "pt-BR" || locale === "es" ? locale : "en";
       const t = messages(lang);
@@ -62,7 +80,7 @@ export async function proxy(request: NextRequest) {
           main{max-width:52rem;margin:4rem auto;padding:0 1.25rem}
           a{color:#ff654f}
         </style>
-        <main><h1>${t.notFound}</h1><a href="/${lang}/playlists">${t.playlists}</a></main>
+        <main><h1>${t.notFound}</h1><a href="/${lang}/${requestedPlaylist ? "playlists" : "discover"}">${requestedPlaylist ? t.playlists : t.discover}</a></main>
         </html>`,
         {
           status: 404,
@@ -84,6 +102,7 @@ export async function proxy(request: NextRequest) {
 }
 export const config = {
   matcher: [
+    "/:locale/profile/:username",
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

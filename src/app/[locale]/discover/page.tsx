@@ -12,6 +12,7 @@ import { supabase, currentUser } from "@/integrations/supabase";
 import { Hero } from "@/features/catalog/Hero";
 import { Shelf } from "@/features/catalog/Cards";
 import { container } from "@/lib/layout";
+import { getRecentViewingTitles } from "@/features/profile/queries";
 export default async function Discover({
   params,
   searchParams,
@@ -46,23 +47,37 @@ export default async function Discover({
     genre_ids: number[];
   }[] = [];
   let liked: { media_type: MediaType; tmdb_id: number }[] = [];
+  let recentHistory: Awaited<ReturnType<typeof getRecentViewingTitles>> | null =
+    null;
+  let recentUnavailable = false;
   if (db) {
-    const [{ data: likes }, { data: history }] = await Promise.all([
-      db.rpc(
-        "most_liked_titles",
-        type === "all" ? { p_limit: 12 } : { p_limit: 12, p_media_type: type },
-      ),
-      user
-        ? db
-            .from("watched")
-            .select("media_type,tmdb_id,media_title,poster_path,genre_ids")
-            .eq("user_id", user.id)
-            .order("watched_at", { ascending: false })
-            .limit(30)
-        : Promise.resolve({ data: [] }),
-    ]);
+    const [{ data: likes }, { data: history }, recentResult] =
+      await Promise.all([
+        db.rpc(
+          "most_liked_titles",
+          type === "all"
+            ? { p_limit: 12 }
+            : { p_limit: 12, p_media_type: type },
+        ),
+        user
+          ? db
+              .from("watched")
+              .select("media_type,tmdb_id,media_title,poster_path,genre_ids")
+              .eq("user_id", user.id)
+              .order("watched_at", { ascending: false })
+              .limit(30)
+          : Promise.resolve({ data: [] }),
+        user
+          ? getRecentViewingTitles(db, type).then(
+              (data) => ({ data, error: false }),
+              () => ({ data: null, error: true }),
+            )
+          : Promise.resolve({ data: null, error: false }),
+      ]);
     liked = (likes || []) as typeof liked;
     watched = (history || []) as typeof watched;
+    recentHistory = recentResult.data;
+    recentUnavailable = recentResult.error;
   }
   const genres = new Map<number, number>();
   watched.forEach((x) =>
@@ -93,15 +108,12 @@ export default async function Discover({
     )
   ).filter((x): x is Title => !!x);
   const popular = mostLiked.length < 10 ? await getPopular(locale, type) : [];
-  const recent: Title[] = watched
-    .filter((x) => type === "all" || x.media_type === type)
-    .map((x) => ({
-      id: x.tmdb_id,
-      media_type: x.media_type,
-      title: x.media_title,
-      poster_path: x.poster_path,
-      genre_ids: x.genre_ids,
-    }));
+  const recent: Title[] = (recentHistory?.items || []).map((x) => ({
+    id: x.tmdbId,
+    media_type: x.mediaType,
+    title: x.title,
+    poster_path: x.posterPath,
+  }));
   return (
     <main>
       <div className={container}>
@@ -155,7 +167,7 @@ export default async function Discover({
           title={t.recent}
           items={recent}
           locale={locale}
-          empty={t.noWatched}
+          empty={recentUnavailable ? t.error : t.noWatched}
         />
       </div>
     </main>
