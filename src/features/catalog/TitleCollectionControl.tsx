@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BookmarkPlus, LockKeyhole } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { Button } from "@/components/ui/button";
-import { setTitleCollection } from "@/features/social/actions";
+import { setTitleCollection } from "@/features/library/actions";
 import { savedCollectionLabels } from "./saved-collection-labels";
 
 export function TitleCollectionControl({

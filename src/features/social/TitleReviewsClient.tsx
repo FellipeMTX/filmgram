@@ -17,11 +17,11 @@ import { ReviewDiscussion } from "./ReviewDiscussion";
 import { loadTitleReviewPage } from "./title-review-page";
 import { movieReviewId } from "@/features/catalog/movie-section-links";
 import type { loadTitleReviewContext } from "./title-review-context";
-import { useMovieReviewPages } from "./useMovieReviewPages";
+import { useTitleReviewPages } from "./useTitleReviewPages";
 
 type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 type Own = Awaited<ReturnType<typeof loadTitleReviewContext>>["own"];
-export type MovieReviewsProps = {
+export type TitleReviewsProps = {
   locale: string;
   mediaType?: "movie" | "tv";
   tmdbId: number;
@@ -80,8 +80,8 @@ const labels = {
   },
 };
 
-export function MovieReviewsClient(
-  props: MovieReviewsProps & {
+export function TitleReviewsClient(
+  props: TitleReviewsProps & {
     initialPage: Page;
     own: Own;
     initialError?: boolean;
@@ -115,7 +115,7 @@ export function MovieReviewsClient(
     error: pageError,
     refresh,
     loadMore,
-  } = useMovieReviewPages(
+  } = useTitleReviewPages(
     props.initialPage,
     tmdbId,
     reviewId,

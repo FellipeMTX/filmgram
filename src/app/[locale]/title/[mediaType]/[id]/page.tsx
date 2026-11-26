@@ -17,7 +17,7 @@ import { MediaImage } from "@/features/catalog/MediaImage";
 import { PersonCard } from "@/features/people/PersonCard";
 
 import { movieReviewId } from "@/features/catalog/movie-section-links";
-import { MovieReviews } from "@/features/social/MovieReviews";
+import { TitleReviews } from "@/features/social/TitleReviews";
 import { MovieDetail } from "@/features/catalog/MovieDetail";
 import { getTitleActionsData } from "@/features/catalog/title-actions-data";
 export default async function Detail({
@@ -163,7 +163,7 @@ export default async function Detail({
       </section>
 
       <div className={cn(container, "pt-[35px] pb-20 mobile:pt-[30px]")}>
-        <MovieReviews
+        <TitleReviews
           mediaType="tv"
           locale={locale}
           tmdbId={Number(id)}

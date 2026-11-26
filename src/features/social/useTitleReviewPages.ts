@@ -6,7 +6,7 @@ import { loadTitleReviewPage } from "./title-review-page";
 type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 
 // The initial page and all its cursors belong to one ranking generation.
-export function useMovieReviewPages(
+export function useTitleReviewPages(
   initialPage: Page,
   tmdbId: number,
   reviewId: string | null,

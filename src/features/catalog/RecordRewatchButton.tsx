@@ -4,7 +4,7 @@ import { useRef, useState, useTransition, type FormEvent } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MediaType } from "@/integrations/tmdb";
-import { recordRewatch } from "@/features/profile/watch-actions";
+import { recordRewatch } from "@/features/library/watch-actions";
 
 const labels = {
   "pt-BR": {

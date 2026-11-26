@@ -1,6 +1,6 @@
 import { actionGroup } from "@/lib/layout";
 import { Button } from "@/components/ui/button";
-import { toggleTitle } from "@/features/social/actions";
+import { toggleTitle } from "@/features/library/actions";
 import { titleName, type Title } from "@/integrations/tmdb";
 import { TitleCollectionControl } from "./TitleCollectionControl";
 import { RecordRewatchButton } from "./RecordRewatchButton";
