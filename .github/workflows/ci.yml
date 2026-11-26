@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -10,7 +12,7 @@ permissions:
 
 concurrency:
   group: filmgram-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   HUSKY: "0"
@@ -55,3 +57,25 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: ignore
+
+  migrate:
+    name: Apply production migrations
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.39.2
+      - name: Update Supabase
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Set the SUPABASE_DB_URL repository secret for the production database."
+            exit 1
+          fi
+          supabase db push --db-url "$SUPABASE_DB_URL" --yes
