@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlaylistCover } from "@/components/playlist-cover";
-import { PlaylistItems } from "@/features/social/PlaylistItemControls";
+import { PlaylistItems } from "@/features/playlists/PlaylistItemControls";
 import { SocialEmpty } from "@/features/social/SocialEmpty";
-import { getPlaylist } from "@/features/social/queries";
+import { getPlaylist } from "@/features/playlists/queries";
 import { messages } from "@/i18n/messages";
 import { getSocialViewer } from "@/features/social/social-viewer";
 import { narrow, pageTitle } from "@/lib/layout";

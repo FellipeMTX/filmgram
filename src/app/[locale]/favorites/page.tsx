@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { currentUser, supabase } from "@/integrations/supabase";
 import { signIn } from "@/features/auth/actions";
-import { getFavorites } from "@/features/social/queries";
+import { getFavorites } from "@/features/library/queries";
 import { savedCollectionLabels } from "@/features/catalog/saved-collection-labels";
 import { messages } from "@/i18n/messages";
 
