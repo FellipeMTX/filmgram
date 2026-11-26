@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { loadMovieReviewPage } from "./movie-review-page";
+import { loadTitleReviewPage } from "./title-review-page";
 import { useMovieReviewPages } from "./useMovieReviewPages";
 
-vi.mock("./movie-review-page", () => ({ loadMovieReviewPage: vi.fn() }));
-const load = vi.mocked(loadMovieReviewPage);
-type Page = Awaited<ReturnType<typeof loadMovieReviewPage>>;
+vi.mock("./title-review-page", () => ({ loadTitleReviewPage: vi.fn() }));
+const load = vi.mocked(loadTitleReviewPage);
+type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 const cursor = {
   id: "00000000-0000-4000-8000-000000000001",
   followed: false,
@@ -93,4 +93,20 @@ it("keeps pagination blocked after a failed refresh until retry succeeds", async
   });
   await waitFor(() => expect(result.current.error).toBeNull());
   expect(result.current.page.reviews[0]?.id).toBe("new");
+});
+
+it("loads series pages with the shared ranking cursor", async () => {
+  const initial = page(["first"]);
+  const { result } = renderHook(() =>
+    useMovieReviewPages(initial, 42, null, false, "tv"),
+  );
+  load.mockResolvedValueOnce(page(["second"], null));
+  await act(async () => {
+    await result.current.loadMore();
+  });
+  expect(load).toHaveBeenCalledWith("tv", 42, null, cursor, false);
+  expect(result.current.page.reviews.map((row) => row.id)).toEqual([
+    "first",
+    "second",
+  ]);
 });

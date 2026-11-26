@@ -44,23 +44,29 @@ export function FollowReviewAuthor({
             const button = event.currentTarget;
             const restoreFocus = document.activeElement === button;
             try {
-              await change(true, () => {
-                if (
-                  restoreFocus &&
-                  (document.activeElement === button ||
-                    document.activeElement === document.body)
-                ) {
-                  const card = button.closest("article");
-                  const author = card?.querySelector<HTMLElement>(
-                    'a[href*="/profile/"]',
-                  );
-                  if (author) author.focus();
-                  else if (card) {
-                    card.tabIndex = -1;
-                    card.focus();
+              // A server refresh can unmount a card from a later page while
+              // its discussion is open. The list refreshes after the dialog closes.
+              await change(
+                true,
+                () => {
+                  if (
+                    restoreFocus &&
+                    (document.activeElement === button ||
+                      document.activeElement === document.body)
+                  ) {
+                    const card = button.closest("article");
+                    const author = card?.querySelector<HTMLElement>(
+                      'a[href*="/profile/"]',
+                    );
+                    if (author) author.focus();
+                    else if (card) {
+                      card.tabIndex = -1;
+                      card.focus();
+                    }
                   }
-                }
-              });
+                },
+                !button.closest('[role="dialog"]'),
+              );
               setAnnounced(true);
             } catch {
               // Error is displayed below.

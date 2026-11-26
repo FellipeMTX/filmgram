@@ -14,14 +14,16 @@ import {
   useRestoreReviewDraft,
 } from "./CommunityEditor";
 import { ReviewDiscussion } from "./ReviewDiscussion";
-import { loadMovieReviewPage } from "./movie-review-page";
+import { loadTitleReviewPage } from "./title-review-page";
+import { movieReviewId } from "@/features/catalog/movie-section-links";
 import type { loadTitleReviewContext } from "./title-review-context";
 import { useMovieReviewPages } from "./useMovieReviewPages";
 
-type Page = Awaited<ReturnType<typeof loadMovieReviewPage>>;
+type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 type Own = Awaited<ReturnType<typeof loadTitleReviewContext>>["own"];
 export type MovieReviewsProps = {
   locale: string;
+  mediaType?: "movie" | "tv";
   tmdbId: number;
   reviewId: string | null;
   title: string;
@@ -86,7 +88,23 @@ export function MovieReviewsClient(
     ownSeparate?: boolean;
   },
 ) {
-  const { locale, tmdbId, reviewId, userId } = props;
+  const { locale, tmdbId, userId } = props;
+  const mediaType = props.mediaType || "movie";
+  const [hashReview, setHashReview] = useState<string | null>(null);
+  useEffect(() => {
+    const update = () =>
+      setHashReview(
+        movieReviewId(
+          window.location.hash.startsWith("#review-")
+            ? window.location.hash.slice(8)
+            : null,
+        ),
+      );
+    update();
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  const reviewId = props.reviewId || hashReview;
   const l = labels[locale as keyof typeof labels] || labels.en;
   const t = messages(locale);
   const router = useRouter();
@@ -97,7 +115,21 @@ export function MovieReviewsClient(
     error: pageError,
     refresh,
     loadMore,
-  } = useMovieReviewPages(props.initialPage, tmdbId, reviewId, props.preview);
+  } = useMovieReviewPages(
+    props.initialPage,
+    tmdbId,
+    reviewId,
+    props.preview,
+    mediaType,
+  );
+  useEffect(() => {
+    if (
+      hashReview &&
+      !props.reviewId &&
+      !props.initialPage.reviews.some((row) => row.id === hashReview)
+    )
+      void refresh();
+  }, [hashReview, props.reviewId, props.initialPage, refresh]);
   const [deletedId, setDeletedId] = useState<string | null>(null);
   const own = props.own?.id === deletedId ? null : props.own;
   const ownFallback =
@@ -127,19 +159,52 @@ export function MovieReviewsClient(
       (first === props.initialPage && props.ownSeparate));
   const ownRow =
     ownSeparate && own ? reviews.find((row) => row.id === own.id) : undefined;
-  const communityReviews = ownRow
-    ? reviews.filter((row) => row.id !== ownRow.id)
-    : reviews;
+  const timestamp = (value: string) =>
+    value.replace(
+      /(\.\d+)?(?:\+00:00|Z)$/,
+      (_, fraction: string | undefined) =>
+        (fraction || ".").padEnd(7, "0") + "Z",
+    );
+  const communityReviews = (
+    ownRow ? reviews.filter((row) => row.id !== ownRow.id) : reviews
+  ).sort((a, b) => {
+    const left = timestamp(a.created_at),
+      right = timestamp(b.created_at);
+    return (
+      Number(b.followed) - Number(a.followed) ||
+      (right > left ? 1 : right < left ? -1 : 0) ||
+      (b.id > a.id ? 1 : b.id < a.id ? -1 : 0)
+    );
+  });
   const next = page.next;
+  const scrolledTarget = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      mediaType !== "tv" ||
+      !reviewId ||
+      scrolledTarget.current === reviewId ||
+      !reviews.some((row) => row.id === reviewId)
+    )
+      return;
+    const target = document.getElementById(`review-${reviewId}`);
+    if (target) {
+      scrolledTarget.current = reviewId;
+      target.scrollIntoView({ block: "start" });
+    }
+  }, [mediaType, reviewId, reviews]);
   const [editingTrigger, setEditingTrigger] = useState<HTMLElement | null>(
     null,
   );
   const guardRef = useRef<(() => boolean) | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    sectionRef.current?.setAttribute("data-reviews-hydrated", "true");
+  }, []);
   const followFocusRef = useRef<HTMLElement | null>(null);
   const error = props.initialError || pageError;
   useEffect(() => {
+    let observer: MutationObserver | null = null;
     const onFollow = (event: Event) => {
       const detail = (event as CustomEvent<{ key: string }>).detail;
       if (!userId || !detail?.key.startsWith(`${userId}:`)) return;
@@ -148,10 +213,33 @@ export function MovieReviewsClient(
         active instanceof HTMLElement && sectionRef.current?.contains(active)
           ? active
           : null;
-      void refresh();
+      const dialog = document.querySelector<HTMLElement>(
+        "[data-review-dialog]",
+      );
+      const dialogReviewId = dialog?.dataset.reviewDialog;
+      if (dialogReviewId && !followFocusRef.current) {
+        followFocusRef.current =
+          sectionRef.current?.querySelector<HTMLElement>(
+            `[data-review-id="${CSS.escape(dialogReviewId)}"]`,
+          ) ?? null;
+      }
+      if (!dialog) void refresh();
+      else {
+        observer?.disconnect();
+        observer = new MutationObserver(() => {
+          if (!dialog.isConnected) {
+            observer?.disconnect();
+            void refresh();
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
     };
     window.addEventListener("filmgram-follow-change", onFollow);
-    return () => window.removeEventListener("filmgram-follow-change", onFollow);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("filmgram-follow-change", onFollow);
+    };
   }, [refresh, userId]);
   useEffect(() => {
     if (pending || !followFocusRef.current) return;
@@ -160,7 +248,7 @@ export function MovieReviewsClient(
   }, [pending, page]);
   useRestoreReviewDraft(
     userId,
-    "movie",
+    mediaType,
     tmdbId,
     !props.initialError && !props.preview,
     sectionRef,
@@ -177,7 +265,7 @@ export function MovieReviewsClient(
           guardRef.current = guard;
         },
         locale,
-        mediaType: "movie",
+        mediaType,
         tmdbId,
         userId,
         next: props.titleHref,
@@ -248,7 +336,7 @@ export function MovieReviewsClient(
         {!error && !reviews.length && (
           <p className="mt-4 text-muted-foreground">{l.empty}</p>
         )}
-        {(ownRow ? [ownRow, ...communityReviews] : communityReviews).map(
+        {(ownRow ? [...communityReviews, ownRow] : communityReviews).map(
           (row) => (
             <section
               key={row.id}
@@ -265,7 +353,7 @@ export function MovieReviewsClient(
                 viewerId={userId}
                 followed={row.followed}
                 placement="title"
-                mediaType="movie"
+                mediaType={mediaType}
                 author={{
                   name: row.display_name || t.member,
                   href: row.handle

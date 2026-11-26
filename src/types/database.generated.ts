@@ -572,8 +572,14 @@ export type Database = {
       review_comment_like_summaries: { Args: { p_comment_ids: string[] }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
       set_review_comment_like: { Args: { p_comment_id: string; p_liked: boolean }; Returns: { comment_id: string; like_count: number; liked: boolean }[] }
       movie_review_page: { Args: { p_tmdb_id: number; p_after_followed?: boolean | null; p_after_created_at?: string | null; p_after_id?: string | null; p_limit?: number }; Returns: { id: string; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null; followed: boolean }[] }
+      title_review_page: { Args: { p_media_type: string; p_tmdb_id: number; p_after_followed?: boolean | null; p_after_created_at?: string | null; p_after_id?: string | null; p_limit?: number }; Returns: { id: string; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null; followed: boolean }[] }
       title_reviews_followed_first: { Args: { p_media_type: string; p_tmdb_id: number; p_highlighted_review_id: string | null; p_limit: number }; Returns: { id: string; rating: number; body: string | null; body_document: Json | null; youtube_video_id: string | null; user_id: string; created_at: string; display_name: string | null; handle: string | null; avatar_url: string | null }[] }
-      create_review_comment_with_mention: { Args: { p_review_id: string; p_target_comment_id: string | null; p_body: string }; Returns: string }
+      create_review_comment_with_mention: {
+        Args:
+          | { p_review_id: string; p_target_comment_id: string | null; p_body: string }
+          | { p_review_id: string; p_target_comment_id: string | null; p_body: string; p_attempt_id: string | null }
+        Returns: string
+      }
       flat_review_comments_page: { Args: { p_review_id: string; p_after_created_at: string | null; p_after_id: string | null; p_limit: number }; Returns: { id: string; review_id: string; parent_id: string | null; user_id: string | null; body: string | null; created_at: string; updated_at: string; deleted_at: string | null; display_name: string | null; handle: string | null; avatar_url: string | null; reply_to_handle: string | null }[] }
       set_review_like: { Args: { p_review_id: string; p_liked: boolean }; Returns: undefined }
       review_like_summaries: { Args: { p_review_ids: string[] }; Returns: { review_id: string; like_count: number; liked: boolean; comment_count: number }[] }

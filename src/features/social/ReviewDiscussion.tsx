@@ -141,6 +141,7 @@ export function ReviewDiscussion({
   const [liked, setLiked] = useState(initialLiked),
     [count, setCount] = useState(initialCount);
   const [commentCount, setCommentCount] = useState(initialCommentCount);
+  const attempt = useRef<{ fingerprint: string; id: string } | null>(null);
   useEffect(() => {
     const receive = (event: Event) => {
       const detail = (
@@ -148,14 +149,14 @@ export function ReviewDiscussion({
           reviewId: string;
           count?: number;
           liked?: boolean;
-          commentDelta?: number;
+          commentCount?: number;
         }>
       ).detail;
       if (!detail || detail.reviewId !== reviewId) return;
       if (detail.count !== undefined) setCount(detail.count);
       if (detail.liked !== undefined) setLiked(detail.liked);
-      if (detail.commentDelta)
-        setCommentCount((n) => Math.max(0, n + detail.commentDelta!));
+      if (detail.commentCount !== undefined)
+        setCommentCount(detail.commentCount);
     };
     window.addEventListener("filmgram-review-change", receive);
     return () => window.removeEventListener("filmgram-review-change", receive);
@@ -163,7 +164,7 @@ export function ReviewDiscussion({
   const publishChange = (change: {
     count?: number;
     liked?: boolean;
-    commentDelta?: number;
+    commentCount?: number;
   }) =>
     window.dispatchEvent(
       new CustomEvent("filmgram-review-change", {
@@ -192,7 +193,7 @@ export function ReviewDiscussion({
     function isLocationTarget() {
       const location = window.location;
       if (location.hash !== "#review-" + reviewId) return false;
-      if (!/^\/[^/]+\/title\/movie\/\d+\/?$/.test(location.pathname))
+      if (!/^\/[^/]+\/title\/(?:movie|tv)\/\d+\/?$/.test(location.pathname))
         return true;
       const query = new URLSearchParams(location.search).get("review");
       return query === null || movieReviewId(query) === reviewId;
@@ -438,12 +439,11 @@ export function ReviewDiscussion({
                       disabled={pending}
                       onClick={() =>
                         run(async () => {
-                          mergeComment(
-                            await deleteReviewComment(
-                              actionForm({ comment_id: c.id }),
-                            ),
+                          const result = await deleteReviewComment(
+                            actionForm({ comment_id: c.id }),
                           );
-                          publishChange({ commentDelta: -1 });
+                          mergeComment(result.comment);
+                          publishChange({ commentCount: result.commentCount });
                         })
                       }
                     >
@@ -603,6 +603,7 @@ export function ReviewDiscussion({
                   variant="ghost"
                   disabled={pending || (!replyTo && !draft)}
                   onClick={() => {
+                    attempt.current = null;
                     if (replyTo) {
                       setDraft(commentBody);
                       setReplyTo(null);
@@ -618,17 +619,29 @@ export function ReviewDiscussion({
                   disabled={pending || !commentBody.trim()}
                   onClick={() =>
                     run(async () => {
-                      mergeComment(
-                        await createReviewComment(
-                          actionForm({
-                            body: commentBody,
-                            ...(replyTo
-                              ? { target_comment_id: replyTo.id }
-                              : {}),
-                          }),
-                        ),
+                      const fingerprint = JSON.stringify([
+                        reviewId,
+                        commentBody,
+                        replyTo?.id ?? null,
+                      ]);
+                      if (
+                        !attempt.current ||
+                        attempt.current.fingerprint !== fingerprint
+                      )
+                        attempt.current = {
+                          fingerprint,
+                          id: crypto.randomUUID(),
+                        };
+                      const result = await createReviewComment(
+                        actionForm({
+                          body: commentBody,
+                          attempt_id: attempt.current.id,
+                          ...(replyTo ? { target_comment_id: replyTo.id } : {}),
+                        }),
                       );
-                      publishChange({ commentDelta: 1 });
+                      attempt.current = null;
+                      mergeComment(result.comment);
+                      publishChange({ commentCount: result.commentCount });
                       setDraft("");
                       setReplyTo(null);
                     })

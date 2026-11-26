@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadMovieReviewPage } from "./movie-review-page";
+import { loadTitleReviewPage } from "./title-review-page";
 
-type Page = Awaited<ReturnType<typeof loadMovieReviewPage>>;
+type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 
 // The initial page and all its cursors belong to one ranking generation.
 export function useMovieReviewPages(
@@ -11,6 +11,7 @@ export function useMovieReviewPages(
   tmdbId: number,
   reviewId: string | null,
   preview = false,
+  mediaType: "movie" | "tv" = "movie",
 ) {
   const [page, setPage] = useState(initialPage);
   const [first, setFirst] = useState(initialPage);
@@ -38,7 +39,8 @@ export function useMovieReviewPages(
     setPending(true);
     setError(null);
     try {
-      const fresh = await loadMovieReviewPage(
+      const fresh = await loadTitleReviewPage(
+        mediaType,
         tmdbId,
         reviewId,
         undefined,
@@ -60,7 +62,7 @@ export function useMovieReviewPages(
         setPending(false);
       }
     }
-  }, [tmdbId, reviewId, preview]);
+  }, [mediaType, tmdbId, reviewId, preview]);
 
   const loadMore = useCallback(async () => {
     if (!page.next || busy.current || error === "refresh") return;
@@ -69,7 +71,13 @@ export function useMovieReviewPages(
     setPending(true);
     setError(null);
     try {
-      const more = await loadMovieReviewPage(tmdbId, reviewId, page.next);
+      const more = await loadTitleReviewPage(
+        mediaType,
+        tmdbId,
+        reviewId,
+        page.next,
+        preview,
+      );
       if (current !== generation.current) return;
       setPage((previous) => ({
         ...more,
@@ -89,7 +97,7 @@ export function useMovieReviewPages(
         setPending(false);
       }
     }
-  }, [page.next, tmdbId, reviewId, error]);
+  }, [page.next, mediaType, tmdbId, reviewId, preview, error]);
 
   return { page, first, pending, error, refresh, loadMore };
 }

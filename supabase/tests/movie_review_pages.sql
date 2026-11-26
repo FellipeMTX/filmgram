@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(13);
 
 insert into auth.users(id, email)
 select ('70100000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid,
@@ -16,8 +16,15 @@ select ('70200000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid,
   'movie', 700000151, 8, case when n = 2 then '2025-01-01' else '2026-01-01' end::timestamptz
 from generate_series(2, 24) AS ids(n);
 
+insert into public.reviews(id, user_id, media_type, tmdb_id, rating, created_at, body)
+select ('70300000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid,
+  ('70100000-0000-0000-0000-' || lpad(n::text, 12, '0'))::uuid,
+  'tv', 700000151, 8, case when n = 2 then '2025-01-01' else '2026-01-01' end::timestamptz,
+  case when n = 24 then 'Legacy series review' end
+from generate_series(2, 24) AS ids(n);
+
 insert into public.reviews(user_id, media_type, tmdb_id, rating, created_at)
-values ('70100000-0000-0000-0000-000000000002', 'tv', 700000151, 8, '2026-01-01'),
+values ('70100000-0000-0000-0000-000000000002', 'tv', 700000152, 8, '2026-01-01'),
   ('70100000-0000-0000-0000-000000000002', 'movie', 700000152, 9, '2026-01-01');
 
 set local role authenticated;
@@ -46,6 +53,47 @@ select results_eq(
 select is((select count(*) from public.movie_review_page(700000152)), 1::bigint,
   'only reviews for the matching film are included');
 
+select results_eq(
+  $$select * from public.title_review_page('movie', 700000151)$$,
+  $$select * from public.movie_review_page(700000151)$$,
+  'unified movie pagination preserves the legacy RPC contract'
+);
+
+select results_eq(
+  $$select id, followed from public.title_review_page('tv', 700000151, p_limit => 2)$$,
+  $$values ('70300000-0000-0000-0000-000000000002'::uuid, true),
+           ('70300000-0000-0000-0000-000000000024'::uuid, false)$$,
+  'series pages isolate the media type and rank followed authors before recent reviews'
+);
+
+select is((select count(*) from public.title_review_page('tv', 700000151, p_limit => 250)), 21::bigint,
+  'the series RPC caps a page at twenty rows and one lookahead row');
+
+select results_eq(
+  $$select id from public.title_review_page(
+      'tv', 700000151, true, '2025-01-01', '70300000-0000-0000-0000-000000000002', 2
+    )$$,
+  $$values ('70300000-0000-0000-0000-000000000024'::uuid),
+           ('70300000-0000-0000-0000-000000000023'::uuid)$$,
+  'series pagination crosses from the older followed author to newer authors'
+);
+
+select results_eq(
+  $$select id from public.title_review_page(
+      'tv', 700000151, false, '2026-01-01', '70300000-0000-0000-0000-000000000006'
+    )$$,
+  $$values ('70300000-0000-0000-0000-000000000005'::uuid),
+           ('70300000-0000-0000-0000-000000000004'::uuid),
+           ('70300000-0000-0000-0000-000000000003'::uuid)$$,
+  'series pagination uses the review ID to break timestamp ties'
+);
+
+select is(
+  (select body from public.title_review_page('tv', 700000151) where id = '70300000-0000-0000-0000-000000000024'),
+  'Legacy series review',
+  'existing plain-text series reviews remain readable'
+);
+
 set local role anon;
 select set_config('request.jwt.claim.sub', '', true);
 
@@ -58,6 +106,13 @@ select results_eq(
 
 select is((select count(*) from public.movie_review_page(700000151) where followed), 0::bigint,
   'the RPC exposes no other viewer follow state to guests');
+
+select results_eq(
+  $$select id, followed from public.title_review_page('tv', 700000151, p_limit => 2)$$,
+  $$values ('70300000-0000-0000-0000-000000000024'::uuid, false),
+           ('70300000-0000-0000-0000-000000000023'::uuid, false)$$,
+  'guests can page through series reviews without viewer-specific follow state'
+);
 
 select * from finish();
 rollback;
