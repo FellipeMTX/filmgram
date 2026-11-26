@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { isLocale, messages } from "@/i18n/messages";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { Brand } from "@/components/Brand";
 export default async function LocaleLayout({
   children,
   params,
@@ -24,7 +25,7 @@ export default async function LocaleLayout({
           "border-t border-header-border pt-[30px] pb-[45px] font-bold tracking-[0.08em] mobile:text-xs [&_span]:text-primary",
         )}
       >
-        FILMGRAM <span>·</span> {messages(locale).tagline}{" "}
+        <Brand /> <span>·</span> {messages(locale).tagline}{" "}
         <Link href={`/${locale}/credits`}>{messages(locale).credits}</Link>
       </footer>
     </NextIntlClientProvider>

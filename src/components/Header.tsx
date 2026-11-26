@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { Brand } from "@/components/Brand";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Compass, Users, Layers, UserRound } from "lucide-react";
 import { messages } from "@/i18n/messages";
@@ -86,9 +87,10 @@ export function Header({ locale }: { locale: string }) {
       <header className="relative z-[5] grid h-[76px] grid-cols-[1fr_auto_1fr] items-center border-b border-header-border bg-background px-[5%] mobile:h-[68px] mobile:grid-cols-2 mobile:border-0 mobile:px-5">
         <Link
           href={`/${locale}/discover`}
-          className="justify-self-start font-display text-[32px] font-black tracking-[-1.5px] text-brand-foreground mobile:text-[30px]"
+          aria-label="Filmgram"
+          className="justify-self-start"
         >
-          Filmgram<span className="text-primary">.</span>
+          <Brand decorative header />
         </Link>
         <nav className="flex h-full items-center gap-[38px] compact:gap-3 mobile:hidden">
           {links.map(([url, label, Icon]) => (
