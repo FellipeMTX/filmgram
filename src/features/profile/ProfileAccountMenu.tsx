@@ -22,7 +22,7 @@ export function ProfileAccountMenu({ locale }: { locale: string }) {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          align="start"
+          align="end"
           sideOffset={8}
           aria-label={labels.account}
           className="z-50 grid min-w-40 gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-lg"

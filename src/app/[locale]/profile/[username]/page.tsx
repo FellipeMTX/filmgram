@@ -227,7 +227,7 @@ export default async function Profile({
         <div
           className={
             container +
-            " flex min-h-[290px] items-center gap-6 py-10 mobile:min-h-52 mobile:gap-4 mobile:py-7"
+            " flex min-h-[290px] flex-wrap items-center gap-6 py-10 mobile:min-h-52 mobile:gap-4 mobile:py-7"
           }
         >
           <div className="grid size-36 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-avatar font-display text-5xl mobile:size-[72px] mobile:text-3xl">
@@ -241,7 +241,7 @@ export default async function Profile({
               profile.display_name?.slice(0, 1)
             )}
           </div>
-          <div className="min-w-0 [overflow-wrap:anywhere]">
+          <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
             <h1 className="m-0 font-display text-[44px] leading-tight font-bold mobile:text-3xl">
               {profile.display_name}
             </h1>
@@ -252,25 +252,22 @@ export default async function Profile({
               {stats?.follower_count || 0} {t.followers} ·{" "}
               {stats?.following_count || 0} {t.followingCount}
             </p>
-            {user && (
+            {user && !own && (
               <div className="mt-4">
-                {own ? (
-                  <ProfileAccountMenu locale={locale} />
-                ) : (
-                  <form action={toggleFollow}>
-                    <input
-                      type="hidden"
-                      name="following_id"
-                      value={profile.id}
-                    />
-                    <Button type="submit" variant="outline">
-                      {followResult.data ? t.unfollow : t.follow}
-                    </Button>
-                  </form>
-                )}
+                <form action={toggleFollow}>
+                  <input type="hidden" name="following_id" value={profile.id} />
+                  <Button type="submit" variant="outline">
+                    {followResult.data ? t.unfollow : t.follow}
+                  </Button>
+                </form>
               </div>
             )}
           </div>
+          {own && (
+            <div className="ml-auto shrink-0 max-[520px]:basis-full max-[520px]:text-right">
+              <ProfileAccountMenu locale={locale} />
+            </div>
+          )}
         </div>
       </div>
       <div className={container + " pb-24"}>

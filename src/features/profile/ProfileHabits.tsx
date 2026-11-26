@@ -1,10 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+import { ProfilePeriodSelect } from "./ProfilePeriodSelect";
 import { imageUrl } from "@/integrations/tmdb-display";
 import { profileLabels } from "./labels";
 import type { getPrivateProfileDashboard } from "./queries";
@@ -80,28 +76,24 @@ export function ProfileHabits({
   const lang = locale === "pt-BR" ? 1 : locale === "es" ? 2 : 0;
   return (
     <aside className="min-w-0 border-l border-border pl-6 compact:border-l-0 compact:border-t compact:pt-6 compact:pl-0">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={heading}>{l.habits}</h2>
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <h2
+          className={
+            heading + " compact:my-0 mobile:text-[clamp(1.25rem,6vw,1.5rem)]"
+          }
+        >
+          {l.habits}
+        </h2>
         {own && (
-          <form className="flex items-center gap-2">
-            <input type="hidden" name="tab" value="overview" />
-            <label className="sr-only" htmlFor="period">
-              {l.period}
-            </label>
-            <NativeSelect
-              id="period"
-              name="period"
-              defaultValue={period}
-              size="sm"
-            >
-              <NativeSelectOption value="all">{l.allTime}</NativeSelectOption>
-              <NativeSelectOption value="30d">{l.days30}</NativeSelectOption>
-              <NativeSelectOption value="90d">{l.days90}</NativeSelectOption>
-            </NativeSelect>
-            <Button type="submit" variant="outline" size="sm">
-              {l.apply}
-            </Button>
-          </form>
+          <ProfilePeriodSelect
+            label={l.period}
+            period={period}
+            options={[
+              { value: "all", label: l.allTime },
+              { value: "30d", label: l.days30 },
+              { value: "90d", label: l.days90 },
+            ]}
+          />
         )}
       </div>
       <div className="grid grid-cols-2 divide-x divide-border">

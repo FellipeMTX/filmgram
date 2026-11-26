@@ -121,8 +121,15 @@ test.describe("signed-in account", () => {
     await expect(page.getByText(/2 exibições/)).toBeVisible();
     await expect(page.getByText("0/10", { exact: true })).toBeVisible();
     await page.getByRole("combobox", { name: "Período" }).selectOption("30d");
-    await page.getByRole("button", { name: "Aplicar" }).click();
     await expect(page).toHaveURL(/period=30d/);
+    await page.goBack();
+    await expect(page.getByRole("combobox", { name: "Período" })).toHaveValue(
+      "all",
+    );
+    await page.goForward();
+    await expect(page.getByRole("combobox", { name: "Período" })).toHaveValue(
+      "30d",
+    );
     await expect(page.getByText(/2 exibições/)).toBeVisible();
     await profileNav
       .getByRole("link", { name: "Assistidos", exact: true })
