@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { FilmgramRating } from "@/components/FilmgramRating";
-import { MovieReviews } from "@/features/social/MovieReviews";
+import { TitleReviews } from "@/features/social/TitleReviews";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
 import {
@@ -190,7 +190,7 @@ async function CommunityReviews({
   const [viewer, aggregate] = await Promise.all([user, stats]);
   return (
     <div data-movie-reviews-target={movieReviewId(review) || ""}>
-      <MovieReviews
+      <TitleReviews
         preview={preview}
         reviewsHref={reviewsHref}
         locale={locale}

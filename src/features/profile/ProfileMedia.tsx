@@ -3,28 +3,19 @@ import Image from "next/image";
 import { Heart } from "lucide-react";
 import { PlaylistCover } from "@/components/playlist-cover";
 import { imageUrl } from "@/integrations/tmdb-display";
-import type { MediaType } from "@/integrations/tmdb";
 import { profileLabels } from "./labels";
-export type Title = {
-  mediaType: MediaType;
-  tmdbId: number;
-  title: string;
-  posterPath: string | null;
-  lastWatchedAt?: string;
-};
-export type List = {
-  id: string;
-  name: string;
-  is_public: boolean;
-  item_count: { count: number }[];
-  covers: { poster_path: string | null }[];
-};
+import type {
+  ProfileHistoryItem,
+  ProfilePlaylist,
+  ProfileTitle,
+} from "./types";
+
 export function Posters({
   items,
   locale,
   liked = false,
 }: {
-  items: Title[];
+  items: (ProfileTitle & Partial<Pick<ProfileHistoryItem, "lastWatchedAt">>)[];
   locale: string;
   liked?: boolean;
 }) {
@@ -69,7 +60,13 @@ export function Posters({
     </div>
   );
 }
-export function Lists({ lists, locale }: { lists: List[]; locale: string }) {
+export function Lists({
+  lists,
+  locale,
+}: {
+  lists: ProfilePlaylist[];
+  locale: string;
+}) {
   const l = profileLabels(locale);
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -80,15 +77,15 @@ export function Lists({ lists, locale }: { lists: List[]; locale: string }) {
           className="group min-w-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           <PlaylistCover
-            posterPaths={p.covers.map((c) => c.poster_path)}
+            posterPaths={p.posterPaths}
             className="aspect-[5/3] w-full border border-border"
           />
           <p className="mt-2 truncate font-semibold group-hover:underline">
             {p.name}
           </p>
           <p className="text-sm text-subtle">
-            {p.item_count[0]?.count || 0} {l.titles}
-            {!p.is_public && " - " + l.private}
+            {p.itemCount} {l.titles}
+            {!p.isPublic && " - " + l.private}
           </p>
         </Link>
       ))}

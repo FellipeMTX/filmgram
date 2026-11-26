@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { loadTitleReviewPage } from "./title-review-page";
-import { useMovieReviewPages } from "./useMovieReviewPages";
+import { useTitleReviewPages } from "./useTitleReviewPages";
 
 vi.mock("./title-review-page", () => ({ loadTitleReviewPage: vi.fn() }));
 const load = vi.mocked(loadTitleReviewPage);
@@ -22,7 +22,7 @@ beforeEach(() => load.mockReset());
 
 it("discards old pages and in-flight responses even when the refreshed first page is unchanged", async () => {
   const initial = page(["first"]);
-  const { result } = renderHook(() => useMovieReviewPages(initial, 1, null));
+  const { result } = renderHook(() => useTitleReviewPages(initial, 1, null));
   load.mockResolvedValueOnce(page(["extra"]));
   await act(async () => {
     await result.current.loadMore();
@@ -72,7 +72,7 @@ it("discards old pages and in-flight responses even when the refreshed first pag
 
 it("keeps pagination blocked after a failed refresh until retry succeeds", async () => {
   const initial = page(["first"]);
-  const { result } = renderHook(() => useMovieReviewPages(initial, 1, null));
+  const { result } = renderHook(() => useTitleReviewPages(initial, 1, null));
   load.mockResolvedValueOnce(page(["extra"]));
   await act(async () => {
     await result.current.loadMore();
@@ -98,7 +98,7 @@ it("keeps pagination blocked after a failed refresh until retry succeeds", async
 it("loads series pages with the shared ranking cursor", async () => {
   const initial = page(["first"]);
   const { result } = renderHook(() =>
-    useMovieReviewPages(initial, 42, null, false, "tv"),
+    useTitleReviewPages(initial, 42, null, false, "tv"),
   );
   load.mockResolvedValueOnce(page(["second"], null));
   await act(async () => {

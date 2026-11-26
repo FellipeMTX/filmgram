@@ -7,8 +7,7 @@ import {
   getProfileViewingPage,
   getProfileLikedPage,
 } from "./queries";
-import type { List } from "./ProfileMedia";
-import type { ProfilePeriod } from "./types";
+import { profileTabs, type ProfilePeriod, type ProfilePlaylist } from "./types";
 
 type Client = NonNullable<Awaited<ReturnType<typeof supabase>>>;
 type Search = { tab?: string; type?: string; page?: string; period?: string };
@@ -30,14 +29,8 @@ export async function getProfilePageData(
   const own = userId === profileId;
   const period: ProfilePeriod =
     q.period === "30d" || q.period === "90d" ? q.period : "all";
-  const tab = [
-    "overview",
-    "reviews",
-    ...(own ? ["watched", "liked"] : []),
-    "playlists",
-  ].includes(q.tab || "")
-    ? q.tab!
-    : "overview";
+  const tab =
+    profileTabs(own).find((candidate) => candidate === q.tab) ?? "overview";
   const type = q.type === "movie" || q.type === "tv" ? q.type : "all";
   const requestedPage = Math.max(
     1,
@@ -144,7 +137,14 @@ export async function getProfilePageData(
     if (reviewsResult?.error || listsResult?.error)
       throw new Error("Profile data unavailable");
   }
-  const lists = (listsResult?.data || []) as unknown as List[];
+  const playlistRows = listsResult?.data ?? [];
+  const lists: ProfilePlaylist[] = playlistRows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isPublic: row.is_public,
+    itemCount: row.item_count[0]?.count ?? 0,
+    posterPaths: row.covers.map((cover) => cover.poster_path),
+  }));
   const reviews = reviewsResult?.data || [];
   const reviewData = await Promise.all(
     reviews.map(async (r) => {

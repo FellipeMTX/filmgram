@@ -1,5 +1,4 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import {
   parseReviewContent,
   reviewPlainText,
@@ -16,7 +15,7 @@ async function auth() {
   if (!user) throw new Error("Please sign in");
   return { db, user };
 }
-async function saveReview(form: FormData, revalidate: boolean) {
+export async function submitReviewFromModal(form: FormData) {
   const { db, user } = await auth();
   const ratingInput = form.get("rating");
   const rating = Number(ratingInput);
@@ -69,8 +68,4 @@ async function saveReview(form: FormData, revalidate: boolean) {
   const { error } = result;
   if (reviewId && !error && !result.data) throw new Error("Review not found");
   if (error) throw error;
-  if (revalidate) revalidatePath("/", "layout");
-}
-export async function submitReviewFromModal(form: FormData) {
-  await saveReview(form, false);
 }

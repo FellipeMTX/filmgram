@@ -6,8 +6,9 @@ import { ProfileAccountMenu } from "@/features/profile/ProfileAccountMenu";
 import { ProfileFollowButton } from "@/features/social/ProfileFollowButton";
 import { getProfilePageData } from "@/features/profile/page-data";
 import { profileLabels } from "@/features/profile/labels";
-import { Posters, Lists, type Title } from "@/features/profile/ProfileMedia";
+import { Posters, Lists } from "@/features/profile/ProfileMedia";
 import { ProfileReviews } from "@/features/profile/ProfileReviews";
+import { profileTabs } from "@/features/profile/types";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
@@ -71,17 +72,7 @@ export default async function Profile({
     page,
     pages,
   } = data;
-  const tabs = [
-    { id: "overview", label: l.overview },
-    { id: "reviews", label: l.reviews },
-    ...(own
-      ? [
-          { id: "watched", label: l.watched },
-          { id: "liked", label: l.liked },
-        ]
-      : []),
-    { id: "playlists", label: l.playlists },
-  ];
+  const tabs = profileTabs(own).map((id) => ({ id, label: l[id] }));
   const base = "/" + locale + "/profile/" + encodeURIComponent(username);
   const href = (values: Record<string, string>) =>
     base + "?" + new URLSearchParams(values);
@@ -241,7 +232,7 @@ export default async function Profile({
           </>
         ) : (
           <section className="py-7">
-            {sectionTitle(tabs.find((x) => x.id === tab)!.label)}
+            {sectionTitle(l[tab])}
             {(tab === "watched" || tab === "liked") && (
               <nav aria-label={l.filter} className="mb-6 flex flex-wrap gap-2">
                 {[
@@ -278,11 +269,7 @@ export default async function Profile({
                 <p className="text-subtle">{l.emptyPlaylists}</p>
               )
             ) : raw.length ? (
-              <Posters
-                items={raw as Title[]}
-                locale={locale}
-                liked={tab === "liked"}
-              />
+              <Posters items={raw} locale={locale} liked={tab === "liked"} />
             ) : (
               <p className="text-subtle">
                 {tab === "watched" ? l.emptyWatched : l.emptyLiked}

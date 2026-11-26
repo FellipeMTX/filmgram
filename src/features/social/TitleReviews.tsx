@@ -2,11 +2,11 @@ import { supabase } from "@/integrations/supabase";
 import { loadTitleReviewPage } from "./title-review-page";
 import { getReviewLikeSummaries } from "./review-discussion-queries";
 import {
-  MovieReviewsClient,
-  type MovieReviewsProps,
-} from "./MovieReviewsClient";
+  TitleReviewsClient,
+  type TitleReviewsProps,
+} from "./TitleReviewsClient";
 
-export async function MovieReviews(props: MovieReviewsProps) {
+export async function TitleReviews(props: TitleReviewsProps) {
   let result: {
     page: Awaited<ReturnType<typeof loadTitleReviewPage>>;
     ownSeparate: boolean;
@@ -65,7 +65,7 @@ export async function MovieReviews(props: MovieReviewsProps) {
   } catch {}
   if (!result)
     return (
-      <MovieReviewsClient
+      <TitleReviewsClient
         key={props.tmdbId + ":error"}
         {...props}
         initialError
@@ -79,7 +79,7 @@ export async function MovieReviews(props: MovieReviewsProps) {
       />
     );
   return (
-    <MovieReviewsClient
+    <TitleReviewsClient
       key={[
         props.locale,
         props.tmdbId,
