@@ -34,6 +34,17 @@ async function viewingPage(
   limit = PAGE_SIZE,
 ): Promise<ProfilePage<ProfileHistoryItem>> {
   const { db } = await database();
+  return viewingPageWithClient(db, kind, period, page, type, limit);
+}
+
+async function viewingPageWithClient(
+  db: NonNullable<Awaited<ReturnType<typeof supabase>>>,
+  kind: "history" | "ranking",
+  period: ProfilePeriod,
+  page = 1,
+  type: "all" | "movie" | "tv" = "all",
+  limit = PAGE_SIZE,
+): Promise<ProfilePage<ProfileHistoryItem>> {
   const { data, error } = await db.rpc("profile_viewing_titles", {
     p_period: period,
     p_ranking: kind === "ranking",
@@ -68,11 +79,12 @@ async function likedPage(
     .select("media_type,tmdb_id", { count: "exact" })
     .eq("user_id", user.id);
   if (type !== "all") query = query.eq("media_type", type);
-  const { data, error, count } = await query
+  const { data, error, count, status } = await query
     .order("created_at", { ascending: false })
     .order("media_type")
     .order("tmdb_id")
     .range(start, start + limit - 1);
+  if (error && status === 416 && page > 1) return { items: [], total: 0 };
   if (error) throw error;
   const items = await Promise.all(
     (data || []).map(async (row): Promise<ProfileTitle> => {
@@ -89,6 +101,13 @@ async function likedPage(
     }),
   );
   return { items, total: count || 0 };
+}
+
+export async function getRecentViewingTitles(
+  db: NonNullable<Awaited<ReturnType<typeof supabase>>>,
+  type: "all" | "movie" | "tv",
+) {
+  return viewingPageWithClient(db, "history", "all", 1, type, 30);
 }
 
 export async function getProfileViewingPage(

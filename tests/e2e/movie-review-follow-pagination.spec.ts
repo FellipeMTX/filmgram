@@ -39,9 +39,10 @@ async function account(context?: BrowserContext, origin?: string) {
 test("refreshes review pages after following and keeps the selected review and draft", async ({
   page,
   baseURL,
-}) => {
+}, info) => {
   test.skip(process.env.FILMGRAM_E2E_AUTH !== "1", "Requires local Supabase");
   test.setTimeout(120_000);
+  const tmdbId = info.project.name === "mobile" ? 1300968 : 1263337;
   const reader = await account(page.context(), baseURL);
   const authors: Awaited<ReturnType<typeof account>>[] = [];
   const ownId = randomUUID(),
@@ -66,7 +67,7 @@ test("refreshes review pages after following and keeps the selected review and d
       id: ownId,
       user_id: reader.id,
       media_type: "movie",
-      tmdb_id: 1003596,
+      tmdb_id: tmdbId,
       rating: 8,
       body: `Own ${batch}`,
       created_at: "2019-01-01T00:00:00Z",
@@ -78,7 +79,7 @@ test("refreshes review pages after following and keeps the selected review and d
           id: i === 20 ? selectedId : randomUUID(),
           user_id: a.id,
           media_type: "movie",
-          tmdb_id: 1003596,
+          tmdb_id: tmdbId,
           rating: 8,
           body: `Rank ${batch} ${i}`,
           created_at: `2025-02-${String(22 - i).padStart(2, "0")}T00:00:00Z`,
@@ -87,7 +88,7 @@ test("refreshes review pages after following and keeps the selected review and d
       }),
     );
     await page.goto(
-      `/en/title/movie/1003596?tab=reviews&review=${selectedId}#review-${selectedId}`,
+      `/en/title/movie/${tmdbId}?tab=reviews&review=${selectedId}#review-${selectedId}`,
     );
     const ownCard = page.locator(`#review-${ownId}`);
     const selected = page.locator(`#review-${selectedId}`);
@@ -115,6 +116,32 @@ test("refreshes review pages after following and keeps the selected review and d
     ).toHaveCount(1);
     await expect(ownCard).toHaveCount(1);
     await expect(editor).toHaveText("Draft survives following");
+
+    // The same tab must reconcile the server ranking after returning from a profile.
+    page.once("dialog", (dialog) => dialog.accept());
+    await selected.locator('a[href*="/profile/"]').first().click();
+    await page.getByRole("button", { name: "Unfollow", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Follow", exact: true }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      (
+        window as unknown as { followNavigationMarker: boolean }
+      ).followNavigationMarker = true;
+    });
+    await page.goBack();
+    await expect(
+      page
+        .locator("#review-" + selectedId)
+        .getByRole("button", { name: "+ Follow" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () =>
+          (window as unknown as { followNavigationMarker?: boolean })
+            .followNavigationMarker,
+      ),
+    ).toBe(true);
   } finally {
     await Promise.all(
       authors.map((a) => a.db.from("reviews").delete().eq("user_id", a.id)),

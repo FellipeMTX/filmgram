@@ -87,8 +87,6 @@ test.describe("signed-in account", () => {
     await expect(repeat).toHaveCount(0);
     await page.getByRole("button", { name: "Marcar como assistido" }).click();
     await expect(repeat).toBeVisible();
-    await repeat.click();
-    await expect(page.getByText("Nova exibição registrada.")).toBeVisible();
     await page.getByRole("button", { name: "Curtir", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Curtido", exact: true }),
@@ -99,7 +97,25 @@ test.describe("signed-in account", () => {
       page.getByRole("button", { name: "Assistido", exact: true }),
     ).toBeVisible();
 
+    await page.goto("/pt-BR/title/movie/1726");
+    await repeat.click();
+    await expect(page.getByText("Nova exibição registrada.")).toBeVisible();
+    await page.goto("/pt-BR/discover");
+    const recentShelf = page.getByRole("region", {
+      name: "Assistidos recentemente",
+    });
+    await expect(recentShelf.getByRole("link").first()).toHaveAttribute(
+      "href",
+      "/pt-BR/title/movie/1726",
+    );
+
     await page.goto("/pt-BR/profile/me");
+    const recentProfile = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "Vistos recentemente" }),
+    });
+    await expect(
+      recentProfile.locator('a[href*="/title/"]').first(),
+    ).toHaveAttribute("href", "/pt-BR/title/movie/1726");
     const accountMenu = page.getByRole("button", { name: "Minha conta" });
     await accountMenu.click();
     const accountOptions = page.getByRole("dialog", { name: "Minha conta" });
@@ -158,6 +174,13 @@ test.describe("signed-in account", () => {
     await expect(main.getByText("Black Mirror", { exact: true })).toHaveCount(
       0,
     );
+    await page.goto("/pt-BR/profile/me?tab=liked&type=movie&page=99");
+    await expect(
+      main.locator('a[href="/pt-BR/title/movie/1726"]'),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Filmes", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
     await profileNav
       .getByRole("link", { name: "Playlists", exact: true })
       .click();
@@ -489,6 +512,19 @@ test.describe("signed-in account", () => {
     const visitor = await browser.newContext();
     try {
       const visitorPage = await visitor.newPage();
+      const missingProfile = await visitorPage.goto(
+        `${baseURL}/en/profile/missing-${randomUUID()}`,
+      );
+      expect(missingProfile?.status()).toBe(404);
+      const missingAssetLikeHandle = await visitorPage.goto(
+        "/en/profile/missing-filmgram-profile.png",
+      );
+      expect(missingAssetLikeHandle?.status()).toBe(404);
+      await expect(
+        visitorPage.getByRole("heading", { name: "Page not found" }),
+      ).toBeVisible();
+      const ownProfile = await visitorPage.goto(`${baseURL}/en/profile/me`);
+      expect(ownProfile?.status()).toBe(200);
       await visitorPage.goto(`${baseURL}/en/profile/${profile.handle}`);
       await expect(
         visitorPage.getByRole("link", { name: /Public E2E playlist/ }),

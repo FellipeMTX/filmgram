@@ -1,6 +1,7 @@
 "use server";
 import { currentUser, supabase } from "@/integrations/supabase";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 export async function setReviewAuthorFollow(
   authorId: string,
   following: boolean,
@@ -17,4 +18,13 @@ export async function setReviewAuthorFollow(
       })
     : await db.from("follows").delete().match(key);
   if (result.error) throw result.error;
+  revalidatePath("/", "layout");
+  return following;
+}
+
+export async function setProfileAuthorFollow(
+  authorId: string,
+  following: boolean,
+) {
+  await setReviewAuthorFollow(authorId, following);
 }
