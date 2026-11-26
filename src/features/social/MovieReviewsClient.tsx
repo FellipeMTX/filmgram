@@ -213,7 +213,16 @@ export function MovieReviewsClient(
         active instanceof HTMLElement && sectionRef.current?.contains(active)
           ? active
           : null;
-      const dialog = document.querySelector('[role="dialog"]');
+      const dialog = document.querySelector<HTMLElement>(
+        "[data-review-dialog]",
+      );
+      const dialogReviewId = dialog?.dataset.reviewDialog;
+      if (dialogReviewId && !followFocusRef.current) {
+        followFocusRef.current =
+          sectionRef.current?.querySelector<HTMLElement>(
+            `[data-review-id="${CSS.escape(dialogReviewId)}"]`,
+          ) ?? null;
+      }
       if (!dialog) void refresh();
       else {
         observer?.disconnect();

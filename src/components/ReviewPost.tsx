@@ -468,6 +468,7 @@ export function ReviewPost(props: ReviewPostProps) {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/85" />
         <Dialog.Content
           ref={modalContent}
+          data-review-dialog={props.reviewId}
           aria-describedby={undefined}
           onCloseAutoFocus={(event) => {
             event.preventDefault();

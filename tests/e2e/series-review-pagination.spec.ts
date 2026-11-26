@@ -140,6 +140,13 @@ test("paginates series reviews, preserves deep links and retries comments safely
     });
     await selected.getByRole("button", { name: "Post comment" }).click();
     await expect(selected.getByRole("alert")).toBeVisible();
+    const firstSubmission = await reader.db
+      .from("review_comments")
+      .select("id")
+      .eq("review_id", selectedId)
+      .eq("body", commentText)
+      .single();
+    if (firstSubmission.error) throw firstSubmission.error;
     await selected.getByRole("button", { name: "Post comment" }).click();
     await expect(selected.getByText(commentText, { exact: true })).toHaveCount(
       1,
@@ -150,7 +157,7 @@ test("paginates series reviews, preserves deep links and retries comments safely
       .eq("review_id", selectedId)
       .eq("body", commentText);
     if (stored.error) throw stored.error;
-    expect(stored.data).toHaveLength(1);
+    expect(stored.data).toEqual([firstSubmission.data]);
     await expect(
       selected.getByRole("button", { name: "Comments (1)" }),
     ).toBeVisible();
@@ -175,6 +182,9 @@ test("paginates series reviews, preserves deep links and retries comments safely
       .click();
     await expect(discussion).toHaveCount(0);
     await expect(lastText).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Community reviews" }),
+    ).toBeFocused();
   } finally {
     await Promise.all(
       authors.map((a) => a.db.from("reviews").delete().eq("user_id", a.id)),
