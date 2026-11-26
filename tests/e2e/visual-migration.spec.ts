@@ -5,9 +5,18 @@ test("header keeps its selected flag and centers desktop navigation", async ({
 }) => {
   for (const locale of ["en", "pt-BR", "es"]) {
     await page.goto(`/${locale}/discover?type=all`);
-    for (const width of [320, 700, 701, 768, 838, 900, 1650]) {
+    const header = page.locator("header");
+    const brandLink = header.getByRole("link", {
+      name: "Filmgram",
+      exact: true,
+    });
+    await expect(brandLink).toHaveAttribute("href", `/${locale}/discover`);
+    await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
+      "href",
+      /\/favicon\.ico(?:\?|$)/,
+    );
+    for (const width of [320, 700, 701, 768, 838, 900, 901, 1650]) {
       await page.setViewportSize({ width, height: 900 });
-      const header = page.locator("header");
       await expect(header.getByRole("combobox").locator("svg")).toHaveCount(2);
       const navigation = header.locator("nav");
       if (width <= 700) {
@@ -15,9 +24,7 @@ test("header keeps its selected flag and centers desktop navigation", async ({
         await expect(page.locator("body > nav")).toBeVisible();
       } else {
         const bounds = await navigation.boundingBox();
-        const logo = await header
-          .getByRole("link", { name: "Filmgram." })
-          .boundingBox();
+        const logo = await brandLink.boundingBox();
         const language = await header.getByRole("combobox").boundingBox();
         expect(bounds).not.toBeNull();
         expect(
