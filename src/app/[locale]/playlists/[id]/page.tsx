@@ -86,6 +86,7 @@ export default async function PlaylistDetail({
       ) : (
         <div className="mt-6">
           <SocialEmpty
+            icon="collection"
             message={empty}
             action={
               user?.id === list.user_id

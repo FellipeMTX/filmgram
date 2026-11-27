@@ -14,14 +14,29 @@ export default async function Following({
 }) {
   const { locale } = await params;
   const t = messages(locale);
-  const { user } = await getSocialViewer();
+  const { user, db } = await getSocialViewer();
   const feed = user ? await getFeed(locale) : null;
+  let hasFollowing = false;
+  if (user && db && feed && !feed.items.length) {
+    const result = await db
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", user.id)
+      .limit(1);
+    if (result.error) throw result.error;
+    hasFollowing = !!result.data.length;
+  }
   return (
     <main className={cn(narrow, "max-w-[760px]")}>
       <p className={eyebrow}>{t.community}</p>
       <h1 className={pageTitle}>{t.following}</h1>
       {feed ? (
-        <FollowingFeed initial={feed} locale={locale} userId={user!.id} />
+        <FollowingFeed
+          initial={feed}
+          locale={locale}
+          userId={user!.id}
+          hasFollowing={hasFollowing}
+        />
       ) : (
         <>
           <p className="mb-4 text-muted-foreground">{t.signInPrompt}</p>

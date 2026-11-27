@@ -9,6 +9,7 @@ import { profileLabels } from "@/features/profile/labels";
 import { Posters, Lists } from "@/features/profile/ProfileMedia";
 import { ProfileReviews } from "@/features/profile/ProfileReviews";
 import { profileTabs } from "@/features/profile/types";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
@@ -86,6 +87,38 @@ export default async function Profile({
       )}
     </div>
   );
+  const empty = (
+    message: string,
+    destination: string = "discover",
+    icon: "film" | "review" | "heart" | "collection" = "film",
+  ) => (
+    <SocialEmpty
+      compact
+      icon={icon}
+      title={message}
+      message={
+        own
+          ? locale === "pt-BR"
+            ? "Explore e comece sua coleção."
+            : locale === "es"
+              ? "Explora y empieza tu colección."
+              : "Explore and start your collection."
+          : locale === "pt-BR"
+            ? "Volte mais tarde para novidades."
+            : locale === "es"
+              ? "Vuelve más tarde para ver novedades."
+              : "Check back later for updates."
+      }
+      action={
+        own
+          ? {
+              href: `/${locale}/${destination}`,
+              label: destination === "playlists" ? l.playlists : t.discover,
+            }
+          : undefined
+      }
+    />
+  );
   return (
     <main>
       <div className="relative isolate overflow-hidden bg-secondary">
@@ -161,7 +194,13 @@ export default async function Profile({
         </nav>
         {tab === "overview" ? (
           <>
-            <div className="grid grid-cols-[3fr_2fr] gap-6 py-7 compact:grid-cols-1">
+            <div
+              className={
+                own
+                  ? "grid grid-cols-[3fr_2fr] gap-6 py-7 compact:grid-cols-1"
+                  : "py-7"
+              }
+            >
               <div className="min-w-0">
                 {own && (
                   <section>
@@ -173,7 +212,7 @@ export default async function Profile({
                     {history.length ? (
                       <Posters items={history.slice(0, 4)} locale={locale} />
                     ) : (
-                      <p className="text-subtle">{own ? l.emptyWatched : ""}</p>
+                      empty(l.emptyWatched)
                     )}
                   </section>
                 )}
@@ -186,17 +225,23 @@ export default async function Profile({
                   {reviewData.length ? (
                     <ProfileReviews items={reviewData} locale={locale} />
                   ) : (
-                    <p className="text-subtle">{l.emptyReviews}</p>
+                    empty(l.emptyReviews, "discover", "review")
                   )}
                 </section>
               </div>
-              <ProfileHabits
-                locale={locale}
-                own={own}
-                period={period}
-                dashboard={dashboard}
-                stats={stats || null}
-              />
+              {own && (
+                <ProfileHabits
+                  locale={locale}
+                  period={period}
+                  dashboard={dashboard}
+                  resetHref={href({
+                    ...(q.tab ? { tab: q.tab } : {}),
+                    ...(q.type ? { type: q.type } : {}),
+                    ...(q.page ? { page: q.page } : {}),
+                    period: "all",
+                  })}
+                />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-6 border-t border-border pt-6 compact:grid-cols-1">
               {own && (
@@ -205,7 +250,7 @@ export default async function Profile({
                   {liked.length ? (
                     <Posters items={liked.slice(0, 4)} locale={locale} liked />
                   ) : (
-                    <p className="text-subtle">{l.emptyLiked}</p>
+                    empty(l.emptyLiked, "discover", "heart")
                   )}
                 </section>
               )}
@@ -225,7 +270,7 @@ export default async function Profile({
                 {lists.length ? (
                   <Lists lists={lists.slice(0, 2)} locale={locale} />
                 ) : (
-                  <p className="text-subtle">{l.emptyPlaylists}</p>
+                  empty(l.emptyPlaylists, "playlists", "collection")
                 )}
               </section>
             </div>
@@ -260,20 +305,18 @@ export default async function Profile({
               reviewData.length ? (
                 <ProfileReviews items={reviewData} locale={locale} />
               ) : (
-                <p className="text-subtle">{l.emptyReviews}</p>
+                empty(l.emptyReviews, "discover", "review")
               )
             ) : tab === "playlists" ? (
               lists.length ? (
                 <Lists lists={lists} locale={locale} />
               ) : (
-                <p className="text-subtle">{l.emptyPlaylists}</p>
+                empty(l.emptyPlaylists, "playlists", "collection")
               )
             ) : raw.length ? (
               <Posters items={raw} locale={locale} liked={tab === "liked"} />
             ) : (
-              <p className="text-subtle">
-                {tab === "watched" ? l.emptyWatched : l.emptyLiked}
-              </p>
+              empty(tab === "watched" ? l.emptyWatched : l.emptyLiked)
             )}
             {pages > 1 && (
               <nav

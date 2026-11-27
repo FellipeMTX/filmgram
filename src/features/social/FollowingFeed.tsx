@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ReviewPost } from "@/components/ReviewPost";
 import { imageUrl } from "@/integrations/tmdb-display";
-import { messages } from "@/i18n/messages";
 import { loadFollowing } from "./feed-actions";
 import type { FeedPage } from "./feed";
 import { SocialEmpty } from "./SocialEmpty";
@@ -36,10 +35,12 @@ export function FollowingFeed({
   initial,
   locale,
   userId,
+  hasFollowing,
 }: {
   initial: FeedPage;
   locale: string;
   userId: string;
+  hasFollowing: boolean;
 }) {
   const [source, setSource] = useState(initial),
     [items, setItems] = useState(initial.items),
@@ -64,13 +65,46 @@ export function FollowingFeed({
     setNext(initial.next);
     setFailed(false);
   }
-  const t = messages(locale),
-    l = labels[locale as keyof typeof labels] || labels.en;
+  const l = labels[locale as keyof typeof labels] || labels.en;
   if (!items.length)
     return (
       <SocialEmpty
-        message={t.followingEmpty}
-        action={{ href: `/${locale}/discover`, label: t.discover }}
+        icon="people"
+        title={
+          hasFollowing
+            ? locale === "pt-BR"
+              ? "Ainda não há resenhas por aqui"
+              : locale === "es"
+                ? "Aún no hay reseñas aquí"
+                : "No reviews here yet"
+            : locale === "pt-BR"
+              ? "Você ainda não segue ninguém"
+              : locale === "es"
+                ? "Aún no sigues a nadie"
+                : "You aren't following anyone yet"
+        }
+        message={
+          hasFollowing
+            ? locale === "pt-BR"
+              ? "As pessoas que você segue ainda não publicaram resenhas."
+              : locale === "es"
+                ? "Las personas que sigues aún no han publicado reseñas."
+                : "People you follow haven't posted reviews yet."
+            : locale === "pt-BR"
+              ? "Explore filmes e séries e siga os autores das resenhas para acompanhar suas publicações aqui."
+              : locale === "es"
+                ? "Explora películas y series y sigue a quienes escriben reseñas para ver sus publicaciones aquí."
+                : "Explore films and series and follow review authors to see their posts here."
+        }
+        action={{
+          href: `/${locale}/discover`,
+          label:
+            locale === "pt-BR"
+              ? "Explorar filmes e séries"
+              : locale === "es"
+                ? "Explorar películas y series"
+                : "Explore films and series",
+        }}
       />
     );
   return (

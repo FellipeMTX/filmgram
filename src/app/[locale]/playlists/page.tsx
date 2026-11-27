@@ -189,8 +189,44 @@ export default async function Playlists({
                 </span>
               </Link>
             )}
-            {group.count === 0 && group.key !== "ownPage" ? (
-              <SocialEmpty message={t.noPlaylists} />
+            {group.count === 0 ? (
+              group.key === "ownPage" ? (
+                <SocialEmpty
+                  icon="collection"
+                  title={
+                    locale === "pt-BR"
+                      ? "Crie sua primeira playlist"
+                      : locale === "es"
+                        ? "Crea tu primera lista"
+                        : "Create your first playlist"
+                  }
+                  message={
+                    locale === "pt-BR"
+                      ? "Crie sua primeira playlist para reunir seus títulos favoritos."
+                      : locale === "es"
+                        ? "Crea tu primera lista para reunir tus títulos favoritos."
+                        : "Create your first playlist to bring your favorite titles together."
+                  }
+                >
+                  <CreatePlaylistDialog
+                    triggerLabel={
+                      locale === "pt-BR"
+                        ? "Criar primeira playlist"
+                        : locale === "es"
+                          ? "Crear primera lista"
+                          : "Create first playlist"
+                    }
+                    locale={locale}
+                    labels={{
+                      ...t,
+                      close: labels.close,
+                      failure: labels.failure,
+                    }}
+                  />
+                </SocialEmpty>
+              ) : (
+                <SocialEmpty icon="collection" message={t.noPlaylists} />
+              )
             ) : (
               <div className="grid grid-cols-2 gap-5 min-[700px]:grid-cols-3 min-[900px]:grid-cols-4 min-[1200px]:grid-cols-5">
                 {group.lists.map((list) => {

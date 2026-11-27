@@ -684,3 +684,66 @@ test.describe("signed-in account", () => {
     await expect(rows.nth(0)).toContainText("Family Guy");
   });
 });
+
+test("shows purposeful empty states for a new profile and its first playlist", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  test.skip(process.env.FILMGRAM_E2E_AUTH !== "1", "Requires local Supabase");
+  if (!baseURL) throw new Error("Expected the Playwright app origin");
+  const { client, userId } = await signUp(page.context(), baseURL);
+  const { data: profile, error } = await client
+    .from("profiles")
+    .select("handle")
+    .eq("id", userId)
+    .single();
+  if (error) throw error;
+
+  await page.goto(`/pt-BR/profile/${profile.handle}?period=30d`);
+  const habits = page.getByRole("heading", { name: "Hábitos de visualização" });
+  await expect(habits).toBeVisible();
+  await expect(
+    page.getByText(/nenhuma atividade neste período/i),
+  ).toBeVisible();
+  await habits
+    .locator("xpath=../..")
+    .getByRole("link", { name: "Ver todos" })
+    .click();
+  await expect(page).toHaveURL(
+    new RegExp(`/profile/${profile.handle}(?:\\?period=all)?$`),
+  );
+  await expect(page.getByRole("combobox", { name: "Período" })).toHaveValue(
+    "all",
+  );
+
+  await page.goto("/pt-BR/playlists");
+  await expect(page.getByRole("link", { name: /^Salvos/ })).toBeVisible();
+  await page.getByRole("button", { name: "Criar primeira playlist" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("textbox", { name: /nome da playlist/i })
+    .fill("Cinema de domingo");
+  await dialog.getByRole("button", { name: "Criar", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Cinema de domingo" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /encontrar títulos|descobrir/i }),
+  ).toBeVisible();
+
+  const visitor = await browser.newPage();
+  try {
+    await visitor.goto(`/pt-BR/profile/${profile.handle}`);
+    const publicProfile = visitor.getByRole("main");
+    await expect(
+      publicProfile.getByRole("heading", { name: "Resenhas recentes" }),
+    ).toBeVisible();
+    await expect(
+      publicProfile.getByRole("heading", { name: "Hábitos de visualização" }),
+    ).toHaveCount(0);
+    await expect(publicProfile.getByText("Cinema de domingo")).toHaveCount(0);
+  } finally {
+    await visitor.close();
+  }
+});
