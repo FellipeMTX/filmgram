@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { signIn } from "@/features/auth/actions";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 import { ProfileAccountMenu } from "@/features/profile/ProfileAccountMenu";
 import { ProfileFollowButton } from "@/features/social/ProfileFollowButton";
 import { getProfilePageData } from "@/features/profile/page-data";
@@ -13,7 +12,7 @@ import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
-import { container, narrow, pageTitle } from "@/lib/layout";
+import { container, narrow } from "@/lib/layout";
 
 const heading =
   "font-display text-[28px] leading-tight font-semibold text-heading";
@@ -41,16 +40,12 @@ export default async function Profile({
   if (username === "me" && !user)
     return (
       <main className={narrow}>
-        <h1 className={pageTitle}>{t.profile}</h1>
-        <p className="text-muted-foreground">{t.signInPrompt}</p>
-        <form action={signIn}>
-          <input
-            type="hidden"
-            name="next"
-            value={"/" + locale + "/profile/me"}
-          />
-          <Button type="submit">{t.signIn}</Button>
-        </form>
+        <SignInPanel
+          locale={locale}
+          next={`/${locale}/profile/me`}
+          context="profile"
+          headingLevel="h1"
+        />
       </main>
     );
   if (!db) throw new Error("Database is not configured");

@@ -18,6 +18,7 @@ import { loadTitleReviewPage } from "./title-review-page";
 import { movieReviewId } from "@/features/catalog/movie-section-links";
 import type { loadTitleReviewContext } from "./title-review-context";
 import { useTitleReviewPages } from "./useTitleReviewPages";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 
 type Page = Awaited<ReturnType<typeof loadTitleReviewPage>>;
 type Own = Awaited<ReturnType<typeof loadTitleReviewContext>>["own"];
@@ -318,7 +319,7 @@ export function TitleReviewsClient(
             ) : (
               <p className="text-sm text-subtle">{l.noRatings}</p>
             )}
-            {!props.preview && !props.initialError && !own && (
+            {!props.preview && !props.initialError && !own && userId && (
               <Button
                 type="button"
                 data-review-open
@@ -330,6 +331,14 @@ export function TitleReviewsClient(
             )}
           </div>
         </div>
+        {!props.preview && !userId && (
+          <SignInPanel
+            locale={locale}
+            next={props.titleHref}
+            context="title-review"
+            compact
+          />
+        )}
         {(!own || !reviews.some((row) => row.id === own.id)) && (
           <CommunityEditor />
         )}

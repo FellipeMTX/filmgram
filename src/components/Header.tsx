@@ -80,7 +80,7 @@ export function Header({ locale }: { locale: string }) {
   return (
     <>
       {query.get("auth_error") === "1" && (
-        <div role="alert" className={container}>
+        <div role="alert" data-auth-error-global className={container}>
           {t.authError}
         </div>
       )}

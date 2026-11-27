@@ -4,7 +4,7 @@ import { PlaylistCover } from "@/components/playlist-cover";
 import { Button } from "@/components/ui/button";
 import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
-import { signIn } from "@/features/auth/actions";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 import { messages } from "@/i18n/messages";
 import type { supabase } from "@/integrations/supabase";
 import { getSocialViewer } from "@/features/social/social-viewer";
@@ -158,18 +158,21 @@ export default async function Playlists({
           <p className={eyebrow}>{t.collection}</p>
           <h1 className={`${pageTitle} mb-0`}>{t.playlists}</h1>
         </div>
-        {user ? (
+        {user && (
           <CreatePlaylistDialog
             locale={locale}
             labels={{ ...t, close: labels.close, failure: labels.failure }}
           />
-        ) : (
-          <form action={signIn}>
-            <input type="hidden" name="next" value={`/${locale}/playlists`} />
-            <Button type="submit">{t.signIn}</Button>
-          </form>
         )}
       </div>
+      {!user && (
+        <SignInPanel
+          locale={locale}
+          next={`/${locale}/playlists`}
+          context="playlists"
+          compact
+        />
+      )}
       {!db ? (
         <p className="text-muted-foreground">{labels.unavailable}</p>
       ) : (

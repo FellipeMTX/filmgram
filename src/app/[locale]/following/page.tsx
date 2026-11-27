@@ -1,9 +1,8 @@
 import { cn } from "@/lib/utils";
 import { narrow, pageTitle, eyebrow } from "@/lib/layout";
-import { Button } from "@/components/ui/button";
 import { messages } from "@/i18n/messages";
 import { getSocialViewer } from "@/features/social/social-viewer";
-import { signIn } from "@/features/auth/actions";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 import { getFeed } from "@/features/social/feed";
 import { FollowingFeed } from "@/features/social/FollowingFeed";
 
@@ -38,13 +37,11 @@ export default async function Following({
           hasFollowing={hasFollowing}
         />
       ) : (
-        <>
-          <p className="mb-4 text-muted-foreground">{t.signInPrompt}</p>
-          <form action={signIn}>
-            <input type="hidden" name="next" value={`/${locale}/following`} />
-            <Button type="submit">{t.signIn}</Button>
-          </form>
-        </>
+        <SignInPanel
+          locale={locale}
+          next={`/${locale}/following`}
+          context="following"
+        />
       )}
     </main>
   );
