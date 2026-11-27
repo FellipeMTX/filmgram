@@ -529,3 +529,29 @@ test("localizes the reply composer and cancel state", async ({
     await reader.db.from("follows").delete().eq("follower_id", reader.id);
   }
 });
+
+test("distinguishes a new following list from followed profiles without reviews", async ({
+  page,
+  baseURL,
+}) => {
+  test.skip(process.env.FILMGRAM_E2E_AUTH !== "1", "Requires local Supabase");
+  if (!baseURL) throw new Error("Expected the Playwright app origin");
+  const reader = await account(page.context(), baseURL);
+  const author = await account();
+  await page.goto("/pt-BR/following");
+  await expect(page.getByText(/você ainda não segue/i)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Explorar filmes e séries" }),
+  ).toHaveAttribute("href", "/pt-BR/discover");
+
+  const { error } = await reader.db.from("follows").insert({
+    follower_id: reader.id,
+    following_id: author.id,
+  });
+  if (error) throw error;
+  await page.reload();
+  await expect(
+    page.getByText("Ainda não há resenhas por aqui", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/você ainda não segue/i)).toHaveCount(0);
+});

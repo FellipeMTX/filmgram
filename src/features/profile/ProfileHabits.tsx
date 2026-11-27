@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { ProfilePeriodSelect } from "./ProfilePeriodSelect";
 import { imageUrl } from "@/integrations/tmdb-display";
 import { profileLabels } from "./labels";
@@ -43,26 +44,20 @@ const genres: Record<number, [string, string, string]> = {
 type Dashboard = Awaited<ReturnType<typeof getPrivateProfileDashboard>>;
 export function ProfileHabits({
   locale,
-  own,
   period,
   dashboard,
-  stats,
+  resetHref,
 }: {
   locale: string;
-  own: boolean;
   period: "all" | "30d" | "90d";
   dashboard: Dashboard | null;
-  stats: {
-    movie_count?: number;
-    series_count?: number;
-    genre_counts?: unknown;
-  } | null;
+  resetHref: string;
 }) {
   const l = profileLabels(locale);
   const counts = dashboard?.stats || {
-    movieCount: Number(stats?.movie_count || 0),
-    seriesCount: Number(stats?.series_count || 0),
-    genreCounts: (stats?.genre_counts || {}) as Record<string, number>,
+    movieCount: 0,
+    seriesCount: 0,
+    genreCounts: {} as Record<string, number>,
   };
   const total = counts.movieCount + counts.seriesCount;
   const moviePercent = total
@@ -75,118 +70,148 @@ export function ProfileHabits({
     .slice(0, 5);
   const lang = locale === "pt-BR" ? 1 : locale === "es" ? 2 : 0;
   return (
-    <aside className="min-w-0 border-l border-border pl-6 compact:border-l-0 compact:border-t compact:pt-6 compact:pl-0">
+    <aside
+      aria-labelledby="profile-habits-heading"
+      className="min-w-0 border-l border-border pl-6 compact:border-l-0 compact:border-t compact:pt-6 compact:pl-0"
+    >
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <h2
+          id="profile-habits-heading"
           className={
             heading + " compact:my-0 mobile:text-[clamp(1.25rem,6vw,1.5rem)]"
           }
         >
           {l.habits}
         </h2>
-        {own && (
-          <ProfilePeriodSelect
-            label={l.period}
-            period={period}
-            options={[
-              { value: "all", label: l.allTime },
-              { value: "30d", label: l.days30 },
-              { value: "90d", label: l.days90 },
-            ]}
-          />
-        )}
-      </div>
-      <div className="grid grid-cols-2 divide-x divide-border">
-        <div>
-          <strong className="block font-display text-4xl">
-            {counts.movieCount}
-          </strong>
-          {l.films}
-        </div>
-        <div className="pl-6">
-          <strong className="block font-display text-4xl">
-            {counts.seriesCount}
-          </strong>
-          {l.series}
-        </div>
-      </div>
-      <div className="mt-5 h-4 overflow-hidden rounded-md bg-muted">
-        <div
-          className="h-full bg-primary"
-          style={{
-            width: (total ? (counts.movieCount / total) * 100 : 0) + "%",
-          }}
+        <ProfilePeriodSelect
+          label={l.period}
+          period={period}
+          options={[
+            { value: "all", label: l.allTime },
+            { value: "30d", label: l.days30 },
+            { value: "90d", label: l.days90 },
+          ]}
         />
       </div>
-      <div className="mt-2 flex justify-between text-sm">
-        <span>
-          {moviePercent}% {l.films.toLowerCase()}
-        </span>
-        <span>
-          {seriesPercent}% {l.series.toLowerCase()}
-        </span>
-      </div>
-      <section className="mt-6 border-t border-border pt-4">
-        <h3 className={heading}>{l.genres}</h3>
-        {top.length ? (
-          top.map(([id, n]) => (
-            <div key={id} className="mt-3">
-              <div className="flex justify-between text-sm">
-                <span>{genres[id]?.[lang] || "#" + id}</span>
-                <span>{n}</span>
-              </div>
-              <div className="mt-1 h-2 rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{
-                    width:
-                      Math.min(100, (n / Math.max(top[0]?.[1] || 1, 1)) * 100) +
-                      "%",
-                  }}
-                />
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="mt-3 text-subtle">{l.emptyGenres}</p>
-        )}
-      </section>
-      {own && (
-        <section className="mt-6 border-t border-border pt-4">
-          <h3 className={heading}>{l.revisited}</h3>
-          {dashboard?.ranking.length ? (
-            dashboard.ranking.slice(0, 4).map((item, i) => (
-              <Link
-                key={item.mediaType + "-" + item.tmdbId}
-                href={
-                  "/" + locale + "/title/" + item.mediaType + "/" + item.tmdbId
+      {total === 0 ? (
+        <SocialEmpty
+          compact
+          icon="chart"
+          message={period === "all" ? l.emptyHabits : l.emptyPeriod}
+          action={
+            period === "all"
+              ? {
+                  href: `/${locale}/discover`,
+                  label:
+                    locale === "pt-BR"
+                      ? "Explorar títulos"
+                      : locale === "es"
+                        ? "Explorar títulos"
+                        : "Explore titles",
                 }
-                className="flex items-center gap-4 border-b border-border py-3 focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                <span className="text-primary">{i + 1}</span>
-                <div className="h-14 w-16 overflow-hidden rounded bg-secondary">
-                  {item.posterPath && (
-                    <Image
-                      src={imageUrl(item.posterPath, "w185")!}
-                      width={64}
-                      height={56}
-                      alt=""
-                      className="h-full w-full object-cover"
+              : { href: resetHref, label: l.all }
+          }
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 divide-x divide-border">
+            <div>
+              <strong className="block font-display text-4xl">
+                {counts.movieCount}
+              </strong>
+              {l.films}
+            </div>
+            <div className="pl-6">
+              <strong className="block font-display text-4xl">
+                {counts.seriesCount}
+              </strong>
+              {l.series}
+            </div>
+          </div>
+          <div className="mt-5 h-4 overflow-hidden rounded-md bg-muted">
+            <div
+              className="h-full bg-primary"
+              style={{
+                width: (total ? (counts.movieCount / total) * 100 : 0) + "%",
+              }}
+            />
+          </div>
+          <div className="mt-2 flex justify-between text-sm">
+            <span>
+              {moviePercent}% {l.films.toLowerCase()}
+            </span>
+            <span>
+              {seriesPercent}% {l.series.toLowerCase()}
+            </span>
+          </div>
+          <section className="mt-6 border-t border-border pt-4">
+            <h3 className={heading}>{l.genres}</h3>
+            {top.length ? (
+              top.map(([id, n]) => (
+                <div key={id} className="mt-3">
+                  <div className="flex justify-between text-sm">
+                    <span>{genres[id]?.[lang] || "#" + id}</span>
+                    <span>{n}</span>
+                  </div>
+                  <div className="mt-1 h-2 rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width:
+                          Math.min(
+                            100,
+                            (n / Math.max(top[0]?.[1] || 1, 1)) * 100,
+                          ) + "%",
+                      }}
                     />
-                  )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold">{item.title}</p>
-                  <p className="text-sm text-subtle">
-                    {item.watchCount} {l.views}
-                  </p>
-                </div>
-              </Link>
-            ))
-          ) : (
-            <p className="mt-3 text-subtle">{l.emptyRevisited}</p>
-          )}
-        </section>
+              ))
+            ) : (
+              <p className="mt-3 text-subtle">{l.emptyGenres}</p>
+            )}
+          </section>
+          <section className="mt-6 border-t border-border pt-4">
+            <h3 className={heading}>{l.revisited}</h3>
+            {dashboard?.ranking.length ? (
+              dashboard.ranking.slice(0, 4).map((item, i) => (
+                <Link
+                  key={item.mediaType + "-" + item.tmdbId}
+                  href={
+                    "/" +
+                    locale +
+                    "/title/" +
+                    item.mediaType +
+                    "/" +
+                    item.tmdbId
+                  }
+                  className="flex items-center gap-4 border-b border-border py-3 focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <span className="text-primary">{i + 1}</span>
+                  <div className="h-14 w-16 overflow-hidden rounded bg-secondary">
+                    {item.posterPath && (
+                      <Image
+                        src={imageUrl(item.posterPath, "w185")!}
+                        width={64}
+                        height={56}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="text-sm text-subtle">
+                      {item.watchCount} {l.views}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="mt-3 text-subtle">{l.emptyRevisited}</p>
+            )}
+          </section>
+        </>
       )}
     </aside>
   );

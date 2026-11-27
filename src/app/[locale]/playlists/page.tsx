@@ -4,7 +4,7 @@ import { PlaylistCover } from "@/components/playlist-cover";
 import { Button } from "@/components/ui/button";
 import { SocialEmpty } from "@/features/social/SocialEmpty";
 import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
-import { signIn } from "@/features/auth/actions";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 import { messages } from "@/i18n/messages";
 import type { supabase } from "@/integrations/supabase";
 import { getSocialViewer } from "@/features/social/social-viewer";
@@ -158,18 +158,21 @@ export default async function Playlists({
           <p className={eyebrow}>{t.collection}</p>
           <h1 className={`${pageTitle} mb-0`}>{t.playlists}</h1>
         </div>
-        {user ? (
+        {user && !!own?.count && (
           <CreatePlaylistDialog
             locale={locale}
             labels={{ ...t, close: labels.close, failure: labels.failure }}
           />
-        ) : (
-          <form action={signIn}>
-            <input type="hidden" name="next" value={`/${locale}/playlists`} />
-            <Button type="submit">{t.signIn}</Button>
-          </form>
         )}
       </div>
+      {!user && (
+        <SignInPanel
+          locale={locale}
+          next={`/${locale}/playlists`}
+          context="playlists"
+          compact={!!publicLists?.count}
+        />
+      )}
       {!db ? (
         <p className="text-muted-foreground">{labels.unavailable}</p>
       ) : (
@@ -189,8 +192,44 @@ export default async function Playlists({
                 </span>
               </Link>
             )}
-            {group.count === 0 && group.key !== "ownPage" ? (
-              <SocialEmpty message={t.noPlaylists} />
+            {group.count === 0 ? (
+              group.key === "ownPage" ? (
+                <SocialEmpty
+                  icon="collection"
+                  title={
+                    locale === "pt-BR"
+                      ? "Crie sua primeira playlist"
+                      : locale === "es"
+                        ? "Crea tu primera lista"
+                        : "Create your first playlist"
+                  }
+                  message={
+                    locale === "pt-BR"
+                      ? "Organize títulos para uma maratona ou guarde suas próximas recomendações."
+                      : locale === "es"
+                        ? "Reúne títulos para un maratón o guarda tus próximas recomendaciones."
+                        : "Pick titles for a marathon or keep your next recommendations together."
+                  }
+                >
+                  <CreatePlaylistDialog
+                    triggerLabel={
+                      locale === "pt-BR"
+                        ? "Criar primeira playlist"
+                        : locale === "es"
+                          ? "Crear primera lista"
+                          : "Create first playlist"
+                    }
+                    locale={locale}
+                    labels={{
+                      ...t,
+                      close: labels.close,
+                      failure: labels.failure,
+                    }}
+                  />
+                </SocialEmpty>
+              ) : (
+                <SocialEmpty icon="collection" message={t.noPlaylists} />
+              )
             ) : (
               <div className="grid grid-cols-2 gap-5 min-[700px]:grid-cols-3 min-[900px]:grid-cols-4 min-[1200px]:grid-cols-5">
                 {group.lists.map((list) => {

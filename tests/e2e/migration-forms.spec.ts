@@ -34,7 +34,9 @@ for (const isPublic of [false, true]) {
       Array.from(cookies, ([name, value]) => ({ name, value, url: baseURL! })),
     );
     await page.goto("/en/playlists");
-    const trigger = page.getByRole("button", { name: "Create playlist" });
+    const trigger = page.getByRole("button", {
+      name: /^Create (first )?playlist$/,
+    });
     await trigger.click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");

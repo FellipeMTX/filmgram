@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { signIn } from "@/features/auth/actions";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 import { ProfileAccountMenu } from "@/features/profile/ProfileAccountMenu";
 import { ProfileFollowButton } from "@/features/social/ProfileFollowButton";
 import { getProfilePageData } from "@/features/profile/page-data";
@@ -9,10 +8,12 @@ import { profileLabels } from "@/features/profile/labels";
 import { Posters, Lists } from "@/features/profile/ProfileMedia";
 import { ProfileReviews } from "@/features/profile/ProfileReviews";
 import { profileTabs } from "@/features/profile/types";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
+import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
-import { container, narrow, pageTitle } from "@/lib/layout";
+import { container, narrow } from "@/lib/layout";
 
 const heading =
   "font-display text-[28px] leading-tight font-semibold text-heading";
@@ -40,16 +41,12 @@ export default async function Profile({
   if (username === "me" && !user)
     return (
       <main className={narrow}>
-        <h1 className={pageTitle}>{t.profile}</h1>
-        <p className="text-muted-foreground">{t.signInPrompt}</p>
-        <form action={signIn}>
-          <input
-            type="hidden"
-            name="next"
-            value={"/" + locale + "/profile/me"}
-          />
-          <Button type="submit">{t.signIn}</Button>
-        </form>
+        <SignInPanel
+          locale={locale}
+          next={`/${locale}/profile/me`}
+          context="profile"
+          headingLevel="h1"
+        />
       </main>
     );
   if (!db) throw new Error("Database is not configured");
@@ -86,6 +83,56 @@ export default async function Profile({
       )}
     </div>
   );
+  const empty = (section: "watched" | "liked" | "reviews" | "playlists") => {
+    const states = {
+      watched: {
+        title: l.emptyWatched,
+        message: l.watchedHelp,
+        icon: "film",
+        label: l.findTitles,
+      },
+      liked: {
+        title: l.emptyLiked,
+        message: l.likedHelp,
+        icon: "heart",
+        label: l.exploreTitles,
+      },
+      reviews: {
+        title: own ? l.emptyReviews : l.emptyPublicReviews,
+        message: own ? l.reviewHelp : l.publicReviewHelp,
+        icon: "review",
+        label: l.exploreTitles,
+      },
+      playlists: {
+        title: own ? l.emptyPlaylists : l.emptyPublicPlaylists,
+        message: own ? l.playlistHelp : l.publicPlaylistHelp,
+        icon: "collection",
+        label: l.createFirst,
+      },
+    } as const;
+    const { title, message, icon, label } = states[section];
+    return (
+      <SocialEmpty
+        compact
+        icon={icon}
+        title={title}
+        message={message}
+        action={
+          own && section !== "playlists"
+            ? { href: `/${locale}/discover`, label }
+            : undefined
+        }
+      >
+        {own && section === "playlists" && (
+          <CreatePlaylistDialog
+            triggerLabel={label}
+            locale={locale}
+            labels={{ ...t, close: l.closeDialog, failure: l.createFailed }}
+          />
+        )}
+      </SocialEmpty>
+    );
+  };
   return (
     <main>
       <div className="relative isolate overflow-hidden bg-secondary">
@@ -161,7 +208,13 @@ export default async function Profile({
         </nav>
         {tab === "overview" ? (
           <>
-            <div className="grid grid-cols-[3fr_2fr] gap-6 py-7 compact:grid-cols-1">
+            <div
+              className={
+                own
+                  ? "grid grid-cols-[3fr_2fr] gap-6 py-7 compact:grid-cols-1"
+                  : "py-7"
+              }
+            >
               <div className="min-w-0">
                 {own && (
                   <section>
@@ -173,7 +226,7 @@ export default async function Profile({
                     {history.length ? (
                       <Posters items={history.slice(0, 4)} locale={locale} />
                     ) : (
-                      <p className="text-subtle">{own ? l.emptyWatched : ""}</p>
+                      empty("watched")
                     )}
                   </section>
                 )}
@@ -186,17 +239,23 @@ export default async function Profile({
                   {reviewData.length ? (
                     <ProfileReviews items={reviewData} locale={locale} />
                   ) : (
-                    <p className="text-subtle">{l.emptyReviews}</p>
+                    empty("reviews")
                   )}
                 </section>
               </div>
-              <ProfileHabits
-                locale={locale}
-                own={own}
-                period={period}
-                dashboard={dashboard}
-                stats={stats || null}
-              />
+              {own && (
+                <ProfileHabits
+                  locale={locale}
+                  period={period}
+                  dashboard={dashboard}
+                  resetHref={href({
+                    ...(q.tab ? { tab: q.tab } : {}),
+                    ...(q.type ? { type: q.type } : {}),
+                    ...(q.page ? { page: q.page } : {}),
+                    period: "all",
+                  })}
+                />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-6 border-t border-border pt-6 compact:grid-cols-1">
               {own && (
@@ -205,7 +264,7 @@ export default async function Profile({
                   {liked.length ? (
                     <Posters items={liked.slice(0, 4)} locale={locale} liked />
                   ) : (
-                    <p className="text-subtle">{l.emptyLiked}</p>
+                    empty("liked")
                   )}
                 </section>
               )}
@@ -218,14 +277,14 @@ export default async function Profile({
                 }
               >
                 {sectionTitle(
-                  l.playlists,
-                  l.allLists,
+                  own ? l.playlists : l.publicPlaylists,
+                  lists.length ? l.allLists : undefined,
                   href({ tab: "playlists" }),
                 )}
                 {lists.length ? (
                   <Lists lists={lists.slice(0, 2)} locale={locale} />
                 ) : (
-                  <p className="text-subtle">{l.emptyPlaylists}</p>
+                  empty("playlists")
                 )}
               </section>
             </div>
@@ -260,20 +319,18 @@ export default async function Profile({
               reviewData.length ? (
                 <ProfileReviews items={reviewData} locale={locale} />
               ) : (
-                <p className="text-subtle">{l.emptyReviews}</p>
+                empty("reviews")
               )
             ) : tab === "playlists" ? (
               lists.length ? (
                 <Lists lists={lists} locale={locale} />
               ) : (
-                <p className="text-subtle">{l.emptyPlaylists}</p>
+                empty("playlists")
               )
             ) : raw.length ? (
               <Posters items={raw} locale={locale} liked={tab === "liked"} />
             ) : (
-              <p className="text-subtle">
-                {tab === "watched" ? l.emptyWatched : l.emptyLiked}
-              </p>
+              empty(tab === "watched" ? "watched" : "liked")
             )}
             {pages > 1 && (
               <nav

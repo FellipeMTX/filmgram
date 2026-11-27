@@ -1,15 +1,51 @@
-import { messages } from "@/i18n/messages";
 import type { Database } from "@/types/database.generated";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+function decodeSegment(segment: string | undefined) {
+  if (!segment) return undefined;
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
+  headers.delete("x-filmgram-internal-missing");
   const locale = request.nextUrl.pathname.split("/")[1];
   headers.set(
     "x-filmgram-locale",
     locale === "pt-BR" || locale === "es" ? locale : "en",
   );
   const forwarded = { request: { headers } };
+  function rewriteMissing(playlist: boolean) {
+    const destination = request.nextUrl.clone();
+    const lang = locale === "pt-BR" || locale === "es" ? locale : "en";
+    destination.pathname = `/${lang}/missing`;
+    destination.search = playlist ? "?playlist=1" : "";
+    const internalHeaders = new Headers(headers);
+    internalHeaders.set("x-filmgram-internal-missing", "1");
+    const missing = NextResponse.rewrite(destination, {
+      status: 404,
+      request: { headers: internalHeaders },
+    });
+    missing.headers.set("Cache-Control", "private, no-store");
+    missing.headers.set("X-Robots-Tag", "noindex");
+    return missing;
+  }
+  const playlistPath = /^\/(?:en|pt-BR|es)\/playlists\/([^/]+)\/?$/i.exec(
+    request.nextUrl.pathname,
+  );
+  const playlistId = decodeSegment(playlistPath?.[1]);
+  if (
+    playlistPath &&
+    !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(playlistId ?? "") &&
+    (request.method === "GET" || request.method === "HEAD") &&
+    request.headers.get("rsc") !== "1"
+  ) {
+    return rewriteMissing(true);
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next(forwarded);
@@ -33,22 +69,12 @@ export async function proxy(request: NextRequest) {
   const authUnavailable =
     authError?.name === "AuthRetryableFetchError" ||
     (authError?.status ?? 0) >= 500;
-  const requestedPlaylist =
-    /^\/(?:en|pt-BR|es)\/playlists\/([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})\/?$/i.exec(
-      request.nextUrl.pathname,
-    )?.[1];
+  const requestedPlaylist = playlistId;
   const profileMatch = /^\/(?:en|pt-BR|es)\/profile\/([^/]+)\/?$/.exec(
     request.nextUrl.pathname,
   );
-  let requestedProfile: string | undefined;
-  try {
-    requestedProfile = profileMatch
-      ? decodeURIComponent(profileMatch[1]!)
-      : undefined;
-  } catch {
-    // Let the route handle malformed paths.
-  }
-  if (requestedProfile === "me") requestedProfile = undefined;
+  const handle = decodeSegment(profileMatch?.[1]);
+  const requestedProfile = handle === "me" ? undefined : handle;
   if (
     (requestedPlaylist || requestedProfile) &&
     !authUnavailable &&
@@ -69,29 +95,7 @@ export async function proxy(request: NextRequest) {
           .eq("handle", requestedProfile!)
           .maybeSingle();
     if (!error && !data) {
-      const lang = locale === "pt-BR" || locale === "es" ? locale : "en";
-      const t = messages(lang);
-      const missing = new NextResponse(
-        `<!doctype html>
-        <html lang="${lang}"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-        <meta name="robots" content="noindex"><title>${t.notFound} · Filmgram</title>
-        <style>
-          body{margin:0;background:#12100f;color:#fbefde;font:1rem system-ui,sans-serif}
-          main{max-width:52rem;margin:4rem auto;padding:0 1.25rem}
-          a{color:#ff654f}
-        </style>
-        <main><h1>${t.notFound}</h1><a href="/${lang}/${requestedPlaylist ? "playlists" : "discover"}">${requestedPlaylist ? t.playlists : t.discover}</a></main>
-        </html>`,
-        {
-          status: 404,
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "private, no-store",
-            "Content-Security-Policy":
-              "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'",
-          },
-        },
-      );
+      const missing = rewriteMissing(!!requestedPlaylist);
       response.cookies
         .getAll()
         .forEach((cookie) => missing.cookies.set(cookie));

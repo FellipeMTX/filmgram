@@ -20,9 +20,11 @@ type Labels = {
 export function CreatePlaylistDialog({
   locale,
   labels,
+  triggerLabel,
 }: {
   locale: string;
   labels: Labels;
+  triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
@@ -58,7 +60,7 @@ export function CreatePlaylistDialog({
       <Dialog.Trigger asChild>
         <Button type="button">
           <Plus size={18} />
-          {labels.createPlaylist}
+          {triggerLabel || labels.createPlaylist}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>

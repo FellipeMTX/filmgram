@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ReviewRichText } from "@/components/ReviewRichText";
 import { FilmgramRating } from "@/components/FilmgramRating";
 import { reviewYoutubeId } from "@/features/social/review-content";
+import { SignInPanel } from "@/features/auth/SignInPanel";
 
 type Context = Awaited<ReturnType<typeof loadTitleReviewContext>>;
 const labels = {
@@ -261,7 +262,7 @@ export function TitleReviewContext({
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-2xl font-bold">{l.community}</h2>
-          {!own && !error && (
+          {!own && !error && data?.userId && (
             <Button
               type="button"
               disabled={!data}
@@ -284,6 +285,14 @@ export function TitleReviewContext({
               l.noRatings
             )}
           </p>
+        )}
+        {data && !data.userId && (
+          <SignInPanel
+            locale={locale}
+            next={reviewId ? titleReviewHref(titleHref, reviewId) : titleHref}
+            context="title-review"
+            compact
+          />
         )}
         {!own && <CommunityEditor />}
         {selected && !deletedSelected && (

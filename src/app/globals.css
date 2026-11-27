@@ -195,3 +195,8 @@
     }
   }
 }
+
+/* A contextual sign-in failure takes precedence over the header fallback. */
+body:has([data-auth-error-local]) [data-auth-error-global] {
+  display: none;
+}
