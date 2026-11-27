@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { Brand } from "@/components/Brand";
 import { signIn } from "./actions";
@@ -74,16 +75,34 @@ const copy = {
   },
 } as const;
 
+const returnQueryKeys = {
+  profile: ["tab", "type", "period", "page"],
+  following: [],
+  playlists: ["ownPage", "publicPage"],
+  "title-review": ["country", "tab", "media", "review"],
+} as const;
+
+function canonicalTitlePath(pathname: string) {
+  return pathname.replace(/(\/title\/(?:movie|tv)\/)0+(?=\d)/, "$1");
+}
+
 function GoogleButton({
   label,
   pendingLabel,
+  restoreFocus,
 }: {
   label: string;
   pendingLabel: string;
+  restoreFocus: boolean;
 }) {
   const { pending } = useFormStatus();
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (restoreFocus && !pending) button.current?.focus();
+  }, [pending, restoreFocus]);
   return (
     <button
+      ref={button}
       type="submit"
       disabled={pending}
       className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-[#fffdf8] px-5 py-3 text-sm font-bold text-[#242424] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70 sm:w-auto"
@@ -130,33 +149,37 @@ export function SignInPanel({
   const search = useSearchParams();
   const urlError = search.get("auth_error") === "1";
   const intended = new URL(next, "https://filmgram.invalid");
-  const params = new URLSearchParams(
-    intended.pathname === pathname ? search.toString() : intended.search,
-  );
-  if (intended.pathname === pathname) {
-    intended.searchParams.forEach((value, key) => {
-      if (!params.has(key)) params.append(key, value);
-    });
+  const sameRoute =
+    intended.pathname === pathname ||
+    (context === "title-review" &&
+      intended.pathname === canonicalTitlePath(pathname));
+  const queryKeys = returnQueryKeys[context];
+  const params = new URLSearchParams();
+  for (const key of queryKeys) {
+    const value =
+      (sameRoute ? search.get(key) : null) ?? intended.searchParams.get(key);
+    if (value && /^[a-z0-9_-]{1,100}$/i.test(value)) {
+      params.set(key, value);
+    }
   }
-  params.delete("auth_error");
   const query = params.toString();
-  const cleanNext =
-    intended.pathname + (query ? `?${query}` : "") + intended.hash;
+  const returnPath = intended.pathname + (query ? `?${query}` : "");
+  const cleanNext = returnPath + intended.hash;
   const Heading = headingLevel;
   return (
     <section
       className={`overflow-hidden rounded-xl border border-border bg-card ${compact ? "my-5" : "mx-auto w-full max-w-[770px]"}`}
     >
-      <div className={`grid ${compact ? "" : "min-[700px]:grid-cols-2"}`}>
+      <div className={`grid ${compact ? "" : "min-[701px]:grid-cols-2"}`}>
         {!compact && (
-          <div className="relative h-32 overflow-hidden min-[700px]:h-auto min-[700px]:min-h-[365px]">
+          <div className="relative h-32 overflow-hidden min-[701px]:h-auto min-[701px]:min-h-[365px]">
             <Image
               src="/profile-cinema.webp"
               alt=""
               fill
               loading="eager"
               sizes="(max-width: 700px) 100vw, 50vw"
-              className="object-cover"
+              className="object-cover min-[701px]:object-[82%_center]"
             />
           </div>
         )}
@@ -187,19 +210,22 @@ export function SignInPanel({
             onSubmit={(event) => {
               // Fragments are not sent to the server; preserve the current one when present.
               if (
-                intended.pathname !== window.location.pathname ||
-                !window.location.hash
+                !sameRoute ||
+                !/^#[a-z0-9_-]{1,100}$/i.test(window.location.hash)
               )
                 return;
               const input = event.currentTarget.elements.namedItem(
                 "next",
               ) as HTMLInputElement | null;
-              if (input)
-                input.value = cleanNext.split("#", 1)[0] + window.location.hash;
+              if (input) input.value = returnPath + window.location.hash;
             }}
           >
             <input type="hidden" name="next" value={cleanNext} />
-            <GoogleButton label={t.button} pendingLabel={t.pending} />
+            <GoogleButton
+              label={t.button}
+              pendingLabel={t.pending}
+              restoreFocus={urlError}
+            />
           </form>
         </div>
       </div>

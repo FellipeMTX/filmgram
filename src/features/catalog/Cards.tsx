@@ -4,6 +4,7 @@ import type { Title } from "@/integrations/tmdb";
 import { Rail } from "./Rail";
 import { MediaImage } from "./MediaImage";
 import { messages } from "@/i18n/messages";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 
 export function Card({ item, locale }: { item: Title; locale: string }) {
   const t = messages(locale),
@@ -86,9 +87,7 @@ export function Shelf({
           ))}
         </Rail>
       ) : (
-        <p className="text-muted-foreground">
-          {empty || messages(locale).noResults}
-        </p>
+        <SocialEmpty compact message={empty || messages(locale).noResults} />
       )}
     </section>
   );

@@ -551,7 +551,7 @@ test("distinguishes a new following list from followed profiles without reviews"
   if (error) throw error;
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: /ainda não há resenhas/i }),
+    page.getByText("Ainda não há resenhas por aqui", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/você ainda não segue/i)).toHaveCount(0);
 });

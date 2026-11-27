@@ -9,6 +9,7 @@ import { Posters, Lists } from "@/features/profile/ProfileMedia";
 import { ProfileReviews } from "@/features/profile/ProfileReviews";
 import { profileTabs } from "@/features/profile/types";
 import { SocialEmpty } from "@/features/social/SocialEmpty";
+import { CreatePlaylistDialog } from "@/features/playlists/create-dialog";
 import { ProfileHabits } from "@/features/profile/ProfileHabits";
 import { messages } from "@/i18n/messages";
 import { currentUser, supabase } from "@/integrations/supabase";
@@ -82,38 +83,56 @@ export default async function Profile({
       )}
     </div>
   );
-  const empty = (
-    message: string,
-    destination: string = "discover",
-    icon: "film" | "review" | "heart" | "collection" = "film",
-  ) => (
-    <SocialEmpty
-      compact
-      icon={icon}
-      title={message}
-      message={
-        own
-          ? locale === "pt-BR"
-            ? "Explore e comece sua coleção."
-            : locale === "es"
-              ? "Explora y empieza tu colección."
-              : "Explore and start your collection."
-          : locale === "pt-BR"
-            ? "Volte mais tarde para novidades."
-            : locale === "es"
-              ? "Vuelve más tarde para ver novedades."
-              : "Check back later for updates."
-      }
-      action={
-        own
-          ? {
-              href: `/${locale}/${destination}`,
-              label: destination === "playlists" ? l.playlists : t.discover,
-            }
-          : undefined
-      }
-    />
-  );
+  const empty = (section: "watched" | "liked" | "reviews" | "playlists") => {
+    const states = {
+      watched: {
+        title: l.emptyWatched,
+        message: l.watchedHelp,
+        icon: "film",
+        label: l.findTitles,
+      },
+      liked: {
+        title: l.emptyLiked,
+        message: l.likedHelp,
+        icon: "heart",
+        label: l.exploreTitles,
+      },
+      reviews: {
+        title: own ? l.emptyReviews : l.emptyPublicReviews,
+        message: own ? l.reviewHelp : l.publicReviewHelp,
+        icon: "review",
+        label: l.exploreTitles,
+      },
+      playlists: {
+        title: own ? l.emptyPlaylists : l.emptyPublicPlaylists,
+        message: own ? l.playlistHelp : l.publicPlaylistHelp,
+        icon: "collection",
+        label: l.createFirst,
+      },
+    } as const;
+    const { title, message, icon, label } = states[section];
+    return (
+      <SocialEmpty
+        compact
+        icon={icon}
+        title={title}
+        message={message}
+        action={
+          own && section !== "playlists"
+            ? { href: `/${locale}/discover`, label }
+            : undefined
+        }
+      >
+        {own && section === "playlists" && (
+          <CreatePlaylistDialog
+            triggerLabel={label}
+            locale={locale}
+            labels={{ ...t, close: l.closeDialog, failure: l.createFailed }}
+          />
+        )}
+      </SocialEmpty>
+    );
+  };
   return (
     <main>
       <div className="relative isolate overflow-hidden bg-secondary">
@@ -207,7 +226,7 @@ export default async function Profile({
                     {history.length ? (
                       <Posters items={history.slice(0, 4)} locale={locale} />
                     ) : (
-                      empty(l.emptyWatched)
+                      empty("watched")
                     )}
                   </section>
                 )}
@@ -220,7 +239,7 @@ export default async function Profile({
                   {reviewData.length ? (
                     <ProfileReviews items={reviewData} locale={locale} />
                   ) : (
-                    empty(l.emptyReviews, "discover", "review")
+                    empty("reviews")
                   )}
                 </section>
               </div>
@@ -245,7 +264,7 @@ export default async function Profile({
                   {liked.length ? (
                     <Posters items={liked.slice(0, 4)} locale={locale} liked />
                   ) : (
-                    empty(l.emptyLiked, "discover", "heart")
+                    empty("liked")
                   )}
                 </section>
               )}
@@ -258,14 +277,14 @@ export default async function Profile({
                 }
               >
                 {sectionTitle(
-                  l.playlists,
-                  l.allLists,
+                  own ? l.playlists : l.publicPlaylists,
+                  lists.length ? l.allLists : undefined,
                   href({ tab: "playlists" }),
                 )}
                 {lists.length ? (
                   <Lists lists={lists.slice(0, 2)} locale={locale} />
                 ) : (
-                  empty(l.emptyPlaylists, "playlists", "collection")
+                  empty("playlists")
                 )}
               </section>
             </div>
@@ -300,18 +319,18 @@ export default async function Profile({
               reviewData.length ? (
                 <ProfileReviews items={reviewData} locale={locale} />
               ) : (
-                empty(l.emptyReviews, "discover", "review")
+                empty("reviews")
               )
             ) : tab === "playlists" ? (
               lists.length ? (
                 <Lists lists={lists} locale={locale} />
               ) : (
-                empty(l.emptyPlaylists, "playlists", "collection")
+                empty("playlists")
               )
             ) : raw.length ? (
               <Posters items={raw} locale={locale} liked={tab === "liked"} />
             ) : (
-              empty(tab === "watched" ? l.emptyWatched : l.emptyLiked)
+              empty(tab === "watched" ? "watched" : "liked")
             )}
             {pages > 1 && (
               <nav

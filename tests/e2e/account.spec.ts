@@ -536,12 +536,20 @@ test.describe("signed-in account", () => {
       await expect(
         visitorPage.getByRole("heading", { name: publicList.name }),
       ).toBeVisible();
+      const encodedFirst = "%" + publicList.id.charCodeAt(0).toString(16);
+      const encodedPlaylist = await visitorPage.goto(
+        `/en/playlists/${encodedFirst}${publicList.id.slice(1)}`,
+      );
+      expect(encodedPlaylist?.status()).toBe(200);
+      await expect(
+        visitorPage.getByRole("heading", { name: publicList.name }),
+      ).toBeVisible();
       const response = await visitorPage.goto(
         `${baseURL}/en/playlists/${privateList.id}`,
       );
       expect(response?.status()).toBe(404);
       await expect(
-        visitorPage.getByRole("heading", { name: "Page not found" }),
+        visitorPage.getByRole("heading", { name: "Playlist unavailable" }),
       ).toBeVisible();
       await expect(visitorPage.getByText(privateList.name)).toHaveCount(0);
     } finally {
@@ -623,7 +631,9 @@ test.describe("signed-in account", () => {
     const { client } = await signUp(page.context(), baseURL);
     const name = `E2E playlist ${randomUUID()}`;
     await page.goto("/en/playlists");
-    await page.getByRole("button", { name: "Create playlist" }).click();
+    await page
+      .getByRole("button", { name: /^Create (first )?playlist$/ })
+      .click();
     await page.getByRole("textbox", { name: "Playlist name" }).fill(name);
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("heading", { name })).toBeVisible();
@@ -701,15 +711,14 @@ test("shows purposeful empty states for a new profile and its first playlist", a
   if (error) throw error;
 
   await page.goto(`/pt-BR/profile/${profile.handle}?period=30d`);
-  const habits = page.getByRole("heading", { name: "Hábitos de visualização" });
+  const habits = page.getByRole("complementary", {
+    name: "Hábitos de visualização",
+  });
   await expect(habits).toBeVisible();
   await expect(
     page.getByText(/nenhuma atividade neste período/i),
   ).toBeVisible();
-  await habits
-    .locator("xpath=../..")
-    .getByRole("link", { name: "Ver todos" })
-    .click();
+  await habits.getByRole("link", { name: "Ver todos" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/profile/${profile.handle}(?:\\?period=all)?$`),
   );
@@ -729,7 +738,7 @@ test("shows purposeful empty states for a new profile and its first playlist", a
     page.getByRole("heading", { name: "Cinema de domingo" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /encontrar títulos|descobrir/i }),
+    page.getByRole("main").getByRole("link", { name: "Encontrar títulos" }),
   ).toBeVisible();
 
   const visitor = await browser.newPage();

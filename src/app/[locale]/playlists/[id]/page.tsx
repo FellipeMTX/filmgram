@@ -42,6 +42,19 @@ export default async function PlaylistDetail({
       : locale === "es"
         ? "Esta lista aún no tiene títulos."
         : "This playlist has no titles yet.";
+  const owner = user?.id === list.user_id;
+  const howToAdd =
+    locale === "pt-BR"
+      ? "Salve um filme ou série na página do título para adicioná-lo a esta playlist."
+      : locale === "es"
+        ? "Guarda una película o serie desde su ficha para añadirla a esta lista."
+        : "Save a film or series from its title page to add it to this playlist.";
+  const findTitles =
+    locale === "pt-BR"
+      ? "Encontrar títulos"
+      : locale === "es"
+        ? "Encontrar títulos"
+        : "Find titles";
   return (
     <main className={narrow}>
       <Link
@@ -81,16 +94,17 @@ export default async function PlaylistDetail({
           locale={locale}
           playlistId={list.id}
           items={items}
-          owner={user?.id === list.user_id}
+          owner={owner}
         />
       ) : (
         <div className="mt-6">
           <SocialEmpty
             icon="collection"
-            message={empty}
+            title={owner ? empty : undefined}
+            message={owner ? howToAdd : empty}
             action={
-              user?.id === list.user_id
-                ? { href: `/${locale}/discover`, label: t.discover }
+              owner
+                ? { href: `/${locale}/discover`, label: findTitles }
                 : undefined
             }
           />

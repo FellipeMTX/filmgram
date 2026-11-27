@@ -158,7 +158,7 @@ export default async function Playlists({
           <p className={eyebrow}>{t.collection}</p>
           <h1 className={`${pageTitle} mb-0`}>{t.playlists}</h1>
         </div>
-        {user && (
+        {user && !!own?.count && (
           <CreatePlaylistDialog
             locale={locale}
             labels={{ ...t, close: labels.close, failure: labels.failure }}
@@ -170,7 +170,7 @@ export default async function Playlists({
           locale={locale}
           next={`/${locale}/playlists`}
           context="playlists"
-          compact
+          compact={!!publicLists?.count}
         />
       )}
       {!db ? (
@@ -205,10 +205,10 @@ export default async function Playlists({
                   }
                   message={
                     locale === "pt-BR"
-                      ? "Crie sua primeira playlist para reunir seus títulos favoritos."
+                      ? "Organize títulos para uma maratona ou guarde suas próximas recomendações."
                       : locale === "es"
-                        ? "Crea tu primera lista para reunir tus títulos favoritos."
-                        : "Create your first playlist to bring your favorite titles together."
+                        ? "Reúne títulos para un maratón o guarda tus próximas recomendaciones."
+                        : "Pick titles for a marathon or keep your next recommendations together."
                   }
                 >
                   <CreatePlaylistDialog

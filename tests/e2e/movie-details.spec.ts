@@ -28,7 +28,7 @@ test("movie sections share a responsive layout and retain credits", async ({
   await reviews.getByRole("link", { name: "View all reviews" }).click();
   await expect(page).toHaveURL(/\?tab=reviews/);
   await expect(
-    page.getByRole("button", { name: "Write review" }),
+    page.getByRole("button", { name: "Sign in with Google" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Info", exact: true }).click();
   await expect(

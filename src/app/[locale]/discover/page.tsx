@@ -13,6 +13,8 @@ import { Hero } from "@/features/catalog/Hero";
 import { Shelf } from "@/features/catalog/Cards";
 import { container } from "@/lib/layout";
 import { getRecentViewingTitles } from "@/features/profile/queries";
+import { CatalogRetry } from "@/features/catalog/CatalogRetry";
+import { SocialEmpty } from "@/features/social/SocialEmpty";
 export default async function Discover({
   params,
   searchParams,
@@ -25,12 +27,22 @@ export default async function Discover({
     t = messages(locale);
   const type: "all" | MediaType =
     query.type === "movie" || query.type === "tv" ? query.type : "all";
-  const [items, topRated, user, db] = await Promise.all([
-    getTrending(locale, type),
-    getTopRated(locale, type),
+  const [trendingResult, topRatedResult, user, db] = await Promise.all([
+    getTrending(locale, type).then(
+      (data) => ({ data, failed: false }),
+      () => ({ data: [], failed: true }),
+    ),
+    getTopRated(locale, type).then(
+      (data) => ({ data, failed: false }),
+      () => ({ data: [], failed: true }),
+    ),
     currentUser(),
     supabase(),
   ]);
+  const items = trendingResult.data;
+  const topRated = topRatedResult.data;
+  const copy =
+    catalogCopy[locale as keyof typeof catalogCopy] || catalogCopy.en;
   const hero = [...items.slice(0, 3), ...topRated, ...items]
     .filter(
       (item, index, all) =>
@@ -107,7 +119,16 @@ export default async function Discover({
         ),
     )
   ).filter((x): x is Title => !!x);
-  const popular = mostLiked.length < 10 ? await getPopular(locale, type) : [];
+  const popularResult =
+    mostLiked.length < 10
+      ? await getPopular(locale, type).then(
+          (data) => ({ data, failed: false }),
+          () => ({ data: [], failed: true }),
+        )
+      : { data: [], failed: false };
+  const popular = popularResult.data;
+  const showMostLiked =
+    mostLiked.length >= 10 || (mostLiked.length > 0 && !popular.length);
   const recent: Title[] = (recentHistory?.items || []).map((x) => ({
     id: x.tmdbId,
     media_type: x.mediaType,
@@ -139,30 +160,112 @@ export default async function Discover({
           ))}
         </div>
       </div>
-      <Hero
-        key={type}
-        items={hero}
-        locale={locale}
-        trendingKeys={items.slice(0, 3).map((x) => `${x.media_type}-${x.id}`)}
-      />
+      {trendingResult.failed &&
+      topRatedResult.failed &&
+      popularResult.failed &&
+      !mostLiked.length ? (
+        <div className={`${container} py-12`} role="alert">
+          <SocialEmpty
+            compact
+            title={copy.failure}
+            message={copy.failureDetail}
+          >
+            <CatalogRetry label={copy.retry} />
+          </SocialEmpty>
+        </div>
+      ) : !hero.length &&
+        !popular.length &&
+        !mostLiked.length &&
+        !trendingResult.failed &&
+        !topRatedResult.failed &&
+        !popularResult.failed ? (
+        <div className={`${container} py-12`}>
+          <SocialEmpty
+            compact
+            title={copy.empty[type]}
+            message={type === "all" ? copy.emptyAllDetail : copy.emptyDetail}
+            action={
+              type === "all"
+                ? undefined
+                : { href: `/${locale}/discover`, label: copy.showAll }
+            }
+          />
+        </div>
+      ) : (
+        <>
+          {hero.length > 0 && (
+            <Hero
+              key={type}
+              items={hero}
+              locale={locale}
+              trendingKeys={items
+                .slice(0, 3)
+                .map((x) => `${x.media_type}-${x.id}`)}
+            />
+          )}
+          <div className={container}>
+            {trendingResult.failed ? (
+              <SectionFailure
+                title={t.recommended}
+                message={copy.sectionFailure}
+                detail={copy.sectionDetail}
+                retry={copy.retry}
+              />
+            ) : (
+              <Shelf
+                title={t.recommended}
+                items={recommended}
+                locale={locale}
+                empty={t.noRecommendations}
+              />
+            )}
+            {trendingResult.failed ? (
+              <SectionFailure
+                title={t.trending}
+                message={copy.sectionFailure}
+                detail={copy.sectionDetail}
+                retry={copy.retry}
+              />
+            ) : (
+              <Shelf
+                title={t.trending}
+                items={items.slice(0, 12)}
+                locale={locale}
+              />
+            )}
+            {topRatedResult.failed ? (
+              <SectionFailure
+                title={t.topRated}
+                message={copy.sectionFailure}
+                detail={copy.sectionDetail}
+                retry={copy.retry}
+              />
+            ) : (
+              <Shelf
+                title={t.topRated}
+                items={topRated.slice(0, 12)}
+                locale={locale}
+              />
+            )}
+            {(showMostLiked || !popularResult.failed) && (
+              <Shelf
+                title={showMostLiked ? t.mostLiked : t.popularTmdb}
+                items={showMostLiked ? mostLiked : popular}
+                locale={locale}
+              />
+            )}
+            {popularResult.failed && (
+              <SectionFailure
+                title={t.popularTmdb}
+                message={copy.sectionFailure}
+                detail={copy.sectionDetail}
+                retry={copy.retry}
+              />
+            )}
+          </div>
+        </>
+      )}
       <div className={container}>
-        <Shelf
-          title={t.recommended}
-          items={recommended}
-          locale={locale}
-          empty={t.noRecommendations}
-        />
-        <Shelf title={t.trending} items={items.slice(0, 12)} locale={locale} />
-        <Shelf
-          title={t.topRated}
-          items={topRated.slice(0, 12)}
-          locale={locale}
-        />
-        <Shelf
-          title={mostLiked.length >= 10 ? t.mostLiked : t.popularTmdb}
-          items={mostLiked.length >= 10 ? mostLiked : popular}
-          locale={locale}
-        />
         <Shelf
           title={t.recent}
           items={recent}
@@ -171,5 +274,77 @@ export default async function Discover({
         />
       </div>
     </main>
+  );
+}
+
+const catalogCopy = {
+  en: {
+    failure: "The catalog is temporarily unavailable.",
+    failureDetail: "Please try again in a moment.",
+    sectionFailure: "This section is temporarily unavailable.",
+    sectionDetail: "Please try again in a moment.",
+    empty: {
+      all: "No titles are available yet.",
+      movie: "No films are available yet.",
+      tv: "No series are available yet.",
+    },
+    emptyAllDetail: "Titles will appear here when the catalog is updated.",
+    showAll: "View all",
+    emptyDetail: "Try another filter or come back later.",
+    retry: "Try again",
+  },
+  "pt-BR": {
+    failure: "O catálogo está temporariamente indisponível.",
+    failureDetail: "Tente novamente em instantes.",
+    sectionFailure: "Esta seção está temporariamente indisponível.",
+    sectionDetail: "Tente novamente em instantes.",
+    empty: {
+      all: "Nenhum título disponível",
+      movie: "Nenhum filme disponível",
+      tv: "Nenhuma série disponível",
+    },
+    emptyAllDetail: "Quando houver títulos no catálogo, eles aparecerão aqui.",
+    showAll: "Ver todos",
+    emptyDetail: "Experimente outro filtro ou volte mais tarde.",
+    retry: "Tentar novamente",
+  },
+  es: {
+    failure: "El catálogo no está disponible temporalmente.",
+    failureDetail: "Inténtalo de nuevo en unos momentos.",
+    sectionFailure: "Esta sección no está disponible temporalmente.",
+    sectionDetail: "Inténtalo de nuevo en unos momentos.",
+    empty: {
+      all: "Aún no hay títulos disponibles",
+      movie: "Aún no hay películas disponibles",
+      tv: "Aún no hay series disponibles",
+    },
+    emptyAllDetail:
+      "Los títulos aparecerán aquí cuando se actualice el catálogo.",
+    showAll: "Ver todos",
+    emptyDetail: "Prueba otro filtro o vuelve más tarde.",
+    retry: "Intentar de nuevo",
+  },
+};
+
+function SectionFailure({
+  title,
+  message,
+  detail,
+  retry,
+}: {
+  title: string;
+  message: string;
+  detail: string;
+  retry: string;
+}) {
+  return (
+    <section className="my-11 mobile:my-[29px]">
+      <h2 className="mb-[18px] font-display text-[25px]">{title}</h2>
+      <div role="alert">
+        <SocialEmpty compact title={message} message={detail}>
+          <CatalogRetry label={retry} />
+        </SocialEmpty>
+      </div>
+    </section>
   );
 }

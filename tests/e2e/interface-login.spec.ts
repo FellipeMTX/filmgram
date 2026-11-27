@@ -8,7 +8,9 @@ test("localizes Google sign-in and shows callback failure in the panel", async (
     ["en", "Your Filmgram profile", "Sign in with Google"],
     ["es", "Tu perfil en Filmgram", "Continuar con Google"],
   ]) {
-    await page.goto(`/${locale}/profile/me?tab=reviews&auth_error=1`);
+    await page.goto(
+      `/${locale}/profile/me?tab=reviews&auth_error=1&utm_content=%2Fbanner`,
+    );
     const main = page.getByRole("main");
     await expect(
       main.getByRole("heading", { name: title, level: 1 }),
@@ -16,6 +18,7 @@ test("localizes Google sign-in and shows callback failure in the panel", async (
     await expect(main.getByRole("button", { name: button })).toBeEnabled();
     await expect(page.locator("[data-auth-error-global]")).toBeHidden();
     await expect(main.getByRole("alert")).toBeVisible();
+    await expect(main.getByRole("button", { name: button })).toBeFocused();
     await expect(main.locator('input[name="next"]')).toHaveValue(
       `/${locale}/profile/me?tab=reviews`,
     );
@@ -64,7 +67,28 @@ test("shows the pending sign-in state and enables retry after OAuth fails", asyn
   }
   await expect(page).toHaveURL(/tab=reviews&auth_error=1/);
   await expect(main.getByRole("alert")).toBeVisible();
-  await expect(
-    main.getByRole("button", { name: "Entrar com Google" }),
-  ).toBeEnabled();
+  const retry = main.getByRole("button", { name: "Entrar com Google" });
+  await expect(retry).toBeEnabled();
+  await expect(retry).toBeFocused();
+  const secondAttempt = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/pt-BR/profile/me"),
+  );
+  await retry.click();
+  await secondAttempt;
+  await expect(retry).toBeEnabled();
+  await expect(retry).toBeFocused();
+});
+
+test("returns to the selected movie reviews section if Google sign-in fails", async ({
+  page,
+}) => {
+  await page.goto("/pt-BR/title/movie/01726?tab=reviews#reviews");
+  const button = page.getByRole("button", { name: "Entrar com Google" });
+  await button.click();
+  await expect(page).toHaveURL(
+    /\/title\/movie\/1726\?tab=reviews&auth_error=1#reviews$/,
+  );
+  await expect(page.locator("main [data-auth-error-local]")).toBeVisible();
 });

@@ -1,20 +1,13 @@
 "use client";
-import { container } from "@/lib/layout";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { messages } from "@/i18n/messages";
+import { useParams, usePathname } from "next/navigation";
+import { MissingPage } from "@/features/catalog/MissingPage";
 export default function NotFound() {
-  const params = useParams(),
-    locale = String(params.locale || "en"),
-    t = messages(locale);
+  const params = useParams();
+  const pathname = usePathname();
   return (
-    <main className={cn(container, "py-20")}>
-      <h1>{t.notFound}</h1>
-      <Link className={buttonVariants()} href={`/${locale}/discover`}>
-        {t.discover}
-      </Link>
-    </main>
+    <MissingPage
+      locale={String(params.locale || "en")}
+      playlist={/^\/(?:en|pt-BR|es)\/playlists\/[^/]+\/?$/.test(pathname)}
+    />
   );
 }

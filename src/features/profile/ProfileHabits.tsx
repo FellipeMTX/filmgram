@@ -70,9 +70,13 @@ export function ProfileHabits({
     .slice(0, 5);
   const lang = locale === "pt-BR" ? 1 : locale === "es" ? 2 : 0;
   return (
-    <aside className="min-w-0 border-l border-border pl-6 compact:border-l-0 compact:border-t compact:pt-6 compact:pl-0">
+    <aside
+      aria-labelledby="profile-habits-heading"
+      className="min-w-0 border-l border-border pl-6 compact:border-l-0 compact:border-t compact:pt-6 compact:pl-0"
+    >
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <h2
+          id="profile-habits-heading"
           className={
             heading + " compact:my-0 mobile:text-[clamp(1.25rem,6vw,1.5rem)]"
           }

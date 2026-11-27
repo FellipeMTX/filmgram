@@ -45,8 +45,10 @@ export function SocialEmpty({
           <Icon size={18} />
         </span>
         <div className="min-w-0">
-          {title && <p className="font-semibold text-foreground">{title}</p>}
-          <p className={`${title ? "mt-1 " : ""}text-muted-foreground`}>
+          {title && (
+            <p className="m-0 font-semibold text-foreground">{title}</p>
+          )}
+          <p className={`m-0 ${title ? "mt-1 " : ""}text-muted-foreground`}>
             {message}
           </p>
           {action && (
