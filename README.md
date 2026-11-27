@@ -27,7 +27,7 @@ See [the implementation plan](docs/PLANEJAMENTO.md) for product stages and the a
 
 ## Interview demo
 
-`/{locale}/entrevista` accepts the interview account provisioned by the seed. Use an explicitly authorized Supabase target. Provide `SUPABASE_URL`, an identical `FILMGRAM_SEED_TARGET`, a server-only `SUPABASE_SERVICE_ROLE_KEY`, and a dedicated `FILMGRAM_DEMO_PASSWORD` of at least 12 characters in the process environment.
+`/{locale}/entrevista` opens the shared Filmgram sign-in panel and takes users to the following feed after login. The interview account provisioned by the seed uses the same email-and-password option as other existing accounts. For the seed, use an explicitly authorized Supabase target. Provide `SUPABASE_URL`, an identical `FILMGRAM_SEED_TARGET`, a server-only `SUPABASE_SERVICE_ROLE_KEY`, and a dedicated `FILMGRAM_DEMO_PASSWORD` of at least 12 characters in the process environment.
 
 Run `node scripts/interview-demo.mjs` after installing dependencies. The seed creates `entrevista@filmgram.example` and its demo network, then verifies the demo credentials and exact follow counts. Rerun with the same password to resume the seed. Its inserts keep existing fixture rows and it stops on conflicts with unmarked Auth accounts. Keep the server key and demo password out of Git and command output.
 

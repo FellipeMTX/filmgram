@@ -1,18 +1,24 @@
 "use client";
 
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import {
+  type FormEvent,
+  useActionState,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useFormStatus } from "react-dom";
 import { Brand } from "@/components/Brand";
-import { signIn } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { signIn, signInWithEmail } from "./actions";
 
 const copy = {
   en: {
-    profile: [
-      "Your Filmgram profile",
-      "Sign in to make your profile your own and share what you love.",
-    ],
+    profile: ["Sign in to Filmgram"],
     following: [
       "Follow the conversation",
       "Sign in to keep up with people and their latest reviews.",
@@ -26,14 +32,17 @@ const copy = {
       "Sign in to rate this title and join the conversation.",
     ],
     button: "Sign in with Google",
+    or: "or",
+    email: "Email",
+    password: "Password",
+    emailButton: "Sign in with email",
+    emailPending: "Signing in…",
+    emailError: "Could not sign in. Check your details and try again.",
     pending: "Connecting to Google…",
     error: "Sign-in failed or was cancelled. Please try again.",
   },
   "pt-BR": {
-    profile: [
-      "Entre para ver seu perfil",
-      "Acompanhe o que assistiu, guarde suas resenhas e descubra seus hábitos de visualização.",
-    ],
+    profile: ["Entre no Filmgram"],
     following: [
       "Entre para ver quem você segue",
       "Acompanhe autores e veja as resenhas deles no seu feed.",
@@ -47,15 +56,19 @@ const copy = {
       "Avalie o título e compartilhe o que achou com a comunidade.",
     ],
     button: "Entrar com Google",
+    or: "ou",
+    email: "E-mail",
+    password: "Senha",
+    emailButton: "Entrar com e-mail",
+    emailPending: "Entrando…",
+    emailError:
+      "Não foi possível entrar. Confira seus dados e tente novamente.",
     pending: "Conectando…",
     error:
       "Não foi possível entrar ou o acesso foi cancelado. Tente novamente.",
   },
   es: {
-    profile: [
-      "Tu perfil en Filmgram",
-      "Entra para crear tu perfil y compartir lo que te gusta.",
-    ],
+    profile: ["Entra en Filmgram"],
     following: [
       "Sigue la conversación",
       "Entra para seguir a otras personas y sus últimas reseñas.",
@@ -69,11 +82,31 @@ const copy = {
       "Entra para valorar este título y unirte a la conversación.",
     ],
     button: "Continuar con Google",
+    or: "o",
+    email: "Correo electrónico",
+    password: "Contraseña",
+    emailButton: "Entrar con correo electrónico",
+    emailPending: "Entrando…",
+    emailError:
+      "No se pudo iniciar sesión. Revisa tus datos e inténtalo de nuevo.",
     pending: "Conectando con Google…",
     error:
       "No se pudo iniciar sesión o se canceló el acceso. Inténtalo de nuevo.",
   },
 } as const;
+
+const { props: desktopCinema } = getImageProps({
+  src: "/login-cinema-portrait.webp",
+  alt: "",
+  fill: true,
+  sizes: "380px",
+});
+const { props: mobileCinema } = getImageProps({
+  src: "/profile-cinema.webp",
+  alt: "",
+  fill: true,
+  sizes: "100vw",
+});
 
 const returnQueryKeys = {
   profile: ["tab", "type", "period", "page"],
@@ -105,7 +138,7 @@ function GoogleButton({
       ref={button}
       type="submit"
       disabled={pending}
-      className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-[#fffdf8] px-5 py-3 text-sm font-bold text-[#242424] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70 sm:w-auto"
+      className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-[#fffdf8] px-5 py-3 text-sm font-bold text-[#242424] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70"
       aria-live="polite"
     >
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">
@@ -128,6 +161,66 @@ function GoogleButton({
       </svg>
       {pending ? pendingLabel : label}
     </button>
+  );
+}
+
+function EmailSignInForm({
+  copy: t,
+  next,
+  onSubmit,
+}: {
+  copy: (typeof copy)[keyof typeof copy];
+  next: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const [error, action, pending] = useActionState(signInWithEmail, false);
+  const [email, setEmail] = useState("");
+  const errorId = useId();
+  return (
+    <form
+      action={action}
+      onSubmit={onSubmit}
+      className="flex w-full flex-col gap-4"
+    >
+      <input type="hidden" name="next" value={next} />
+      <label className="flex flex-col gap-2 text-sm font-bold">
+        {t.email}
+        <Input
+          type="email"
+          name="email"
+          className="border-button-border"
+          autoComplete="username"
+          autoCapitalize="none"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
+      </label>
+      <label className="flex flex-col gap-2 text-sm font-bold">
+        {t.password}
+        <Input
+          type="password"
+          name="password"
+          className="border-button-border"
+          autoComplete="current-password"
+          aria-describedby={error ? errorId : undefined}
+          required
+        />
+      </label>
+      {error && (
+        <p id={errorId} role="alert" className="m-0 text-sm text-destructive">
+          {t.emailError}
+        </p>
+      )}
+      <Button
+        type="submit"
+        disabled={pending}
+        aria-live="polite"
+        className="min-h-12 w-full"
+      >
+        {pending ? t.emailPending : t.emailButton}
+      </Button>
+    </form>
   );
 }
 
@@ -165,68 +258,92 @@ export function SignInPanel({
   const query = params.toString();
   const returnPath = intended.pathname + (query ? `?${query}` : "");
   const cleanNext = returnPath + intended.hash;
+  const [title, description] = t[context];
   const Heading = headingLevel;
+
+  function preserveReturnHash(event: FormEvent<HTMLFormElement>) {
+    // Fragments are not sent to the server; capture a valid one at submit time.
+    const input = event.currentTarget.elements.namedItem("next");
+    if (input instanceof HTMLInputElement) {
+      const hash = window.location.hash;
+      input.value =
+        sameRoute && /^#[a-z0-9_-]{1,100}$/i.test(hash)
+          ? returnPath + hash
+          : cleanNext;
+    }
+  }
+
   return (
     <section
       className={`overflow-hidden rounded-xl border border-border bg-card ${compact ? "my-5" : "mx-auto w-full max-w-[770px]"}`}
     >
-      <div className={`grid ${compact ? "" : "min-[701px]:grid-cols-2"}`}>
+      <div
+        className={`grid ${compact ? "" : "min-[701px]:grid-cols-[2fr_3fr]"}`}
+      >
         {!compact && (
           <div className="relative h-32 overflow-hidden min-[701px]:h-auto min-[701px]:min-h-[365px]">
-            <Image
-              src="/profile-cinema.webp"
-              alt=""
-              fill
-              loading="eager"
-              sizes="(max-width: 700px) 100vw, 50vw"
-              className="object-cover min-[701px]:object-[82%_center]"
-            />
+            <picture>
+              <source
+                media="(min-width: 701px)"
+                srcSet={desktopCinema.srcSet}
+                sizes={desktopCinema.sizes}
+              />
+              <img
+                {...mobileCinema}
+                alt=""
+                loading="eager"
+                className="object-cover"
+              />
+            </picture>
           </div>
         )}
         <div
-          className={`flex flex-col items-start justify-center ${compact ? "gap-3 p-5 sm:p-7" : "gap-4 p-7 sm:p-10"}`}
+          className={`flex flex-col items-start justify-center ${compact ? "gap-3 p-5 sm:p-7" : "gap-5 p-6 sm:p-9"}`}
         >
           <Brand decorative header />
           <Heading
             className={`m-0 font-display leading-tight font-bold ${compact ? "text-xl sm:text-2xl" : "text-[clamp(1.7rem,4vw,2.35rem)]"}`}
           >
-            {t[context][0]}
+            {title}
           </Heading>
-          <p className="m-0 max-w-md text-sm leading-relaxed text-muted-foreground">
-            {t[context][1]}
-          </p>
-          {urlError && (
-            <p
-              role="alert"
-              data-auth-error-local
-              className="m-0 text-sm text-destructive"
-            >
-              {t.error}
+          {description && (
+            <p className="m-0 max-w-md text-sm leading-relaxed text-muted-foreground">
+              {description}
             </p>
           )}
-          <form
-            action={signIn}
-            className="w-full sm:w-auto"
-            onSubmit={(event) => {
-              // Fragments are not sent to the server; preserve the current one when present.
-              if (
-                !sameRoute ||
-                !/^#[a-z0-9_-]{1,100}$/i.test(window.location.hash)
-              )
-                return;
-              const input = event.currentTarget.elements.namedItem(
-                "next",
-              ) as HTMLInputElement | null;
-              if (input) input.value = returnPath + window.location.hash;
-            }}
-          >
-            <input type="hidden" name="next" value={cleanNext} />
-            <GoogleButton
-              label={t.button}
-              pendingLabel={t.pending}
-              restoreFocus={urlError}
+          <div className="flex w-full max-w-md flex-col gap-4">
+            {urlError && (
+              <p
+                role="alert"
+                data-auth-error-local
+                className="m-0 text-sm text-destructive"
+              >
+                {t.error}
+              </p>
+            )}
+            <form
+              action={signIn}
+              onSubmit={preserveReturnHash}
+              className="w-full"
+            >
+              <input type="hidden" name="next" value={cleanNext} />
+              <GoogleButton
+                label={t.button}
+                pendingLabel={t.pending}
+                restoreFocus={urlError}
+              />
+            </form>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span aria-hidden="true" className="h-px flex-1 bg-border" />
+              {t.or}
+              <span aria-hidden="true" className="h-px flex-1 bg-border" />
+            </div>
+            <EmailSignInForm
+              copy={t}
+              next={cleanNext}
+              onSubmit={preserveReturnHash}
             />
-          </form>
+          </div>
         </div>
       </div>
     </section>
