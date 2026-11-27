@@ -28,6 +28,26 @@ export async function signIn(form: FormData) {
   if (!destination) redirect(authErrorPath(next));
   redirect(destination);
 }
+export async function signInWithEmail(
+  _state: boolean,
+  form: FormData,
+): Promise<boolean> {
+  const rawEmail = form.get("email");
+  const password = form.get("password");
+  if (typeof rawEmail !== "string" || typeof password !== "string") return true;
+  const email = rawEmail.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password) return true;
+
+  try {
+    const db = await supabase();
+    if (!db) return true;
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    if (error) return true;
+  } catch {
+    return true;
+  }
+  redirect(safeReturnPath(text(form, "next")));
+}
 export async function signOut(form: FormData) {
   const db = await supabase();
   await db?.auth.signOut();

@@ -9,9 +9,14 @@ test("following asks signed-out visitors to sign in and preserves the return pat
   await page.goto("/pt-BR/following");
   await expect(page.getByRole("heading", { name: "Seguindo" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Google/ })).toBeVisible();
-  await expect(page.locator("input[name=next]")).toHaveValue(
-    "/pt-BR/following",
-  );
+  await expect(
+    page.getByRole("button", { name: "Entrar com e-mail", exact: true }),
+  ).toBeVisible();
+  const returnPaths = page.getByRole("main").locator("input[name=next]");
+  await expect(returnPaths).toHaveCount(2);
+  for (const input of await returnPaths.all()) {
+    await expect(input).toHaveValue("/pt-BR/following");
+  }
 });
 
 async function account(context?: BrowserContext, origin?: string) {
