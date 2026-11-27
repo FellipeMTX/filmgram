@@ -92,3 +92,23 @@ test("returns to the selected movie reviews section if Google sign-in fails", as
   );
   await expect(page.locator("main [data-auth-error-local]")).toBeVisible();
 });
+
+test("opens the localized test account form from the Google sign-in panel", async ({
+  page,
+}) => {
+  for (const [locale, label, password] of [
+    ["pt-BR", "Entrar com conta de teste", "Senha"],
+    ["en", "Sign in with a test account", "Password"],
+    ["es", "Entrar con una cuenta de prueba", "Contraseña"],
+  ] as const) {
+    await page.goto(`/${locale}/profile/me`);
+    const link = page
+      .getByRole("main")
+      .getByRole("link", { name: label, exact: true });
+    await expect(link).toHaveAttribute("href", `/${locale}/entrevista`);
+    await link.focus();
+    await link.press("Enter");
+    await expect(page).toHaveURL(`/${locale}/entrevista`);
+    await expect(page.getByLabel(password, { exact: true })).toBeVisible();
+  }
+});

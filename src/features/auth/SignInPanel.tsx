@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
@@ -26,6 +27,7 @@ const copy = {
       "Sign in to rate this title and join the conversation.",
     ],
     button: "Sign in with Google",
+    demoLink: "Sign in with a test account",
     pending: "Connecting to Google…",
     error: "Sign-in failed or was cancelled. Please try again.",
   },
@@ -47,6 +49,7 @@ const copy = {
       "Avalie o título e compartilhe o que achou com a comunidade.",
     ],
     button: "Entrar com Google",
+    demoLink: "Entrar com conta de teste",
     pending: "Conectando…",
     error:
       "Não foi possível entrar ou o acesso foi cancelado. Tente novamente.",
@@ -69,6 +72,7 @@ const copy = {
       "Entra para valorar este título y unirte a la conversación.",
     ],
     button: "Continuar con Google",
+    demoLink: "Entrar con una cuenta de prueba",
     pending: "Conectando con Google…",
     error:
       "No se pudo iniciar sesión o se canceló el acceso. Inténtalo de nuevo.",
@@ -227,6 +231,12 @@ export function SignInPanel({
               restoreFocus={urlError}
             />
           </form>
+          <Link
+            href={`/${locale}/entrevista`}
+            className="inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            {t.demoLink}
+          </Link>
         </div>
       </div>
     </section>
